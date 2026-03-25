@@ -23,6 +23,15 @@ export default function AttractionsDashboard() {
   const [submitting, setSubmitting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [processingAll, setProcessingAll] = useState(false)
+  const [processAllStatus, setProcessAllStatus] = useState<{
+    running: boolean
+    current: number
+    total: number
+    currentTitle: string
+    completed: number
+    errors: number
+  } | null>(null)
 
   useEffect(() => {
     loadEntries()
@@ -61,11 +70,12 @@ export default function AttractionsDashboard() {
       input_method: 'excel_upload' as const,
       screenshot_url: '',
       original_description: row.original_description,
+      keywords_list: '',
       recommended_versions: row.recommended_versions,
       fact_check_scores: row.fact_check_scores,
       duplicate_analysis: row.duplicate_analysis,
-      ab_tests: row.ab_tests,
-      organiser_trigger_risk: row.organiser_trigger_risk,
+      ab_tests: '',
+      organiser_trigger_risk: '',
       tov_score: row.tov_score,
       grammar_style: row.grammar_style,
       reviewer_output: row.reviewer_output,
@@ -73,6 +83,7 @@ export default function AttractionsDashboard() {
       prev_original_description: row.prev_original_description,
       seo_analysis: row.seo_analysis,
       fact_check_final: row.fact_check_final,
+      optimized_description: '',
       ranked_versions: row.ranked_versions,
       categories: row.categories,
       tags: row.tags,
@@ -124,6 +135,7 @@ export default function AttractionsDashboard() {
       input_method: inputMethod,
       screenshot_url,
       original_description: inputMethod === 'rawtext_url' ? formData.raw_text : '',
+      keywords_list: '',
       recommended_versions: '',
       fact_check_scores: '',
       duplicate_analysis: '',
@@ -136,6 +148,7 @@ export default function AttractionsDashboard() {
       prev_original_description: '',
       seo_analysis: '',
       fact_check_final: '',
+      optimized_description: '',
       ranked_versions: '',
       categories: '',
       tags: '',
@@ -176,6 +189,71 @@ export default function AttractionsDashboard() {
     setSelected(new Set())
   }
 
+  async function processAllWithAI() {
+    const toProcess = selected.size > 0
+      ? entries.filter(e => selected.has(e.id))
+      : entries
+    const withDescription = toProcess.filter(e => e.original_description && e.original_description.trim() !== '')
+
+    if (withDescription.length === 0) {
+      alert('No entries with descriptions to process. Add original descriptions first.')
+      return
+    }
+
+    if (!confirm(`Process ${withDescription.length} attraction${withDescription.length > 1 ? 's' : ''} through all AI steps? This runs in the background â you can navigate away.`)) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      alert('Please log in again.')
+      return
+    }
+
+    setProcessingAll(true)
+    setProcessAllStatus({
+      running: true,
+      current: 0,
+      total: withDescription.length,
+      currentTitle: withDescription[0]?.event_title || '',
+      completed: 0,
+      errors: 0,
+    })
+
+    try {
+      const res = await fetch('/api/ai/process-all-entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'attractions',
+          authToken: session.access_token,
+          entryIds: withDescription.map(e => e.id),
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        const completed = data.results?.filter((r: any) => r.status === 'success').length || 0
+        const errors = data.results?.filter((r: any) => r.status === 'error').length || 0
+        setProcessAllStatus({
+          running: false,
+          current: data.processed,
+          total: data.processed,
+          currentTitle: 'Done!',
+          completed,
+          errors,
+        })
+        loadEntries()
+      } else {
+        alert(`Process All error: ${data.error || 'Unknown error'}`)
+        setProcessAllStatus(null)
+      }
+    } catch (err: any) {
+      alert(`Process All failed: ${err.message}`)
+      setProcessAllStatus(null)
+    }
+
+    setProcessingAll(false)
+  }
+
   function toggleSelect(id: string, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -203,18 +281,18 @@ export default function AttractionsDashboard() {
 
     const headers = [
       'Attraction ID', 'Attraction Name', 'Event URL', 'Page QA', 'Categories', 'Tags',
-      'Original Description', 'Recommended Versions', 'Fact Check Scores',
-      'Duplicate Analysis', 'A/B Tests', 'Organiser Trigger Risk', 'TOV Score',
-      'Grammar & Style', 'Reviewer', 'Resolver', 'Prev Original',
-      'SEO Analysis', 'Fact Check Final', 'Ranked Versions', 'Status'
+      'Original Description', 'Keywords List', 'Keyword-Optimized Versions', 'Fact Check Scores',
+      'Duplicate Analysis', 'TOV Score', 'Grammar & Style', 'Reviewer', 'Resolver',
+      'Prev Original', 'SEO Keyword Analysis', 'Fact Check Final',
+      'Optimized Description', 'Ranked Versions', 'Status'
     ]
 
     const rows = toExport.map(e => [
       e.event_id, e.event_title, e.event_url, e.page_qa_comments, e.categories, e.tags,
-      e.original_description, e.recommended_versions, e.fact_check_scores,
-      e.duplicate_analysis, e.ab_tests, e.organiser_trigger_risk, e.tov_score,
-      e.grammar_style, e.reviewer_output, e.resolver_output, e.prev_original_description,
-      e.seo_analysis, e.fact_check_final, e.ranked_versions, e.status
+      e.original_description, e.keywords_list, e.recommended_versions, e.fact_check_scores,
+      e.duplicate_analysis, e.tov_score, e.grammar_style, e.reviewer_output, e.resolver_output,
+      e.prev_original_description, e.seo_analysis, e.fact_check_final,
+      e.optimized_description, e.ranked_versions, e.status
     ])
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
@@ -246,19 +324,20 @@ export default function AttractionsDashboard() {
   }
 
   function getCompletedSteps(entry: EventEntry): number {
+    // Attraction-specific pipeline fields (no ab_tests or organiser_trigger_risk)
     const fields = [
       entry.original_description,
+      entry.keywords_list,
       entry.recommended_versions,
       entry.fact_check_scores,
       entry.duplicate_analysis,
-      entry.ab_tests,
-      entry.organiser_trigger_risk,
       entry.tov_score,
       entry.grammar_style,
       entry.reviewer_output,
       entry.resolver_output,
       entry.seo_analysis,
       entry.fact_check_final,
+      entry.optimized_description,
       entry.ranked_versions,
     ]
     return fields.filter(f => f && f.trim() !== '').length
@@ -272,13 +351,68 @@ export default function AttractionsDashboard() {
           <h1 className="text-2xl font-bold text-white">Attractions Content Pipeline</h1>
           <p className="text-pl-text-dim text-sm mt-1">Process attraction descriptions through the content engine</p>
         </div>
-        <button onClick={() => setShowNewForm(true)} className="pl-btn-primary flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Attraction
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={processAllWithAI}
+            disabled={processingAll || entries.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            title={selected.size > 0 ? `Process ${selected.size} selected` : 'Process all entries through AI pipeline'}
+          >
+            {processingAll ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                {selected.size > 0 ? `Process ${selected.size} with AI` : 'Process All with AI'}
+              </>
+            )}
+          </button>
+          <button onClick={() => setShowNewForm(true)} className="pl-btn-primary flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Attraction
+          </button>
+        </div>
       </div>
+
+      {/* Process All Status Banner */}
+      {processAllStatus && (
+        <div className={`mb-6 rounded-xl border p-4 ${processAllStatus.running ? 'bg-emerald-600/10 border-emerald-500/30' : processAllStatus.errors > 0 ? 'bg-yellow-600/10 border-yellow-500/30' : 'bg-green-600/10 border-green-500/30'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              {processAllStatus.running ? (
+                <div className="w-5 h-5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+              ) : (
+                <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              )}
+              <span className="text-sm font-medium text-white">
+                {processAllStatus.running
+                  ? `Processing: ${processAllStatus.currentTitle}`
+                  : `Batch complete: ${processAllStatus.completed} succeeded, ${processAllStatus.errors} errors`
+                }
+              </span>
+            </div>
+            {!processAllStatus.running && (
+              <button onClick={() => setProcessAllStatus(null)} className="text-pl-muted hover:text-white text-sm">Dismiss</button>
+            )}
+          </div>
+          <div className="w-full h-2 bg-pl-dark rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${processAllStatus.running ? 'bg-emerald-500 animate-pulse' : 'bg-green-500'}`}
+              style={{ width: `${processAllStatus.total > 0 ? (processAllStatus.current / processAllStatus.total) * 100 : 0}%` }}
+            />
+          </div>
+          <p className="text-xs text-pl-muted mt-1">
+            {processAllStatus.current}/{processAllStatus.total} entries {processAllStatus.running ? 'processing...' : 'processed'}
+          </p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
@@ -314,10 +448,10 @@ export default function AttractionsDashboard() {
                 <label className="block text-sm text-pl-text-dim mb-3">How are you providing the content?</label>
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { value: 'screenshot_url' as InputMethod, icon: '📸', label: 'Screenshot + URL', desc: 'Upload screenshot and provide URL' },
-                    { value: 'rawtext_url' as InputMethod, icon: '📝', label: 'Raw Text + URL', desc: 'Paste description text with URL' },
-                    { value: 'url_only' as InputMethod, icon: '🔗', label: 'URL Only', desc: 'Just provide the attraction URL' },
-                    { value: 'excel_upload' as InputMethod, icon: '📊', label: 'Excel File', desc: 'Import from reference XLSX' },
+                    { value: 'screenshot_url' as InputMethod, icon: 'ð¸', label: 'Screenshot + URL', desc: 'Upload screenshot and provide URL' },
+                    { value: 'rawtext_url' as InputMethod, icon: 'ð', label: 'Raw Text + URL', desc: 'Paste description text with URL' },
+                    { value: 'url_only' as InputMethod, icon: 'ð', label: 'URL Only', desc: 'Just provide the attraction URL' },
+                    { value: 'excel_upload' as InputMethod, icon: 'ð', label: 'Excel File', desc: 'Import from reference XLSX' },
                   ].map((method) => (
                     <button
                       key={method.value}
@@ -592,7 +726,7 @@ export default function AttractionsDashboard() {
                   </div>
                   <div className="w-24 h-2 bg-pl-dark rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-pl-gold to-pl-gold-light rounded-full transition-all"
+                      className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all"
                       style={{ width: `${(getCompletedSteps(entry) / 13) * 100}%` }}
                     />
                   </div>
@@ -631,3 +765,4 @@ export default function AttractionsDashboard() {
     </div>
   )
 }
+
