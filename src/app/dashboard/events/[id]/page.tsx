@@ -23,6 +23,8 @@ export default function EventDetailPage() {
   const [editValue, setEditValue] = useState('')
   const [aiProcessing, setAiProcessing] = useState<Record<string, boolean>>({})
   const [runningAll, setRunningAll] = useState(false)
+  const [fetchingDesc, setFetchingDesc] = useState(false)
+  const [deletingEntry, setDeletingEntry] = useState(false)
 
   useEffect(() => {
     loadEntry()
@@ -132,6 +134,43 @@ export default function EventDetailPage() {
     // Reload to get fresh data
     await loadEntry()
     setRunningAll(false)
+  }
+
+  async function deleteEntry() {
+    if (!confirm('Are you sure you want to remove this event?')) return
+    setDeletingEntry(true)
+    const { error } = await supabase.from('content_entries').delete().eq('id', params.id)
+    if (!error) {
+      router.push('/dashboard/events')
+    } else {
+      alert('Failed to delete: ' + error.message)
+      setDeletingEntry(false)
+    }
+  }
+
+  async function fetchDescriptionFromURL() {
+    if (!entry?.event_url) return
+    setFetchingDesc(true)
+    try {
+      const res = await fetch('/api/fetch-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: entry.event_url }),
+      })
+      const data = await res.json()
+      if (res.ok && data.description) {
+        await saveField('original_description', data.description)
+        if (activeStep === 'S1') {
+          setEditValue(data.description)
+        }
+      } else {
+        alert(data.error || 'Could not fetch description from URL')
+      }
+    } catch (err: any) {
+      alert('Network error: ' + err.message)
+    } finally {
+      setFetchingDesc(false)
+    }
   }
 
   async function exportToExcel() {
@@ -259,8 +298,51 @@ export default function EventDetailPage() {
             </svg>
             Export XLSX
           </button>
+          <button
+            onClick={deleteEntry}
+            disabled={deletingEntry}
+            className="p-2 rounded-lg text-pl-muted hover:text-red-400 hover:bg-red-600/10 transition-all"
+            title="Remove event"
+          >
+            {deletingEntry ? (
+              <div className="w-5 h-5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Fetch Description Banner - shows when original_description is empty */}
+      {!entry.original_description && entry.event_url && (
+        <div className="pl-card p-4 mb-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-4">
+          <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-amber-200 flex-1">Original description is needed before AI can process. Fetch it from the event URL or enter it manually in Step S1.</p>
+          <button
+            onClick={fetchDescriptionFromURL}
+            disabled={fetchingDesc}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium disabled:opacity-40 transition-all flex-shrink-0"
+          >
+            {fetchingDesc ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Fetching...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Fetch from URL
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Progress Bar */}
       <div className="pl-card p-4 mb-8">
