@@ -50,6 +50,9 @@ export interface EventEntry {
   seo_analysis: string                // Step 11 - AA
   fact_check_final: string            // Step 12
   ranked_versions: string             // Step 13 - AG
+  // Attractions-specific fields
+  keywords_list: string               // Keywords for attraction SEO optimization
+  optimized_description: string       // Final keyword-optimized description
   // Categories/Tags (Step B)
   categories: string
   tags: string
@@ -77,6 +80,7 @@ export interface StepConfig {
   optional?: boolean
 }
 
+// Events pipeline: 13-step content engine
 export const STEPS_CONFIG: StepConfig[] = [
   { step: '1', label: 'Event ID', column: 'A', field: 'event_id' },
   { step: '2', label: 'Event Title', column: 'B', field: 'event_title' },
@@ -95,4 +99,32 @@ export const STEPS_CONFIG: StepConfig[] = [
   { step: 'S11', label: 'SEO Analysis', column: 'AA', field: 'seo_analysis' },
   { step: 'S12', label: 'Fact Check (Final)', column: 'AB', field: 'fact_check_final' },
   { step: 'S13', label: 'Ranked Top Versions', column: 'AG', field: 'ranked_versions' },
+]
+
+// Attractions pipeline: keyword-optimized content flow
+// Attractions are different from events:
+// - Text is in attractions format (experience/venue focused, not event-date focused)
+// - Includes a keywords list for SEO optimization
+// - Descriptions are optimized around keywords, not just rewritten
+// - Still uses Platinumlist TOV
+// - No organiser trigger risk (attractions are venue-owned)
+// - No A/B tests (attractions are evergreen, not time-bound)
+export const ATTRACTIONS_STEPS_CONFIG: StepConfig[] = [
+  { step: '1', label: 'Attraction ID', column: 'A', field: 'event_id' },
+  { step: '2', label: 'Attraction Name', column: 'B', field: 'event_title' },
+  { step: 'A', label: 'Page Structure & QA', column: 'C', field: 'page_qa_comments', optional: true },
+  { step: 'B', label: 'Categories & Tags', column: 'E', field: 'categories', optional: true },
+  { step: 'S1', label: 'Original Description', column: 'H', field: 'original_description' },
+  { step: 'K', label: 'Keywords List', column: '-', field: 'keywords_list' },
+  { step: 'S2', label: 'Keyword-Optimized Versions', column: 'J', field: 'recommended_versions' },
+  { step: 'S3', label: 'Fact Check', column: 'K', field: 'fact_check_scores' },
+  { step: 'S4', label: 'Duplicate Analysis', column: 'L', field: 'duplicate_analysis' },
+  { step: 'S5', label: 'TOV Score', column: 'O', field: 'tov_score' },
+  { step: 'S6', label: 'Grammar & Style', column: 'P', field: 'grammar_style' },
+  { step: 'S7', label: 'Reviewer', column: 'W', field: 'reviewer_output' },
+  { step: 'S8', label: 'Resolver', column: 'Y', field: 'resolver_output' },
+  { step: 'S9', label: 'SEO Keyword Analysis', column: 'AA', field: 'seo_analysis' },
+  { step: 'S10', label: 'Fact Check (Final)', column: 'AB', field: 'fact_check_final' },
+  { step: 'S11', label: 'Optimized Final Description', column: '-', field: 'optimized_description' },
+  { step: 'S12', label: 'Ranked Top Versions', column: 'AG', field: 'ranked_versions' },
 ]
