@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { STEPS_CONFIG, type EventEntry } from '@/types'
-import * as XLSX from 'xlsx'
+
+// AI-processable step fields (Steps S2-S13)
+const AI_STEPS = [
+  'recommended_versions', 'fact_check_scores', 'duplicate_analysis',
+  'ab_tests', 'organiser_trigger_risk', 'tov_score', 'grammar_style',
+  'reviewer_output', 'resolver_output', 'seo_analysis', 'fact_check_final',
+  'ranked_versions',
+]
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -14,6 +21,8 @@ export default function EventDetailPage() {
   const [saving, setSaving] = useState(false)
   const [activeStep, setActiveStep] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [aiProcessing, setAiProcessing] = useState<Record<string, boolean>>({})
+  const [runningAll, setRunningAll] = useState(false)
 
   useEffect(() => {
     loadEntry()
@@ -50,8 +59,86 @@ export default function EventDetailPage() {
     setEntry(prev => prev ? { ...prev, status: status as EventEntry['status'] } : null)
   }
 
-  function exportToExcel() {
+  async function getAuthToken(): Promise<string | null> {
+    const { data } = await supabase.auth.getSession()
+    return data.session?.access_token || null
+  }
+
+  async function runAIStep(stepField: string) {
+    const authToken = await getAuthToken()
+    if (!authToken) return
+
+    setAiProcessing(prev => ({ ...prev, [stepField]: true }))
+
+    try {
+      const res = await fetch('/api/ai/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entryId: params.id,
+          stepField,
+          authToken,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.result) {
+        setEntry(prev => prev ? { ...prev, [stepField]: data.result, status: 'in_progress' } : null)
+        if (activeStep) {
+          setEditValue(data.result)
+        }
+      } else {
+        alert(`AI Error: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`Network error: ${err.message}`)
+    } finally {
+      setAiProcessing(prev => ({ ...prev, [stepField]: false }))
+    }
+  }
+
+  async function runAllAISteps() {
+    const authToken = await getAuthToken()
+    if (!authToken) return
+
+    setRunningAll(true)
+
+    // Run steps sequentially
+    for (const stepField of AI_STEPS) {
+      // Skip if original_description is empty (can't process without it)
+      if (!entry?.original_description && stepField !== 'recommended_versions') continue
+      if (stepField === 'recommended_versions' && !entry?.original_description) continue
+
+      setAiProcessing(prev => ({ ...prev, [stepField]: true }))
+
+      try {
+        const res = await fetch('/api/ai/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entryId: params.id, stepField, authToken }),
+        })
+
+        const data = await res.json()
+        if (res.ok && data.result) {
+          setEntry(prev => prev ? { ...prev, [stepField]: data.result } : null)
+        }
+      } catch {
+        // Continue to next step
+      } finally {
+        setAiProcessing(prev => ({ ...prev, [stepField]: false }))
+      }
+    }
+
+    // Reload to get fresh data
+    await loadEntry()
+    setRunningAll(false)
+  }
+
+  async function exportToExcel() {
     if (!entry) return
+
+    // Dynamic import to avoid SSR issues
+    const XLSX = await import('xlsx')
 
     const headers = [
       'Event ID', 'Event Title', 'Event URL', 'Page QA (Step A)', 'Categories (Step B)',
@@ -81,8 +168,6 @@ export default function EventDetailPage() {
     ]
 
     const ws = XLSX.utils.aoa_to_sheet([headers, row])
-
-    // Set column widths
     ws['!cols'] = headers.map(() => ({ wch: 30 }))
 
     const wb = XLSX.utils.book_new()
@@ -116,6 +201,7 @@ export default function EventDetailPage() {
 
   const completedCount = STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
   const totalSteps = STEPS_CONFIG.length
+  const canRunAI = (field: string) => AI_STEPS.includes(field)
 
   return (
     <div className="p-8 max-w-5xl">
@@ -136,6 +222,27 @@ export default function EventDetailPage() {
           <p className="text-sm text-pl-muted mt-1">{entry.event_url}</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Run All AI Button */}
+          <button
+            onClick={runAllAISteps}
+            disabled={runningAll || !entry.original_description}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            title={!entry.original_description ? 'Add original description first' : 'Run all AI steps sequentially'}
+          >
+            {runningAll ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Running AI...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Run All AI
+              </>
+            )}
+          </button>
           <select
             value={entry.status}
             onChange={(e) => updateStatus(e.target.value)}
@@ -175,54 +282,80 @@ export default function EventDetailPage() {
           const status = getStepStatus(step.field)
           const isActive = activeStep === step.step
           const value = getFieldValue(step.field)
+          const isAIStep = canRunAI(step.field)
+          const isProcessing = aiProcessing[step.field]
 
           return (
-            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-pl-gold/40' : ''}`}>
+            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-pl-gold/40' : ''} ${isProcessing ? 'border-purple-500/40' : ''}`}>
               {/* Step Header */}
-              <button
-                onClick={() => {
-                  if (isActive) {
-                    setActiveStep(null)
-                  } else {
-                    setActiveStep(step.step)
-                    setEditValue(value)
-                  }
-                }}
-                className="w-full flex items-center gap-4 p-4 text-left hover:bg-pl-card/50 transition-colors"
-              >
-                {/* Step number */}
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                  status === 'done'
-                    ? 'bg-pl-success/20 text-pl-success'
-                    : 'bg-pl-muted/20 text-pl-muted'
-                }`}>
-                  {status === 'done' ? (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : idx + 1}
-                </div>
-
-                {/* Step info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-pl-gold/60">Step {step.step}</span>
-                    <span className="text-xs text-pl-muted">Col {step.column}</span>
-                    {step.optional && <span className="text-[10px] bg-pl-muted/20 text-pl-muted px-2 py-0.5 rounded-full">Optional</span>}
+              <div className="flex items-center">
+                <button
+                  onClick={() => {
+                    if (isActive) {
+                      setActiveStep(null)
+                    } else {
+                      setActiveStep(step.step)
+                      setEditValue(value)
+                    }
+                  }}
+                  className="flex-1 flex items-center gap-4 p-4 text-left hover:bg-pl-card/50 transition-colors"
+                >
+                  {/* Step number */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    isProcessing
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : status === 'done'
+                        ? 'bg-pl-success/20 text-pl-success'
+                        : 'bg-pl-muted/20 text-pl-muted'
+                  }`}>
+                    {isProcessing ? (
+                      <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                    ) : status === 'done' ? (
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : idx + 1}
                   </div>
-                  <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
-                </div>
 
-                {/* Status */}
-                <span className={`px-2 py-1 rounded text-xs ${status === 'done' ? 'badge-done' : 'badge-pending'}`}>
-                  {status === 'done' ? 'Done' : 'Pending'}
-                </span>
+                  {/* Step info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-pl-gold/60">Step {step.step}</span>
+                      <span className="text-xs text-pl-muted">Col {step.column}</span>
+                      {step.optional && <span className="text-[10px] bg-pl-muted/20 text-pl-muted px-2 py-0.5 rounded-full">Optional</span>}
+                      {isAIStep && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">AI</span>}
+                    </div>
+                    <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
+                  </div>
 
-                {/* Expand icon */}
-                <svg className={`w-5 h-5 text-pl-muted transition-transform ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                  {/* Status */}
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    isProcessing ? 'bg-purple-500/20 text-purple-400' :
+                    status === 'done' ? 'badge-done' : 'badge-pending'
+                  }`}>
+                    {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
+                  </span>
+
+                  {/* Expand icon */}
+                  <svg className={`w-5 h-5 text-pl-muted transition-transform ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {/* AI Run Button (outside the expand button) */}
+                {isAIStep && !isActive && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
+                    disabled={isProcessing || runningAll}
+                    className="mr-4 p-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition-all disabled:opacity-30"
+                    title={`Run AI for ${step.label}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
 
               {/* Expanded Editor */}
               {isActive && (
@@ -243,6 +376,27 @@ export default function EventDetailPage() {
                         <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
                       ) : 'Save'}
                     </button>
+                    {isAIStep && (
+                      <button
+                        onClick={() => runAIStep(step.field)}
+                        disabled={isProcessing || runningAll}
+                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Running...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Run AI
+                          </>
+                        )}
+                      </button>
+                    )}
                     <button onClick={() => setActiveStep(null)} className="pl-btn-secondary text-sm">
                       Cancel
                     </button>
