@@ -486,7 +486,7 @@ export default function AttractionDetailPage() {
                       <span className="text-xs text-pl-muted ml-auto">
                         {value.length} characters
                       </span>
-                    )}}
+                    )}
                   </div>
                 </div>
               )}
