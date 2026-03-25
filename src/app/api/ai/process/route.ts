@@ -78,13 +78,38 @@ export async function POST(request: NextRequest) {
     // Generate the prompt
     const prompt = STEP_PROMPTS[promptKey](ctx)
 
-    // Call AI via PL Supabase Edge Function or direct API
-    // Using Anthropic Claude API via fetch
+    // Call AI - supports OpenAI (primary) or Anthropic (fallback)
+    const openaiKey = process.env.OPENAI_API_KEY
     const anthropicKey = process.env.ANTHROPIC_API_KEY
     let aiResult: string
 
-    if (anthropicKey) {
-      // Use Anthropic Claude API directly
+    if (openaiKey) {
+      // Use OpenAI ChatGPT API
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 4096,
+          messages: [
+            { role: 'system', content: 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.' },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      })
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text()
+        return NextResponse.json({ error: `OpenAI API error: ${errText}` }, { status: 500 })
+      }
+
+      const aiData = await aiResponse.json()
+      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+    } else if (anthropicKey) {
+      // Fallback: Use Anthropic Claude API
       const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -101,26 +126,22 @@ export async function POST(request: NextRequest) {
 
       if (!aiResponse.ok) {
         const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI API error: ${errText}` }, { status: 500 })
+        return NextResponse.json({ error: `Anthropic API error: ${errText}` }, { status: 500 })
       }
 
       const aiData = await aiResponse.json()
       aiResult = aiData.content?.[0]?.text || 'No response from AI'
     } else {
-      // Fallback: Use PL Supabase for AI processing if available
-      // Or return a helpful message
+      // No API key configured
       try {
         const plClient = createPLClient()
-        // Try to call a PL edge function for AI processing
         const { data, error } = await plClient.functions.invoke('ai-process', {
           body: { prompt, stepField }
         })
-
         if (error) throw error
         aiResult = data?.result || 'No response from PL AI'
       } catch {
-        // Ultimate fallback - generate a structured placeholder
-        aiResult = `[AI Processing Required]\n\nStep: ${stepField}\nEvent: ${ctx.eventTitle}\n\nTo enable AI processing, add an ANTHROPIC_API_KEY environment variable in Vercel.\n\nPrompt preview:\n${prompt.substring(0, 500)}...`
+        aiResult = `[AI Processing Required]\n\nStep: ${stepField}\nEvent: ${ctx.eventTitle}\n\nTo enable AI processing, add OPENAI_API_KEY or ANTHROPIC_API_KEY in Vercel Environment Variables.\n\nPrompt preview:\n${prompt.substring(0, 500)}...`
       }
     }
 
