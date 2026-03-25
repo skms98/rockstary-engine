@@ -21,6 +21,8 @@ export default function EventsDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState<string | null>(null)
 
   useEffect(() => {
     loadEntries()
@@ -148,6 +150,90 @@ export default function EventsDashboard() {
       loadEntries()
     }
     setSubmitting(false)
+  }
+
+  async function deleteEntry(id: string, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to remove this event?')) return
+    setDeleting(id)
+    const { error } = await supabase.from('content_entries').delete().eq('id', id)
+    if (!error) {
+      setEntries(prev => prev.filter(entry => entry.id !== id))
+      setSelected(prev => { const next = new Set(prev); next.delete(id); return next })
+    }
+    setDeleting(null)
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return
+    if (!confirm(`Remove ${selected.size} selected event${selected.size > 1 ? 's' : ''}?`)) return
+    const ids = Array.from(selected)
+    for (const id of ids) {
+      await supabase.from('content_entries').delete().eq('id', id)
+    }
+    setEntries(prev => prev.filter(e => !selected.has(e.id)))
+    setSelected(new Set())
+  }
+
+  function toggleSelect(id: string, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === entries.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(entries.map(e => e.id)))
+    }
+  }
+
+  async function massExport(format: 'xlsx' | 'csv') {
+    const toExport = entries.filter(e => selected.size === 0 || selected.has(e.id))
+    if (toExport.length === 0) return
+
+    const XLSX = await import('xlsx')
+
+    const headers = [
+      'Event ID', 'Event Title', 'Event URL', 'Page QA', 'Categories', 'Tags',
+      'Original Description', 'Recommended Versions', 'Fact Check Scores',
+      'Duplicate Analysis', 'A/B Tests', 'Organiser Trigger Risk', 'TOV Score',
+      'Grammar & Style', 'Reviewer', 'Resolver', 'Prev Original',
+      'SEO Analysis', 'Fact Check Final', 'Ranked Versions', 'Status'
+    ]
+
+    const rows = toExport.map(e => [
+      e.event_id, e.event_title, e.event_url, e.page_qa_comments, e.categories, e.tags,
+      e.original_description, e.recommended_versions, e.fact_check_scores,
+      e.duplicate_analysis, e.ab_tests, e.organiser_trigger_risk, e.tov_score,
+      e.grammar_style, e.reviewer_output, e.resolver_output, e.prev_original_description,
+      e.seo_analysis, e.fact_check_final, e.ranked_versions, e.status
+    ])
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    ws['!cols'] = headers.map(() => ({ wch: 30 }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Events Pipeline')
+
+    if (format === 'csv') {
+      const csv = XLSX.utils.sheet_to_csv(ws)
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `rockstary-events-${toExport.length}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } else {
+      XLSX.writeFile(wb, `rockstary-events-${toExport.length}.xlsx`)
+    }
   }
 
   function getStatusColor(status: string) {
@@ -397,6 +483,55 @@ export default function EventsDashboard() {
         </div>
       )}
 
+      {/* Bulk Actions Bar */}
+      {entries.length > 0 && (
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs text-pl-muted hover:text-white transition-colors"
+          >
+            <div className={`w-4 h-4 rounded border flex items-center justify-center ${selected.size === entries.length ? 'bg-pl-gold border-pl-gold' : 'border-pl-muted/40'}`}>
+              {selected.size === entries.length && (
+                <svg className="w-3 h-3 text-pl-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              )}
+            </div>
+            {selected.size === entries.length ? 'Deselect all' : 'Select all'}
+          </button>
+
+          {selected.size > 0 && (
+            <>
+              <span className="text-xs text-pl-gold">{selected.size} selected</span>
+              <button onClick={() => massExport('xlsx')} className="pl-btn-secondary text-xs py-1 px-3 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Export XLSX
+              </button>
+              <button onClick={() => massExport('csv')} className="pl-btn-secondary text-xs py-1 px-3 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Export CSV (Google Sheets)
+              </button>
+              <button onClick={deleteSelected} className="text-xs py-1 px-3 rounded-lg bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 transition-all flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Remove selected
+              </button>
+            </>
+          )}
+
+          {selected.size === 0 && entries.length > 0 && (
+            <>
+              <div className="flex-1" />
+              <button onClick={() => massExport('xlsx')} className="pl-btn-secondary text-xs py-1 px-3 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Export All XLSX
+              </button>
+              <button onClick={() => massExport('csv')} className="pl-btn-secondary text-xs py-1 px-3 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Export All CSV
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Entries List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -416,48 +551,80 @@ export default function EventsDashboard() {
       ) : (
         <div className="space-y-3">
           {entries.map((entry) => (
-            <a
-              key={entry.id}
-              href={`/dashboard/events/${entry.id}`}
-              className="pl-card p-5 flex items-center gap-6 group block"
-            >
-              {/* Event ID Badge */}
-              <div className="bg-pl-gold/10 text-pl-gold font-mono font-bold px-3 py-2 rounded-lg text-sm min-w-[60px] text-center">
-                #{entry.event_id}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-white group-hover:text-pl-gold transition-colors truncate">
-                  {entry.event_title}
-                </h3>
-                <p className="text-xs text-pl-muted mt-1 truncate">{entry.event_url}</p>
-              </div>
-
-              {/* Progress */}
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-xs text-pl-muted">Steps</p>
-                  <p className="text-sm font-medium text-white">{getCompletedSteps(entry)}/13</p>
+            <div key={entry.id} className="pl-card flex items-center group">
+              {/* Checkbox */}
+              <button
+                onClick={(e) => toggleSelect(entry.id, e)}
+                className="p-4 pr-2 flex-shrink-0"
+              >
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                  selected.has(entry.id) ? 'bg-pl-gold border-pl-gold' : 'border-pl-muted/30 hover:border-pl-muted/60'
+                }`}>
+                  {selected.has(entry.id) && (
+                    <svg className="w-3 h-3 text-pl-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                  )}
                 </div>
-                <div className="w-24 h-2 bg-pl-dark rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-pl-gold to-pl-gold-light rounded-full transition-all"
-                    style={{ width: `${(getCompletedSteps(entry) / 13) * 100}%` }}
-                  />
+              </button>
+
+              {/* Entry Link */}
+              <a
+                href={`/dashboard/events/${entry.id}`}
+                className="flex-1 flex items-center gap-6 p-4 pl-2"
+              >
+                {/* Event ID Badge */}
+                <div className="bg-pl-gold/10 text-pl-gold font-mono font-bold px-3 py-2 rounded-lg text-sm min-w-[60px] text-center">
+                  #{entry.event_id}
                 </div>
-              </div>
 
-              {/* Status */}
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}>
-                {entry.status.replace('_', ' ')}
-              </span>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-white group-hover:text-pl-gold transition-colors truncate">
+                    {entry.event_title}
+                  </h3>
+                  <p className="text-xs text-pl-muted mt-1 truncate">{entry.event_url}</p>
+                </div>
 
-              {/* Arrow */}
-              <svg className="w-5 h-5 text-pl-muted group-hover:text-pl-gold transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
+                {/* Progress */}
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-pl-muted">Steps</p>
+                    <p className="text-sm font-medium text-white">{getCompletedSteps(entry)}/13</p>
+                  </div>
+                  <div className="w-24 h-2 bg-pl-dark rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-pl-gold to-pl-gold-light rounded-full transition-all"
+                      style={{ width: `${(getCompletedSteps(entry) / 13) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Status */}
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}>
+                  {entry.status.replace('_', ' ')}
+                </span>
+
+                {/* Arrow */}
+                <svg className="w-5 h-5 text-pl-muted group-hover:text-pl-gold transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+
+              {/* Delete Button */}
+              <button
+                onClick={(e) => deleteEntry(entry.id, e)}
+                disabled={deleting === entry.id}
+                className="p-3 mr-2 rounded-lg text-pl-muted/40 hover:text-red-400 hover:bg-red-600/10 transition-all opacity-0 group-hover:opacity-100"
+                title="Remove event"
+              >
+                {deleting === entry.id ? (
+                  <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
           ))}
         </div>
       )}
