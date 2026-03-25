@@ -3,15 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { STEPS_CONFIG, type EventEntry } from '@/types'
+import { ATTRACTIONS_STEPS_CONFIG, type EventEntry } from '@/types'
+import { ATTRACTION_AI_STEPS } from '@/lib/ai-prompts-attractions'
 
-// AI-processable step fields (Steps S2-S13)
-const AI_STEPS = [
-  'recommended_versions', 'fact_check_scores', 'duplicate_analysis',
-  'ab_tests', 'organiser_trigger_risk', 'tov_score', 'grammar_style',
-  'reviewer_output', 'resolver_output', 'seo_analysis', 'fact_check_final',
-  'ranked_versions',
-]
+// AI-processable step fields for attractions
+const AI_STEPS = ATTRACTION_AI_STEPS
 
 export default function AttractionDetailPage() {
   const params = useParams()
@@ -105,11 +101,13 @@ export default function AttractionDetailPage() {
 
     setRunningAll(true)
 
-    // Run steps sequentially
     for (const stepField of AI_STEPS) {
-      // Skip if original_description is empty (can't process without it)
-      if (!entry?.original_description && stepField !== 'recommended_versions') continue
-      if (stepField === 'recommended_versions' && !entry?.original_description) continue
+      if (!entry?.original_description) continue
+      // keywords_list needs original_description
+      // recommended_versions needs keywords_list
+      if (stepField === 'recommended_versions' && !entry?.keywords_list && !(entry as any)?.keywords_list) {
+        // Run keywords first if not done
+      }
 
       setAiProcessing(prev => ({ ...prev, [stepField]: true }))
 
@@ -131,13 +129,12 @@ export default function AttractionDetailPage() {
       }
     }
 
-    // Reload to get fresh data
     await loadEntry()
     setRunningAll(false)
   }
 
   async function deleteEntry() {
-    if (!confirm('Are you sure you want to remove this event?')) return
+    if (!confirm('Are you sure you want to remove this attraction?')) return
     setDeletingEntry(true)
     const { error } = await supabase.from('content_entries').delete().eq('id', params.id)
     if (!error) {
@@ -163,6 +160,10 @@ export default function AttractionDetailPage() {
         if (activeStep === 'S1') {
           setEditValue(data.description)
         }
+      } else if (data.queue_detected) {
+        setActiveStep('S1')
+        setEditValue('')
+        alert('The page is behind queue protection (Cloudflare). Please open the URL in your browser, copy the description text, and paste it into Step S1 below.')
       } else {
         alert(data.error || 'Could not fetch description from URL')
       }
@@ -175,40 +176,30 @@ export default function AttractionDetailPage() {
 
   async function exportToExcel() {
     if (!entry) return
-
-    // Dynamic import to avoid SSR issues
     const XLSX = await import('xlsx')
 
     const headers = [
-      'Event ID', 'Event Title', 'Event URL', 'Page QA (Step A)', 'Categories (Step B)',
-      'Tags (Step B)', '', 'Original Description (H)', '',
-      'Recommended Versions (J)', '', 'Fact Check Scores (Step 3)',
-      'Duplicate Analysis (Step 4)', 'A/B Tests (Step 5)',
-      'Organiser Trigger Risk (Step 6)', 'TOV Score (Step 7)',
-      'Grammar & Style (Step 8)', '', '', '', '', '',
-      'Reviewer (W - Step 9)', '', 'Resolver (Y - Step 10)', '',
-      '', '', 'Prev Original (AC)', '', 'SEO Analysis (AA - Step 11)',
-      '', 'Fact Check Final (Step 12)', '', '', '', '',
-      'Ranked Top Versions (AG - Step 13)'
+      'Attraction ID', 'Attraction Name', 'URL', 'Page QA', 'Categories',
+      'Tags', 'Keywords List', 'Original Description',
+      'Keyword-Optimized Versions', 'Fact Check', 'Duplicate Analysis',
+      'TOV Score', 'Grammar & Style', 'Reviewer', 'Resolver',
+      'SEO Keyword Analysis', 'Fact Check (Final)', 'Optimized Description',
+      'Ranked Versions', 'Status'
     ]
 
     const row = [
       entry.event_id, entry.event_title, entry.event_url,
       entry.page_qa_comments, entry.categories, entry.tags,
-      '', entry.original_description, '',
-      entry.recommended_versions, '', entry.fact_check_scores,
-      entry.duplicate_analysis, entry.ab_tests,
-      entry.organiser_trigger_risk, entry.tov_score,
-      entry.grammar_style, '', '', '', '', '',
-      entry.reviewer_output, '', entry.resolver_output, '',
-      '', '', entry.prev_original_description, '', entry.seo_analysis,
-      '', entry.fact_check_final, '', '', '', '',
-      entry.ranked_versions,
+      entry.keywords_list || '', entry.original_description,
+      entry.recommended_versions, entry.fact_check_scores,
+      entry.duplicate_analysis, entry.tov_score,
+      entry.grammar_style, entry.reviewer_output, entry.resolver_output,
+      entry.seo_analysis, entry.fact_check_final,
+      entry.optimized_description || '', entry.ranked_versions, entry.status,
     ]
 
     const ws = XLSX.utils.aoa_to_sheet([headers, row])
     ws['!cols'] = headers.map(() => ({ wch: 30 }))
-
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Attraction Pipeline')
     XLSX.writeFile(wb, `rockstary-attraction-${entry.event_id}.xlsx`)
@@ -238,9 +229,13 @@ export default function AttractionDetailPage() {
     return value && value.trim() !== '' ? 'done' : 'pending'
   }
 
-  const completedCount = STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
-  const totalSteps = STEPS_CONFIG.length
+  const completedCount = ATTRACTIONS_STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
+  const totalSteps = ATTRACTIONS_STEPS_CONFIG.length
   const canRunAI = (field: string) => AI_STEPS.includes(field)
+
+  // Check if keywords step is needed
+  const hasKeywords = !!(entry.keywords_list && entry.keywords_list.trim())
+  const hasDescription = !!(entry.original_description && entry.original_description.trim())
 
   return (
     <div className="p-8 max-w-5xl">
@@ -253,10 +248,11 @@ export default function AttractionDetailPage() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <span className="bg-pl-gold/10 text-pl-gold font-mono font-bold px-3 py-1 rounded-lg text-sm">
+            <span className="bg-emerald-500/10 text-emerald-400 font-mono font-bold px-3 py-1 rounded-lg text-sm">
               #{entry.event_id}
             </span>
             <h1 className="text-xl font-bold text-white">{entry.event_title}</h1>
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider">Attraction</span>
           </div>
           <p className="text-sm text-pl-muted mt-1">{entry.event_url}</p>
         </div>
@@ -264,9 +260,9 @@ export default function AttractionDetailPage() {
           {/* Run All AI Button */}
           <button
             onClick={runAllAISteps}
-            disabled={runningAll || !entry.original_description}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            title={!entry.original_description ? 'Add original description first' : 'Run all AI steps sequentially'}
+            disabled={runningAll || !hasDescription}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            title={!hasDescription ? 'Add original description first' : 'Run all AI steps (keywords + optimization pipeline)'}
           >
             {runningAll ? (
               <>
@@ -302,7 +298,7 @@ export default function AttractionDetailPage() {
             onClick={deleteEntry}
             disabled={deletingEntry}
             className="p-2 rounded-lg text-pl-muted hover:text-red-400 hover:bg-red-600/10 transition-all"
-            title="Remove event"
+            title="Remove attraction"
           >
             {deletingEntry ? (
               <div className="w-5 h-5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
@@ -315,13 +311,13 @@ export default function AttractionDetailPage() {
         </div>
       </div>
 
-      {/* Fetch Description Banner - shows when original_description is empty */}
-      {!entry.original_description && entry.event_url && (
+      {/* Fetch Description Banner */}
+      {!hasDescription && entry.event_url && (
         <div className="pl-card p-4 mb-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-4">
           <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-sm text-amber-200 flex-1">Original description is needed before AI can process. Fetch it from the event URL or enter it manually in Step S1.</p>
+          <p className="text-sm text-amber-200 flex-1">Original description is needed before AI can process. Fetch it from the URL or enter it manually in Step S1.</p>
           <button
             onClick={fetchDescriptionFromURL}
             disabled={fetchingDesc}
@@ -344,15 +340,44 @@ export default function AttractionDetailPage() {
         </div>
       )}
 
+      {/* Keywords Needed Banner */}
+      {hasDescription && !hasKeywords && (
+        <div className="pl-card p-4 mb-4 border-emerald-500/30 bg-emerald-500/5 flex items-center gap-4">
+          <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <p className="text-sm text-emerald-200 flex-1">Generate keywords next! The keyword list drives the optimization of all subsequent steps.</p>
+          <button
+            onClick={() => runAIStep('keywords_list')}
+            disabled={aiProcessing['keywords_list']}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all flex-shrink-0"
+          >
+            {aiProcessing['keywords_list'] ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Generate Keywords
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div className="pl-card p-4 mb-8">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-pl-text-dim">Pipeline Progress</span>
-          <span className="text-sm font-medium text-pl-gold">{completedCount}/{totalSteps} steps</span>
+          <span className="text-sm text-pl-text-dim">Attraction Pipeline Progress</span>
+          <span className="text-sm font-medium text-emerald-400">{completedCount}/{totalSteps} steps</span>
         </div>
         <div className="w-full h-3 bg-pl-dark rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-pl-gold-dark via-pl-gold to-pl-gold-light rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 rounded-full transition-all duration-500"
             style={{ width: `${(completedCount / totalSteps) * 100}%` }}
           />
         </div>
@@ -360,15 +385,17 @@ export default function AttractionDetailPage() {
 
       {/* Steps */}
       <div className="space-y-3">
-        {STEPS_CONFIG.map((step, idx) => {
+        {ATTRACTIONS_STEPS_CONFIG.map((step, idx) => {
           const status = getStepStatus(step.field)
           const isActive = activeStep === step.step
           const value = getFieldValue(step.field)
           const isAIStep = canRunAI(step.field)
           const isProcessing = aiProcessing[step.field]
+          const isKeywordsStep = step.field === 'keywords_list'
+          const isOptimizedStep = step.field === 'optimized_description'
 
           return (
-            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-pl-gold/40' : ''} ${isProcessing ? 'border-purple-500/40' : ''}`}>
+            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-emerald-500/40' : ''} ${isProcessing ? 'border-emerald-500/40' : ''} ${isKeywordsStep ? 'ring-1 ring-emerald-500/20' : ''}`}>
               {/* Step Header */}
               <div className="flex items-center">
                 <button
@@ -385,13 +412,13 @@ export default function AttractionDetailPage() {
                   {/* Step number */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                     isProcessing
-                      ? 'bg-purple-500/20 text-purple-400'
+                      ? 'bg-emerald-500/20 text-emerald-400'
                       : status === 'done'
                         ? 'bg-pl-success/20 text-pl-success'
                         : 'bg-pl-muted/20 text-pl-muted'
                   }`}>
                     {isProcessing ? (
-                      <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
                     ) : status === 'done' ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -402,17 +429,19 @@ export default function AttractionDetailPage() {
                   {/* Step info */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-pl-gold/60">Step {step.step}</span>
-                      <span className="text-xs text-pl-muted">Col {step.column}</span>
+                      <span className="text-xs font-mono text-emerald-500/60">Step {step.step}</span>
+                      {step.column !== '-' && <span className="text-xs text-pl-muted">Col {step.column}</span>}
                       {step.optional && <span className="text-[10px] bg-pl-muted/20 text-pl-muted px-2 py-0.5 rounded-full">Optional</span>}
-                      {isAIStep && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">AI</span>}
+                      {isAIStep && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">AI</span>}
+                      {isKeywordsStep && <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">SEO Keywords</span>}
+                      {isOptimizedStep && <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full">Final Output</span>}
                     </div>
                     <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
                   </div>
 
                   {/* Status */}
                   <span className={`px-2 py-1 rounded text-xs ${
-                    isProcessing ? 'bg-purple-500/20 text-purple-400' :
+                    isProcessing ? 'bg-emerald-500/20 text-emerald-400' :
                     status === 'done' ? 'badge-done' : 'badge-pending'
                   }`}>
                     {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
@@ -429,7 +458,7 @@ export default function AttractionDetailPage() {
                   <button
                     onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
                     disabled={isProcessing || runningAll}
-                    className="mr-4 p-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition-all disabled:opacity-30"
+                    className="mr-4 p-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 hover:text-emerald-300 transition-all disabled:opacity-30"
                     title={`Run AI for ${step.label}`}
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -445,7 +474,10 @@ export default function AttractionDetailPage() {
                   <textarea
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    placeholder={`Enter ${step.label} content...`}
+                    placeholder={isKeywordsStep
+                      ? 'Enter keywords (comma-separated) or click "Run AI" to auto-generate from the description...'
+                      : `Enter ${step.label} content...`
+                    }
                     className="pl-input min-h-[200px] resize-y font-mono text-sm"
                   />
                   <div className="flex items-center gap-3 mt-3">
@@ -462,7 +494,7 @@ export default function AttractionDetailPage() {
                       <button
                         onClick={() => runAIStep(step.field)}
                         disabled={isProcessing || runningAll}
-                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
+                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all"
                       >
                         {isProcessing ? (
                           <>
