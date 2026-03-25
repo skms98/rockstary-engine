@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { STEP_PROMPTS, STEP_FIELD_TO_PROMPT, type StepContext } from '@/lib/ai-prompts'
+import { ATTRACTION_PROMPTS, ATTRACTION_FIELD_TO_PROMPT, type AttractionStepContext } from '@/lib/ai-prompts-attractions'
 import { createPLClient } from '@/lib/pl-supabase'
 
 // Server-side only route - credentials never exposed to browser
@@ -13,7 +14,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is authenticated via Rockstary auth
-    // Create client with user's JWT so RLS policies (auth.uid() = user_id) work correctly
     const supabaseAuth = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,58 +36,120 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 })
     }
 
-    // Check if the step has a prompt
-    const promptKey = STEP_FIELD_TO_PROMPT[stepField]
-    if (!promptKey || !STEP_PROMPTS[promptKey]) {
-      return NextResponse.json({ error: `No AI prompt available for step: ${stepField}` }, { status: 400 })
-    }
+    // Detect mode and use the right prompt system
+    const isAttraction = entry.mode === 'attractions'
+    let prompt: string
 
-    // Build context from entry data
-    const ctx: StepContext = {
-      eventTitle: entry.event_title || '',
-      eventUrl: entry.event_url || '',
-      originalDescription: entry.original_description || '',
-      recommendedVersions: entry.recommended_versions || '',
-      factCheckScores: entry.fact_check_scores || '',
-      duplicateAnalysis: entry.duplicate_analysis || '',
-      abTests: entry.ab_tests || '',
-      organiserTriggerRisk: entry.organiser_trigger_risk || '',
-      tovScore: entry.tov_score || '',
-      grammarStyle: entry.grammar_style || '',
-      reviewerOutput: entry.reviewer_output || '',
-      resolverOutput: entry.resolver_output || '',
-      prevOriginalDescription: entry.prev_original_description || '',
-      seoAnalysis: entry.seo_analysis || '',
-      factCheckFinal: entry.fact_check_final || '',
-      rankedVersions: entry.ranked_versions || '',
-    }
+    if (isAttraction) {
+      // ATTRACTIONS MODE â keyword-optimized pipeline
+      const attractionPromptKey = ATTRACTION_FIELD_TO_PROMPT[stepField]
+      if (!attractionPromptKey || !ATTRACTION_PROMPTS[attractionPromptKey]) {
+        return NextResponse.json({ error: `No attraction AI prompt available for step: ${stepField}` }, { status: 400 })
+      }
 
-    // Check prerequisites
-    if (stepField === 'recommended_versions' && !ctx.originalDescription) {
-      return NextResponse.json({
-        error: 'Original description (Step 1) is required before running this step'
-      }, { status: 400 })
-    }
+      const actx: AttractionStepContext = {
+        attractionName: entry.event_title || '',
+        attractionUrl: entry.event_url || '',
+        originalDescription: entry.original_description || '',
+        keywordsList: entry.keywords_list || '',
+        recommendedVersions: entry.recommended_versions || '',
+        factCheckScores: entry.fact_check_scores || '',
+        duplicateAnalysis: entry.duplicate_analysis || '',
+        tovScore: entry.tov_score || '',
+        grammarStyle: entry.grammar_style || '',
+        reviewerOutput: entry.reviewer_output || '',
+        resolverOutput: entry.resolver_output || '',
+        prevOriginalDescription: entry.prev_original_description || '',
+        seoAnalysis: entry.seo_analysis || '',
+        factCheckFinal: entry.fact_check_final || '',
+        optimizedDescription: entry.optimized_description || '',
+        rankedVersions: entry.ranked_versions || '',
+      }
 
-    if (['fact_check_scores', 'duplicate_analysis', 'ab_tests', 'organiser_trigger_risk', 'tov_score', 'grammar_style'].includes(stepField)) {
-      if (!ctx.originalDescription || !ctx.recommendedVersions) {
+      // Check prerequisites for attractions
+      if (stepField === 'keywords_list' && !actx.originalDescription) {
         return NextResponse.json({
-          error: 'Original description and Recommended versions are required before running this step'
+          error: 'Original description is required before generating keywords'
         }, { status: 400 })
       }
+
+      if (stepField === 'recommended_versions') {
+        if (!actx.originalDescription) {
+          return NextResponse.json({
+            error: 'Original description is required before creating optimized versions'
+          }, { status: 400 })
+        }
+        if (!actx.keywordsList) {
+          return NextResponse.json({
+            error: 'Keywords list is required before creating keyword-optimized versions. Run the Keywords step first.'
+          }, { status: 400 })
+        }
+      }
+
+      if (['fact_check_scores', 'duplicate_analysis', 'tov_score', 'grammar_style'].includes(stepField)) {
+        if (!actx.originalDescription || !actx.recommendedVersions) {
+          return NextResponse.json({
+            error: 'Original description and Keyword-Optimized Versions are required before running this step'
+          }, { status: 400 })
+        }
+      }
+
+      prompt = ATTRACTION_PROMPTS[attractionPromptKey](actx)
+
+    } else {
+      // EVENTS MODE â original 13-step pipeline
+      const promptKey = STEP_FIELD_TO_PROMPT[stepField]
+      if (!promptKey || !STEP_PROMPTS[promptKey]) {
+        return NextResponse.json({ error: `No AI prompt available for step: ${stepField}` }, { status: 400 })
+      }
+
+      const ctx: StepContext = {
+        eventTitle: entry.event_title || '',
+        eventUrl: entry.event_url || '',
+        originalDescription: entry.original_description || '',
+        recommendedVersions: entry.recommended_versions || '',
+        factCheckScores: entry.fact_check_scores || '',
+        duplicateAnalysis: entry.duplicate_analysis || '',
+        abTests: entry.ab_tests || '',
+        organiserTriggerRisk: entry.organiser_trigger_risk || '',
+        tovScore: entry.tov_score || '',
+        grammarStyle: entry.grammar_style || '',
+        reviewerOutput: entry.reviewer_output || '',
+        resolverOutput: entry.resolver_output || '',
+        prevOriginalDescription: entry.prev_original_description || '',
+        seoAnalysis: entry.seo_analysis || '',
+        factCheckFinal: entry.fact_check_final || '',
+        rankedVersions: entry.ranked_versions || '',
+      }
+
+      // Check prerequisites for events
+      if (stepField === 'recommended_versions' && !ctx.originalDescription) {
+        return NextResponse.json({
+          error: 'Original description (Step 1) is required before running this step'
+        }, { status: 400 })
+      }
+
+      if (['fact_check_scores', 'duplicate_analysis', 'ab_tests', 'organiser_trigger_risk', 'tov_score', 'grammar_style'].includes(stepField)) {
+        if (!ctx.originalDescription || !ctx.recommendedVersions) {
+          return NextResponse.json({
+            error: 'Original description and Recommended versions are required before running this step'
+          }, { status: 400 })
+        }
+      }
+
+      prompt = STEP_PROMPTS[promptKey](ctx)
     }
 
-    // Generate the prompt
-    const prompt = STEP_PROMPTS[promptKey](ctx)
-
     // Call AI via PL Supabase edge function (primary)
-    // PL credentials are server-side only via Vercel env vars (PL_SUPABASE_URL, PL_SUPABASE_SERVICE_KEY)
     let aiResult: string
+    const systemMessage = isAttraction
+      ? 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
+      : 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.'
 
     try {
       const plClient = createPLClient()
       const { data, error } = await plClient.functions.invoke('ai-process', {
-        body: { prompt, stepField, eventTitle: ctx.eventTitle }
+        body: { prompt, stepField, eventTitle: entry.event_title || '' }
       })
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
@@ -107,7 +169,7 @@ export async function POST(request: NextRequest) {
             model: 'gpt-4o',
             max_tokens: 4096,
             messages: [
-              { role: 'system', content: 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.' },
+              { role: 'system', content: systemMessage },
               { role: 'user', content: prompt },
             ],
           }),
@@ -130,6 +192,7 @@ export async function POST(request: NextRequest) {
             model: 'claude-sonnet-4-20250514',
             max_tokens: 4096,
             messages: [{ role: 'user', content: prompt }],
+            system: systemMessage,
           }),
         })
         if (!aiResponse.ok) {
@@ -168,4 +231,4 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
-      }
+}
