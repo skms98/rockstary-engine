@@ -13,9 +13,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is authenticated via Rockstary auth
+    // Create client with user's JWT so RLS policies (auth.uid() = user_id) work correctly
     const supabaseAuth = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${authToken}` } } }
     )
 
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(authToken)
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Load the entry from Rockstary DB
+    // Load the entry from Rockstary DB (RLS will filter to user's own entries)
     const { data: entry, error: fetchError } = await supabaseAuth
       .from('content_entries')
       .select('*')
@@ -166,4 +168,4 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
-}
+      }
