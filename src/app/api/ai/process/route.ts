@@ -78,70 +78,68 @@ export async function POST(request: NextRequest) {
     // Generate the prompt
     const prompt = STEP_PROMPTS[promptKey](ctx)
 
-    // Call AI - supports OpenAI (primary) or Anthropic (fallback)
-    const openaiKey = process.env.OPENAI_API_KEY
-    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    // Call AI via PL Supabase edge function (primary)
+    // PL credentials are server-side only via Vercel env vars (PL_SUPABASE_URL, PL_SUPABASE_SERVICE_KEY)
     let aiResult: string
 
-    if (openaiKey) {
-      // Use OpenAI ChatGPT API
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.' },
-            { role: 'user', content: prompt },
-          ],
-        }),
+    try {
+      const plClient = createPLClient()
+      const { data, error } = await plClient.functions.invoke('ai-process', {
+        body: { prompt, stepField, eventTitle: ctx.eventTitle }
       })
+      if (error) throw error
+      aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
+    } catch (plError: any) {
+      // If PL edge function fails, try direct OpenAI/Anthropic as fallback
+      const openaiKey = process.env.OPENAI_API_KEY
+      const anthropicKey = process.env.ANTHROPIC_API_KEY
 
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `OpenAI API error: ${errText}` }, { status: 500 })
-      }
-
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
-    } else if (anthropicKey) {
-      // Fallback: Use Anthropic Claude API
-      const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': anthropicKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      })
-
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `Anthropic API error: ${errText}` }, { status: 500 })
-      }
-
-      const aiData = await aiResponse.json()
-      aiResult = aiData.content?.[0]?.text || 'No response from AI'
-    } else {
-      // No API key configured
-      try {
-        const plClient = createPLClient()
-        const { data, error } = await plClient.functions.invoke('ai-process', {
-          body: { prompt, stepField }
+      if (openaiKey) {
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 4096,
+            messages: [
+              { role: 'system', content: 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.' },
+              { role: 'user', content: prompt },
+            ],
+          }),
         })
-        if (error) throw error
-        aiResult = data?.result || 'No response from PL AI'
-      } catch {
-        aiResult = `[AI Processing Required]\n\nStep: ${stepField}\nEvent: ${ctx.eventTitle}\n\nTo enable AI processing, add OPENAI_API_KEY or ANTHROPIC_API_KEY in Vercel Environment Variables.\n\nPrompt preview:\n${prompt.substring(0, 500)}...`
+        if (!aiResponse.ok) {
+          const errText = await aiResponse.text()
+          return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+        }
+        const aiData = await aiResponse.json()
+        aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+      } else if (anthropicKey) {
+        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        })
+        if (!aiResponse.ok) {
+          const errText = await aiResponse.text()
+          return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+        }
+        const aiData = await aiResponse.json()
+        aiResult = aiData.content?.[0]?.text || 'No response from AI'
+      } else {
+        return NextResponse.json({
+          error: `PL AI edge function error: ${plError?.message || 'Unknown error'}. No fallback API keys configured.`
+        }, { status: 500 })
       }
     }
 
