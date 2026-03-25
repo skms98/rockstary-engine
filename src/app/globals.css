@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --pl-dark: #0B0E17;
+  --pl-navy: #121829;
+  --pl-card: #1A1F35;
+  --pl-border: #2A3050;
+  --pl-gold: #E8A624;
+  --pl-gold-light: #F0C050;
+}
+
+body {
+  background-color: var(--pl-dark);
+  color: #E5E7EB;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--pl-dark); }
+::-webkit-scrollbar-thumb { background: var(--pl-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--pl-gold); }
+
+/* Gold shimmer animation */
+@keyframes goldShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-shimmer {
+  background: linear-gradient(90deg, #E8A624, #F0C050, #E8A624, #C88B15, #E8A624);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldShimmer 3s linear infinite;
+}
+
+/* Step progress line */
+.step-line {
+  background: linear-gradient(180deg, var(--pl-gold) 0%, var(--pl-border) 100%);
+}
+
+/* Card hover effect */
+.pl-card {
+  @apply bg-pl-card border border-pl-border rounded-xl transition-all duration-300;
+}
+.pl-card:hover {
+  @apply border-pl-gold/30 shadow-lg shadow-pl-gold/5;
+}
+
+/* Input styling */
+.pl-input {
+  @apply w-full bg-pl-navy border border-pl-border rounded-lg px-4 py-3 text-pl-text
+         placeholder:text-pl-muted focus:outline-none focus:border-pl-gold/50
+         focus:ring-1 focus:ring-pl-gold/30 transition-all;
+}
+
+/* Button styles */
+.pl-btn-primary {
+  @apply bg-pl-gold hover:bg-pl-gold-light text-pl-dark font-semibold px-6 py-3
+         rounded-lg transition-all duration-200 shadow-lg shadow-pl-gold/20
+         hover:shadow-pl-gold/40 active:scale-[0.98];
+}
+.pl-btn-secondary {
+  @apply bg-pl-card border border-pl-border hover:border-pl-gold/40 text-pl-text
+         font-medium px-6 py-3 rounded-lg transition-all duration-200;
+}
+
+/* Status badges */
+.badge-pending { @apply bg-pl-muted/20 text-pl-muted; }
+.badge-processing { @apply bg-pl-accent/20 text-pl-accent-light; }
+.badge-done { @apply bg-pl-success/20 text-pl-success; }
+.badge-error { @apply bg-pl-danger/20 text-pl-danger; }
