@@ -39,7 +39,10 @@ export default function LoginPage() {
           }
         })
         if (error) throw error
-        setMessage('Check your email for a confirmation link!')
+        // Auto sign-in after registration (email auto-confirmed via DB trigger)
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) throw signInError
+        router.push('/dashboard/events')
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
