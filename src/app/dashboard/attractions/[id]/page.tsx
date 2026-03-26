@@ -55,13 +55,13 @@ function FormattedContent({ text }: { text: string }) {
       return
     }
 
-    // Bullet points
-    if (trimmed.startsWith('- ') || trimmed.startsWith('â¢ ') || trimmed.startsWith('* ')) {
-      const content = trimmed.slice(2)
+    // Bullet points â match -, â¢, *, â, âº, â¸, â¦, â, â, â, â¬¥, â¬ and any non-alphanumeric single-char prefix followed by space
+    const bulletMatch = trimmed.match(/^(?:[-â¢*ââºâ¸â¦ââââ¬¥â¬â§â¶â¦¿ââ£â¡â]|\p{So}|\p{Sk})\s+(.*)/u)
+    if (bulletMatch) {
       elements.push(
         <div key={i} className="flex gap-2 ml-2 my-0.5">
           <span className="text-emerald-500/60 mt-0.5 flex-shrink-0">â¢</span>
-          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(content)}</span>
+          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(bulletMatch[1])}</span>
         </div>
       )
       return
@@ -747,4 +747,3 @@ export default function AttractionDetailPage() {
     </div>
   )
 }
-
