@@ -9,184 +9,6 @@ import { ATTRACTION_AI_STEPS } from '@/lib/ai-prompts-attractions'
 // AI-processable step fields for attractions
 const AI_STEPS = ATTRACTION_AI_STEPS
 
-// Simple markdown-like renderer for AI output
-function FormattedContent({ text }: { text: string }) {
-  if (!text) return <p className="text-pl-muted italic text-sm">No content yet</p>
-
-  const lines = text.split('\n')
-  const elements: JSX.Element[] = []
-
-  lines.forEach((line, i) => {
-    const trimmed = line.trim()
-    if (!trimmed) {
-      elements.push(<div key={i} className="h-2" />)
-      return
-    }
-
-    // Headers
-    if (trimmed.startsWith('### ')) {
-      elements.push(
-        <h4 key={i} className="text-sm font-semibold text-emerald-400 mt-3 mb-1">
-          {trimmed.slice(4)}
-        </h4>
-      )
-      return
-    }
-    if (trimmed.startsWith('## ')) {
-      elements.push(
-        <h3 key={i} className="text-sm font-bold text-emerald-400 mt-4 mb-1.5">
-          {trimmed.slice(3)}
-        </h3>
-      )
-      return
-    }
-    if (trimmed.startsWith('# ')) {
-      elements.push(
-        <h2 key={i} className="text-base font-bold text-white mt-4 mb-2">
-          {trimmed.slice(2)}
-        </h2>
-      )
-      return
-    }
-
-    // Horizontal rule
-    if (/^[-=_]{3,}$/.test(trimmed)) {
-      elements.push(<hr key={i} className="border-pl-border my-3" />)
-      return
-    }
-
-    // Bullet points â match -, â¢, *, â, âº, â¸, â¦, â, â, â, â¬¥, â¬ and any non-alphanumeric single-char prefix followed by space
-    const bulletMatch = trimmed.match(/^(?:[-â¢*ââºâ¸â¦ââââ¬¥â¬â§â¶â¦¿ââ£â¡â]|\p{So}|\p{Sk})\s+(.*)/u)
-    if (bulletMatch) {
-      elements.push(
-        <div key={i} className="flex gap-2 ml-2 my-0.5">
-          <span className="text-emerald-500/60 mt-0.5 flex-shrink-0">â¢</span>
-          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(bulletMatch[1])}</span>
-        </div>
-      )
-      return
-    }
-
-    // Numbered list
-    const numMatch = trimmed.match(/^(\d+)[.)]\s+(.*)/)
-    if (numMatch) {
-      elements.push(
-        <div key={i} className="flex gap-2 ml-2 my-0.5">
-          <span className="text-emerald-500/60 font-mono text-xs mt-0.5 flex-shrink-0 w-5 text-right">{numMatch[1]}.</span>
-          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(numMatch[2])}</span>
-        </div>
-      )
-      return
-    }
-
-    // Score lines
-    const scoreMatch = trimmed.match(/^(Score|Rating|Grade|Risk|Result|Verdict|Overall|Total|Final|Keyword|Density)[:\s]+(.+)/i)
-    if (scoreMatch) {
-      elements.push(
-        <div key={i} className="flex items-center gap-2 my-1.5 px-3 py-1.5 rounded-lg bg-pl-navy/60 border border-pl-border/50">
-          <span className="text-xs font-semibold text-pl-text-dim uppercase tracking-wider">{scoreMatch[1]}</span>
-          <span className="text-sm font-bold text-emerald-400">{scoreMatch[2]}</span>
-        </div>
-      )
-      return
-    }
-
-    // Version labels
-    const versionMatch = trimmed.match(/^(Version\s+[A-Z0-9]+|Option\s+\d+|Variant\s+\d+)[:\s]+(.*)$/i)
-    if (versionMatch) {
-      elements.push(
-        <div key={i} className="mt-3 mb-1">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded mb-1">
-            {versionMatch[1]}
-          </span>
-          {versionMatch[2] && (
-            <p className="text-sm text-pl-text-dim leading-relaxed ml-1">{renderInline(versionMatch[2])}</p>
-          )}
-        </div>
-      )
-      return
-    }
-
-    // Keyword tags (comma-separated keywords line)
-    if (trimmed.includes(',') && trimmed.split(',').length >= 3 && trimmed.split(',').every(k => k.trim().split(' ').length <= 4)) {
-      const keywords = trimmed.split(',').map(k => k.trim()).filter(Boolean)
-      elements.push(
-        <div key={i} className="flex flex-wrap gap-1.5 my-2">
-          {keywords.map((kw, ki) => (
-            <span key={ki} className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              {kw}
-            </span>
-          ))}
-        </div>
-      )
-      return
-    }
-
-    // Regular paragraph
-    elements.push(
-      <p key={i} className="text-sm text-pl-text-dim leading-relaxed my-0.5">
-        {renderInline(trimmed)}
-      </p>
-    )
-  })
-
-  return <div className="space-y-0">{elements}</div>
-}
-
-// Render inline formatting: **bold**, *italic*, `code`
-function renderInline(text: string): (string | JSX.Element)[] {
-  const parts: (string | JSX.Element)[] = []
-  let remaining = text
-  let key = 0
-
-  while (remaining.length > 0) {
-    const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
-    const codeMatch = remaining.match(/`(.+?)`/)
-    const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/)
-
-    let earliest: { match: RegExpMatchArray; type: string } | null = null
-    for (const [m, type] of [[boldMatch, 'bold'], [codeMatch, 'code'], [italicMatch, 'italic']] as const) {
-      if (m && m.index !== undefined) {
-        if (!earliest || m.index < earliest.match.index!) {
-          earliest = { match: m, type }
-        }
-      }
-    }
-
-    if (!earliest) {
-      parts.push(remaining)
-      break
-    }
-
-    const { match, type } = earliest
-    const idx = match.index!
-
-    if (idx > 0) parts.push(remaining.slice(0, idx))
-
-    if (type === 'bold') {
-      parts.push(<strong key={key++} className="text-white font-semibold">{match[1]}</strong>)
-    } else if (type === 'code') {
-      parts.push(<code key={key++} className="text-xs bg-pl-dark px-1.5 py-0.5 rounded font-mono text-emerald-400/80">{match[1]}</code>)
-    } else if (type === 'italic') {
-      parts.push(<em key={key++} className="text-pl-text-dim/80">{match[1]}</em>)
-    }
-
-    remaining = remaining.slice(idx + match[0].length)
-  }
-
-  return parts
-}
-
-// Content preview for collapsed steps
-function ContentPreview({ text, maxLength = 120 }: { text: string; maxLength?: number }) {
-  if (!text || !text.trim()) return null
-  const clean = text.replace(/\n+/g, ' ').replace(/[#*_`]+/g, '').replace(/\s+/g, ' ').trim()
-  const preview = clean.length > maxLength ? clean.slice(0, maxLength) + '...' : clean
-  return (
-    <p className="text-xs text-pl-muted/70 mt-1 line-clamp-1">{preview}</p>
-  )
-}
-
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -194,7 +16,6 @@ export default function AttractionDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeStep, setActiveStep] = useState<string | null>(null)
-  const [editMode, setEditMode] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [aiProcessing, setAiProcessing] = useState<Record<string, boolean>>({})
   const [runningAll, setRunningAll] = useState(false)
@@ -223,7 +44,7 @@ export default function AttractionDetailPage() {
       .eq('id', params.id)
     if (!error) {
       setEntry(prev => prev ? { ...prev, [field]: value } : null)
-      setEditMode(false)
+      setActiveStep(null)
     }
     setSaving(false)
   }
@@ -263,7 +84,6 @@ export default function AttractionDetailPage() {
         setEntry(prev => prev ? { ...prev, [stepField]: data.result, status: 'in_progress' } : null)
         if (activeStep) {
           setEditValue(data.result)
-          setEditMode(false) // Show formatted result
         }
       } else {
         alert(`AI Error: ${data.error}`)
@@ -283,6 +103,11 @@ export default function AttractionDetailPage() {
 
     for (const stepField of AI_STEPS) {
       if (!entry?.original_description) continue
+      // keywords_list needs original_description
+      // recommended_versions needs keywords_list
+      if (stepField === 'recommended_versions' && !entry?.keywords_list && !(entry as any)?.keywords_list) {
+        // Run keywords first if not done
+      }
 
       setAiProcessing(prev => ({ ...prev, [stepField]: true }))
 
@@ -337,7 +162,6 @@ export default function AttractionDetailPage() {
         }
       } else if (data.queue_detected) {
         setActiveStep('S1')
-        setEditMode(true)
         setEditValue('')
         alert('The page is behind queue protection (Cloudflare). Please open the URL in your browser, copy the description text, and paste it into Step S1 below.')
       } else {
@@ -353,37 +177,117 @@ export default function AttractionDetailPage() {
   async function exportToExcel() {
     if (!entry) return
     const XLSX = await import('xlsx')
-
-    const headers = [
-      'Attraction ID', 'Attraction Name', 'URL', 'Page QA', 'Categories',
-      'Tags', 'Keywords List', 'Original Description',
-      'Keyword-Optimized Versions', 'Fact Check', 'Duplicate Analysis',
-      'TOV Score', 'Grammar & Style', 'Reviewer', 'Resolver',
-      'SEO Keyword Analysis', 'Fact Check (Final)', 'Optimized Description',
-      'Ranked Versions', 'Status'
-    ]
-
-    const row = [
-      entry.event_id, entry.event_title, entry.event_url,
-      entry.page_qa_comments, entry.categories, entry.tags,
-      entry.keywords_list || '', entry.original_description,
-      entry.recommended_versions, entry.fact_check_scores,
-      entry.duplicate_analysis, entry.tov_score,
-      entry.grammar_style, entry.reviewer_output, entry.resolver_output,
-      entry.seo_analysis, entry.fact_check_final,
-      entry.optimized_description || '', entry.ranked_versions, entry.status,
-    ]
-
-    const ws = XLSX.utils.aoa_to_sheet([headers, row])
-    ws['!cols'] = headers.map(() => ({ wch: 30 }))
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Attraction Pipeline')
+
+    // Parse the optimized_description into sections
+    const optimized = entry.optimized_description || ''
+    const sections: Record<string, string> = {}
+    const sectionPattern = /===\s*([^=]+?)\s*===/g
+    let match
+    const sectionNames: string[] = []
+    const sectionPositions: number[] = []
+    while ((match = sectionPattern.exec(optimized)) !== null) {
+      sectionNames.push(match[1].trim())
+      sectionPositions.push(match.index + match[0].length)
+    }
+    for (let i = 0; i < sectionNames.length; i++) {
+      const start = sectionPositions[i]
+      const end = i + 1 < sectionPositions.length ? optimized.lastIndexOf('===', sectionPositions[i + 1]) : optimized.length
+      sections[sectionNames[i].toUpperCase()] = optimized.substring(start, end).trim()
+    }
+
+    // Parse original description sections from original_description
+    const orig = entry.original_description || ''
+
+    // Build the reference-format rows: A=keywords+URL, B=section label, C=original, D=optimised
+    const rows: (string | null)[][] = []
+
+    // Row 1: Header + H1
+    rows.push(['Keywords can be combined with each other', 'Section 1 - Headline / H1', entry.event_title, ' ', entry.categories || null, entry.tags || null])
+    // Row 2: URL
+    rows.push([entry.event_url, null, null, null, null, null])
+    // Row 3: Keywords + Teaser
+    rows.push([`keywords to include: \n\n${entry.keywords_list || ''}`, 'Section 2 - Teaser', null, sections['TEASER'] || null, null, null])
+    // Row 4: Icons
+    rows.push([null, 'Section 3 - Icons', null, null, null, null])
+    // Row 5: What to Expect header
+    rows.push([null, 'Section 5', 'What To Expect', 'What To Expect', null, null])
+    // Row 6: What to Expect content
+    rows.push([null, null, orig, sections['WHAT TO EXPECT'] || null, null, null])
+    // Row 7: CTA
+    rows.push([null, null, null, sections['CTA'] || 'Book your spot now and experience it for yourself.', null, null])
+    // Row 8: Highlights header
+    rows.push([null, 'Section 6', 'Highlights', 'Highlights', null, null])
+    // Row 9: Highlights content
+    rows.push([null, null, null, sections['HIGHLIGHTS'] || null, null, null])
+    // Row 10: blank
+    rows.push([null, null, null, null, null, null])
+    // Row 11: Inclusions header
+    rows.push([null, 'Section 7 ', "What\u2019s included in the ticket", "What\u2019s included in the ticket", null, null])
+    // Row 12: Inclusions content
+    rows.push([null, null, null, sections['INCLUSIONS'] || null, null, null])
+    // Row 13: Exclusions header
+    rows.push([null, null, 'Exclusions', 'Exclusions', null, null])
+    // Row 14: Exclusions content
+    rows.push([null, null, null, sections['EXCLUSIONS'] || null, null, null])
+    // Row 15: Timing header
+    rows.push([null, 'Section 8', 'Timing: ', 'Timing: ', null, null])
+    // Row 16: Timing content
+    rows.push([null, null, null, sections['TIMINGS'] || null, null, null])
+    // Row 17: Ticket info header
+    rows.push([null, 'Section 9', 'Ticket Information: ', 'Ticket Information: ', null, null])
+    // Row 18: Ticket info auto
+    rows.push([null, null, 'the price will be displayed automatically', 'the price will be displayed automatically', null, null])
+    // Row 19: Important info header
+    rows.push([null, 'Section 10', 'Important things to know before your visit', 'Important things to know before your visit', null, null])
+    // Row 20: Important info content
+    rows.push([null, null, null, sections['IMPORTANT THINGS TO KNOW'] || null, null, null])
+    // Row 21: Cancellation header
+    rows.push([null, null, 'Cancelation policy: ', 'Cancelation policy: ', null, null])
+    // Row 22: Cancellation content
+    rows.push([null, null, null, sections['CANCELLATION POLICY'] || null, null, null])
+    // Row 23: Location header
+    rows.push([null, 'Section 10 - Location + How To Get There', 'Address:', 'Address:', null, null])
+    // Row 24: Address content
+    rows.push([null, null, null, null, null, null])
+    // Row 25: Directions header
+    rows.push([null, null, 'How to get there:', 'How to get there:', null, null])
+    // Row 26+: Direction subsections
+    const directions = sections['DIRECTIONS'] || ''
+    const byCarMatch = directions.match(/By car:([\s\S]*?)(?=By taxi:|By public|$)/i)
+    const byTaxiMatch = directions.match(/By taxi:([\s\S]*?)(?=By car:|By public|$)/i)
+    const byPublicMatch = directions.match(/By public transportation:([\s\S]*?)(?=By car:|By taxi:|$)/i)
+    rows.push([null, null, 'By car: ', 'By car: ', null, null])
+    rows.push([null, null, null, byCarMatch ? byCarMatch[1].trim() : null, null, null])
+    rows.push([null, null, 'By taxi: ', 'By taxi: ', null, null])
+    rows.push([null, null, null, byTaxiMatch ? byTaxiMatch[1].trim() : null, null, null])
+    rows.push([null, null, 'By public transportation: ', 'By public transportation: ', null, null])
+    rows.push([null, null, null, byPublicMatch ? byPublicMatch[1].trim() : null, null, null])
+
+    // Add tagging JSON to E1 and reasoning to F1
+    if (entry.categories || entry.tags) {
+      rows[0][4] = JSON.stringify({
+        final_status: 'VALID',
+        domain: 'ATTRACTION',
+        primary_category: entry.categories?.split(',')[0]?.trim() || '',
+        tags: entry.tags?.split(',').map((t: string) => t.trim()) || [],
+      }, null, 2)
+      rows[0][5] = entry.page_qa_comments || ''
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+    ws['!cols'] = [{ wch: 45 }, { wch: 35 }, { wch: 50 }, { wch: 50 }, { wch: 40 }, { wch: 40 }]
+
+    // Truncate sheet name to 31 chars (Excel limit)
+    const sheetName = (entry.event_title || 'Attraction').substring(0, 31)
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+
     XLSX.writeFile(wb, `rockstary-attraction-${entry.event_id}.xlsx`)
   }
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-pl-gold/30 border-t-pl-gold rounded-full animate-spin" />
     </div>
   )
 
@@ -409,6 +313,7 @@ export default function AttractionDetailPage() {
   const totalSteps = ATTRACTIONS_STEPS_CONFIG.length
   const canRunAI = (field: string) => AI_STEPS.includes(field)
 
+  // Check if keywords step is needed
   const hasKeywords = !!(entry.keywords_list && entry.keywords_list.trim())
   const hasDescription = !!(entry.original_description && entry.original_description.trim())
 
@@ -432,6 +337,7 @@ export default function AttractionDetailPage() {
           <p className="text-sm text-pl-muted mt-1">{entry.event_url}</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Run All AI Button */}
           <button
             onClick={runAllAISteps}
             disabled={runningAll || !hasDescription}
@@ -569,18 +475,16 @@ export default function AttractionDetailPage() {
           const isOptimizedStep = step.field === 'optimized_description'
 
           return (
-            <div key={step.step} className={`pl-card overflow-hidden transition-all ${isActive ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : ''} ${isProcessing ? 'border-emerald-500/40 shadow-lg shadow-emerald-500/5' : ''} ${isKeywordsStep ? 'ring-1 ring-emerald-500/20' : ''}`}>
+            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-emerald-500/40' : ''} ${isProcessing ? 'border-emerald-500/40' : ''} ${isKeywordsStep ? 'ring-1 ring-emerald-500/20' : ''}`}>
               {/* Step Header */}
               <div className="flex items-center">
                 <button
                   onClick={() => {
                     if (isActive) {
                       setActiveStep(null)
-                      setEditMode(false)
                     } else {
                       setActiveStep(step.step)
                       setEditValue(value)
-                      setEditMode(!value) // Auto-enter edit mode if empty
                     }
                   }}
                   className="flex-1 flex items-center gap-4 p-4 text-left hover:bg-pl-card/50 transition-colors"
@@ -603,7 +507,7 @@ export default function AttractionDetailPage() {
                   </div>
 
                   {/* Step info */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-emerald-500/60">Step {step.step}</span>
                       {step.column !== '-' && <span className="text-xs text-pl-muted">Col {step.column}</span>}
@@ -613,30 +517,23 @@ export default function AttractionDetailPage() {
                       {isOptimizedStep && <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full">Final Output</span>}
                     </div>
                     <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
-                    {/* Content preview when collapsed */}
-                    {!isActive && <ContentPreview text={value} />}
                   </div>
 
-                  {/* Status + char count */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {value && !isActive && (
-                      <span className="text-[10px] text-pl-muted font-mono">{value.length.toLocaleString()}c</span>
-                    )}
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      isProcessing ? 'bg-emerald-500/20 text-emerald-400' :
-                      status === 'done' ? 'badge-done' : 'badge-pending'
-                    }`}>
-                      {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
-                    </span>
-                  </div>
+                  {/* Status */}
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    isProcessing ? 'bg-emerald-500/20 text-emerald-400' :
+                    status === 'done' ? 'badge-done' : 'badge-pending'
+                  }`}>
+                    {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
+                  </span>
 
                   {/* Expand icon */}
-                  <svg className={`w-5 h-5 text-pl-muted transition-transform flex-shrink-0 ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`w-5 h-5 text-pl-muted transition-transform ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
-                {/* AI Run Button */}
+                {/* AI Run Button (outside the expand button) */}
                 {isAIStep && !isActive && (
                   <button
                     onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
@@ -651,43 +548,42 @@ export default function AttractionDetailPage() {
                 )}
               </div>
 
-              {/* Expanded Content */}
+              {/* Expanded Editor */}
               {isActive && (
-                <div className="border-t border-pl-border">
-                  {/* Toolbar */}
-                  <div className="flex items-center gap-2 px-4 py-2 bg-pl-dark/40 border-b border-pl-border/50">
+                <div className="border-t border-pl-border p-4 bg-pl-dark/30">
+                  <textarea
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    placeholder={isKeywordsStep
+                      ? 'Enter keywords (comma-separated) or click "Run AI" to auto-generate from the description...'
+                      : `Enter ${step.label} content...`
+                    }
+                    className="pl-input min-h-[200px] resize-y font-mono text-sm"
+                  />
+                  <div className="flex items-center gap-3 mt-3">
                     <button
-                      onClick={() => { setEditMode(false) }}
-                      className={`text-xs px-3 py-1 rounded-md transition-all ${!editMode ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-pl-muted hover:text-white'}`}
+                      onClick={() => saveField(step.field, editValue)}
+                      disabled={saving}
+                      className="pl-btn-primary text-sm flex items-center gap-2"
                     >
-                      View
+                      {saving ? (
+                        <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
+                      ) : 'Save'}
                     </button>
-                    <button
-                      onClick={() => { setEditMode(true); setEditValue(value) }}
-                      className={`text-xs px-3 py-1 rounded-md transition-all ${editMode ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-pl-muted hover:text-white'}`}
-                    >
-                      Edit
-                    </button>
-                    <div className="flex-1" />
-                    {value && (
-                      <span className="text-[10px] text-pl-muted font-mono">
-                        {value.length.toLocaleString()} chars Â· {value.split('\n').length} lines
-                      </span>
-                    )}
                     {isAIStep && (
                       <button
                         onClick={() => runAIStep(step.field)}
                         disabled={isProcessing || runningAll}
-                        className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all"
+                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all"
                       >
                         {isProcessing ? (
                           <>
-                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Running...
                           </>
                         ) : (
                           <>
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             Run AI
@@ -695,47 +591,13 @@ export default function AttractionDetailPage() {
                         )}
                       </button>
                     )}
-                  </div>
-
-                  {/* Content Area */}
-                  <div className="p-4 bg-pl-dark/20">
-                    {editMode ? (
-                      <>
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          placeholder={isKeywordsStep
-                            ? 'Enter keywords (comma-separated) or click "Run AI" to auto-generate from the description...'
-                            : `Enter ${step.label} content...`
-                          }
-                          className="pl-input min-h-[200px] resize-y font-mono text-sm"
-                        />
-                        <div className="flex items-center gap-3 mt-3">
-                          <button
-                            onClick={() => saveField(step.field, editValue)}
-                            disabled={saving}
-                            className="pl-btn-primary text-sm flex items-center gap-2"
-                          >
-                            {saving ? (
-                              <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Save
-                              </>
-                            )}
-                          </button>
-                          <button onClick={() => { setEditMode(false) }} className="pl-btn-secondary text-sm">
-                            Cancel
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        <FormattedContent text={value} />
-                      </div>
+                    <button onClick={() => setActiveStep(null)} className="pl-btn-secondary text-sm">
+                      Cancel
+                    </button>
+                    {value && (
+                      <span className="text-xs text-pl-muted ml-auto">
+                        {value.length} characters
+                      </span>
                     )}
                   </div>
                 </div>
