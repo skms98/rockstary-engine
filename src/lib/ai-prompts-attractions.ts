@@ -49,32 +49,67 @@ Generate keywords in these categories:
 
 Format as a structured list with each category clearly labeled. Also provide a comma-separated flat list of ALL keywords at the end for easy copy-paste.`,
 
-  // Step S2: Keyword-Optimized Versions (replaces generic "recommended versions")
+  // Step S2: Keyword-Optimized Versions â structured section output
   recommended_versions: (ctx) => `You are a professional content writer for Platinumlist.net, specializing in attraction and experience descriptions.
 
-Write 3 keyword-optimized versions of this attraction description. Each version must:
-- Naturally incorporate keywords from the KEYWORDS LIST below
-- Follow the Platinumlist TOV: warm, inviting, confident, informative, action-oriented
-- Be written in ATTRACTION FORMAT (experience-focused, evergreen, not time-bound)
-- Highlight what visitors will SEE, DO, and FEEL
-- Include practical info (location hints, what to expect, who it's for)
-- Be between 200-500 words each
-- NOT sound like a generic event listing â this is a permanent attraction/experience
+Produce a STRUCTURED keyword-optimised attraction page. Each keyword from the list must be used EXACTLY ONCE, annotated as (keyword) [number].
 
 ATTRACTION: ${ctx.attractionName}
+URL: ${ctx.attractionUrl}
 
-ORIGINAL DESCRIPTION:
+ORIGINAL DESCRIPTION (source of truth â do NOT invent facts beyond this):
 ${ctx.originalDescription}
 
 KEYWORDS LIST:
 ${ctx.keywordsList}
 
-Provide exactly 3 versions:
-- Version A: Discovery angle â "what awaits you" (curiosity-driven, immersive)
-- Version B: Practical guide angle â "everything you need to know" (informative, helpful)
-- Version C: Emotional angle â "why you'll love it" (experience-focused, aspirational)
+RULES:
+- Keyword format: (keyword text) [number]. Example: (Burj Khalifa in Dubai) [1]
+- Prepositions may be added inside brackets for grammar flow
+- Keywords may be pluralised if grammar requires
+- Each keyword used exactly ONCE across the entire output
+- Max 2 keyword annotations per sentence
+- No same keyword in consecutive sentences
+- No em dashes. Use commas, full stops, semicolons.
+- No hype or superlatives (amazing, incredible, best, unforgettable, must-see)
+- Platinumlist B2C TOV: warm, inviting, informative, action-oriented, experience-focused
+- Active voice preferred. Sentences max 22-24 words.
+- UK English. Metric measurements.
 
-Each version should naturally weave in at least 8-10 keywords from the list without keyword stuffing. Bold the primary keywords on first use.`,
+OUTPUT SECTIONS (use === SECTION NAME === delimiters):
+
+=== TEASER ===
+13 words max, starts with action verb, describes the experience.
+
+=== WHAT TO EXPECT ===
+2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
+
+=== CTA ===
+One line: "Book your spot now and..."
+
+=== HIGHLIGHTS ===
+Exactly 4 lines. Each starts with present-tense action verb. Under 12 words. No adjective hype. Line-break separated. No bullets.
+
+=== INCLUSIONS ===
+From source only. Line-break separated. No bullets. If unavailable: null
+
+=== EXCLUSIONS ===
+From source only. Line-break separated. No bullets. If unavailable: null
+
+=== TIMINGS ===
+From source. If empty: "Timings vary by date. Check available sessions by pressing Select Tickets."
+
+=== IMPORTANT THINGS TO KNOW ===
+Practical info from source (preserve original wording, fix capitalisation only). End with: To check the (tickets) [n] and (price) [n], press "Select Tickets" on this page.
+
+=== CANCELLATION POLICY ===
+Use source policy verbatim or apply standard Platinumlist format. If unavailable: null
+
+=== DIRECTIONS ===
+By car: ...
+By taxi: ...
+By public transportation: ...
+If unavailable: null`,
 
   // Step S3: Fact Check
   fact_check_scores: (ctx) => `You are a fact-checking analyst for Platinumlist.net.
@@ -282,15 +317,20 @@ Verify:
 8. Final Fact Check Score (0-100) for each resolved version
 9. APPROVED / NOT APPROVED verdict`,
 
-  // Step S11: Optimized Final Description
+  // Step S11: Optimized Final Description â STRUCTURED SECTION OUTPUT
+  // This produces the master output matching the reference Excel format
   optimized_description: (ctx) => `You are the final production editor for Platinumlist.net attractions.
 
-Create the PUBLICATION-READY optimized description by taking the best resolved version and applying final polish.
+Your task is to produce a PUBLICATION-READY structured attraction page by combining the best resolved version with all analysis feedback.
 
 ATTRACTION: ${ctx.attractionName}
+URL: ${ctx.attractionUrl}
 
 TARGET KEYWORDS:
 ${ctx.keywordsList}
+
+ORIGINAL DESCRIPTION (source of truth):
+${ctx.originalDescription}
 
 RESOLVED VERSIONS:
 ${ctx.resolverOutput}
@@ -301,17 +341,70 @@ ${ctx.seoAnalysis}
 FACT CHECK RESULT:
 ${ctx.factCheckFinal}
 
-Instructions:
-1. Select the version that scored highest on BOTH fact check AND SEO
-2. Apply any final SEO improvements from the analysis (missing keywords, better placement)
-3. Ensure all facts are verified as accurate
-4. Format properly for web publication:
-   - Engaging opening line with primary keyword
-   - Short paragraphs (2-3 sentences max)
-   - Key details easy to scan
-   - Strong CTA at the end (book tickets, plan your visit)
-5. Ensure Platinumlist TOV is perfect
-6. Output ONLY the final optimized description â no analysis, no labels, just the ready-to-publish text`,
+HARD RULES:
+- Every keyword from the list must be used EXACTLY ONCE in the output, annotated as (keyword) [number]. Example: (Burj Khalifa in Dubai) [1]
+- Keywords may have prepositions added inside brackets if needed for grammar: (snorkeling tour) [4] or (tickets) [6]
+- Keywords may be pluralised if grammar requires it
+- No keyword may appear in consecutive sentences. Minimum 18-word gap before reuse.
+- Maximum two keyword annotations per sentence
+- No em dashes anywhere. Use commas, full stops, or semicolons.
+- No hype, no superlatives (amazing, incredible, best, unforgettable)
+- No invented facts. Every claim must trace to the ORIGINAL DESCRIPTION
+- UK English. Metric measurements.
+- Platinumlist B2C TOV: warm, inviting, informative, action-oriented, experience-focused
+- Sentence max: 22-24 words. Active voice preferred.
+
+OUTPUT FORMAT â Produce each section below. Use === SECTION NAME === as delimiters:
+
+=== TEASER ===
+One line, max 13 words, starting with an action verb. Describes the experience. Used for SEO meta.
+
+=== WHAT TO EXPECT ===
+Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.
+
+=== CTA ===
+One closing line starting with "Book your spot now and..."
+
+=== HIGHLIGHTS ===
+Exactly 4 lines, each starting with a present-tense action verb (Explore, Discover, Access, View, etc.).
+Under 12 words per line. No value adjectives. No bullet characters. Line-break separated.
+
+=== INCLUSIONS ===
+Clean list of what the ticket includes. No bullet characters. Line-break separated.
+Only items explicitly stated in the original. If unavailable: null
+
+=== EXCLUSIONS ===
+Clean list of what is NOT included. No bullet characters. Line-break separated.
+Only items explicitly stated in the original. If unavailable: null
+
+=== TIMINGS ===
+Timing info from the source. If unavailable, write: Timings vary by date. Check available sessions by pressing "Select Tickets" on this page.
+
+=== IMPORTANT THINGS TO KNOW ===
+Practical visitor info transplanted from the original (verbatim where possible, fixing only capitalisation).
+MUST end with: To check the (tickets) [n] and (price) [n], press "Select Tickets" on this page. Available dates and costs are displayed there, and the booking can be completed directly.
+
+=== CANCELLATION POLICY ===
+Apply the correct policy from these options:
+- No Cancellation: "This experience has a non-cancellable, non-changeable cancellation policy. Once booked, the ticket cannot be cancelled or modified."
+- Free Cancellation: "Free cancellation or rescheduling is allowed up to (x) hours before the experience."
+- Reschedule Only: "This experience has a reschedule-only policy: Rescheduling is allowed up to (x) hours before the tour or visit. No cancellations or refunds."
+- Custom: If the source has a unique policy (e.g. partial refund), preserve the exact terms.
+If unavailable in the original: null
+
+=== DIRECTIONS ===
+By car: [directions from source or factual inference]
+By taxi: [directions]
+By public transportation: [directions]
+If unavailable: null for each sub-section
+
+VALIDATION BEFORE OUTPUT:
+- All keywords used with correct [number] annotations? Check.
+- Zero stacked keywords? Check.
+- No em dashes? Check.
+- Fact check score 10/10 vs original? Check.
+- TOV aligned? Check.
+If any check fails, revise before outputting.`,
 
   // Step S12: Ranked Top Versions
   ranked_versions: (ctx) => `You are the final ranking judge for Platinumlist.net attraction content.
