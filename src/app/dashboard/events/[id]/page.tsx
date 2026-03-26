@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { STEPS_CONFIG, type EventEntry } from '@/types'
@@ -13,6 +13,173 @@ const AI_STEPS = [
   'ranked_versions',
 ]
 
+// Simple markdown-like renderer for AI output
+function FormattedContent({ text }: { text: string }) {
+  if (!text) return <p className="text-pl-muted italic text-sm">No content yet</p>
+
+  const lines = text.split('\n')
+  const elements: JSX.Element[] = []
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim()
+    if (!trimmed) {
+      elements.push(<div key={i} className="h-2" />)
+      return
+    }
+
+    // Headers: ### or ## or #
+    if (trimmed.startsWith('### ')) {
+      elements.push(
+        <h4 key={i} className="text-sm font-semibold text-pl-gold mt-3 mb-1">
+          {trimmed.slice(4)}
+        </h4>
+      )
+      return
+    }
+    if (trimmed.startsWith('## ')) {
+      elements.push(
+        <h3 key={i} className="text-sm font-bold text-pl-gold mt-4 mb-1.5">
+          {trimmed.slice(3)}
+        </h3>
+      )
+      return
+    }
+    if (trimmed.startsWith('# ')) {
+      elements.push(
+        <h2 key={i} className="text-base font-bold text-white mt-4 mb-2">
+          {trimmed.slice(2)}
+        </h2>
+      )
+      return
+    }
+
+    // Horizontal rule
+    if (/^[-=_]{3,}$/.test(trimmed)) {
+      elements.push(<hr key={i} className="border-pl-border my-3" />)
+      return
+    }
+
+    // Bullet points
+    if (trimmed.startsWith('- ') || trimmed.startsWith('â¢ ') || trimmed.startsWith('* ')) {
+      const content = trimmed.slice(2)
+      elements.push(
+        <div key={i} className="flex gap-2 ml-2 my-0.5">
+          <span className="text-pl-gold/60 mt-0.5 flex-shrink-0">â¢</span>
+          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(content)}</span>
+        </div>
+      )
+      return
+    }
+
+    // Numbered list
+    const numMatch = trimmed.match(/^(\d+)[.)]\s+(.*)/)
+    if (numMatch) {
+      elements.push(
+        <div key={i} className="flex gap-2 ml-2 my-0.5">
+          <span className="text-pl-gold/60 font-mono text-xs mt-0.5 flex-shrink-0 w-5 text-right">{numMatch[1]}.</span>
+          <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(numMatch[2])}</span>
+        </div>
+      )
+      return
+    }
+
+    // Score lines (e.g., "Score: 8/10" or "Rating: High")
+    const scoreMatch = trimmed.match(/^(Score|Rating|Grade|Risk|Result|Verdict|Overall|Total|Final)[:\s]+(.+)/i)
+    if (scoreMatch) {
+      elements.push(
+        <div key={i} className="flex items-center gap-2 my-1.5 px-3 py-1.5 rounded-lg bg-pl-navy/60 border border-pl-border/50">
+          <span className="text-xs font-semibold text-pl-text-dim uppercase tracking-wider">{scoreMatch[1]}</span>
+          <span className="text-sm font-bold text-pl-gold">{scoreMatch[2]}</span>
+        </div>
+      )
+      return
+    }
+
+    // Version labels (e.g., "Version A:" or "Option 1:")
+    const versionMatch = trimmed.match(/^(Version\s+[A-Z0-9]+|Option\s+\d+|Variant\s+\d+)[:\s]+(.*)$/i)
+    if (versionMatch) {
+      elements.push(
+        <div key={i} className="mt-3 mb-1">
+          <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded mb-1">
+            {versionMatch[1]}
+          </span>
+          {versionMatch[2] && (
+            <p className="text-sm text-pl-text-dim leading-relaxed ml-1">{renderInline(versionMatch[2])}</p>
+          )}
+        </div>
+      )
+      return
+    }
+
+    // Regular paragraph
+    elements.push(
+      <p key={i} className="text-sm text-pl-text-dim leading-relaxed my-0.5">
+        {renderInline(trimmed)}
+      </p>
+    )
+  })
+
+  return <div className="space-y-0">{elements}</div>
+}
+
+// Render inline formatting: **bold**, *italic*, `code`
+function renderInline(text: string): (string | JSX.Element)[] {
+  const parts: (string | JSX.Element)[] = []
+  let remaining = text
+  let key = 0
+
+  while (remaining.length > 0) {
+    // Bold
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
+    // Inline code
+    const codeMatch = remaining.match(/`(.+?)`/)
+    // Italic
+    const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/)
+
+    // Find the earliest match
+    let earliest: { match: RegExpMatchArray; type: string } | null = null
+    for (const [m, type] of [[boldMatch, 'bold'], [codeMatch, 'code'], [italicMatch, 'italic']] as const) {
+      if (m && m.index !== undefined) {
+        if (!earliest || m.index < earliest.match.index!) {
+          earliest = { match: m, type }
+        }
+      }
+    }
+
+    if (!earliest) {
+      parts.push(remaining)
+      break
+    }
+
+    const { match, type } = earliest
+    const idx = match.index!
+
+    if (idx > 0) parts.push(remaining.slice(0, idx))
+
+    if (type === 'bold') {
+      parts.push(<strong key={key++} className="text-white font-semibold">{match[1]}</strong>)
+    } else if (type === 'code') {
+      parts.push(<code key={key++} className="text-xs bg-pl-dark px-1.5 py-0.5 rounded font-mono text-pl-gold/80">{match[1]}</code>)
+    } else if (type === 'italic') {
+      parts.push(<em key={key++} className="text-pl-text-dim/80">{match[1]}</em>)
+    }
+
+    remaining = remaining.slice(idx + match[0].length)
+  }
+
+  return parts
+}
+
+// Content preview for collapsed steps
+function ContentPreview({ text, maxLength = 120 }: { text: string; maxLength?: number }) {
+  if (!text || !text.trim()) return null
+  const clean = text.replace(/\n+/g, ' ').replace(/[#*_`]+/g, '').replace(/\s+/g, ' ').trim()
+  const preview = clean.length > maxLength ? clean.slice(0, maxLength) + '...' : clean
+  return (
+    <p className="text-xs text-pl-muted/70 mt-1 line-clamp-1">{preview}</p>
+  )
+}
+
 export default function EventDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -20,6 +187,7 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeStep, setActiveStep] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [aiProcessing, setAiProcessing] = useState<Record<string, boolean>>({})
   const [runningAll, setRunningAll] = useState(false)
@@ -48,7 +216,7 @@ export default function EventDetailPage() {
       .eq('id', params.id)
     if (!error) {
       setEntry(prev => prev ? { ...prev, [field]: value } : null)
-      setActiveStep(null)
+      setEditMode(false)
     }
     setSaving(false)
   }
@@ -88,6 +256,7 @@ export default function EventDetailPage() {
         setEntry(prev => prev ? { ...prev, [stepField]: data.result, status: 'in_progress' } : null)
         if (activeStep) {
           setEditValue(data.result)
+          setEditMode(false) // Show formatted result
         }
       } else {
         alert(`AI Error: ${data.error}`)
@@ -105,9 +274,7 @@ export default function EventDetailPage() {
 
     setRunningAll(true)
 
-    // Run steps sequentially
     for (const stepField of AI_STEPS) {
-      // Skip if original_description is empty (can't process without it)
       if (!entry?.original_description && stepField !== 'recommended_versions') continue
       if (stepField === 'recommended_versions' && !entry?.original_description) continue
 
@@ -131,7 +298,6 @@ export default function EventDetailPage() {
       }
     }
 
-    // Reload to get fresh data
     await loadEntry()
     setRunningAll(false)
   }
@@ -163,6 +329,11 @@ export default function EventDetailPage() {
         if (activeStep === 'S1') {
           setEditValue(data.description)
         }
+      } else if (data.queue_detected) {
+        setActiveStep('S1')
+        setEditMode(true)
+        setEditValue('')
+        alert('The event page is behind queue protection (Cloudflare). Please open the event URL in your browser, copy the description text, and paste it into Step S1 below.')
       } else {
         alert(data.error || 'Could not fetch description from URL')
       }
@@ -176,7 +347,6 @@ export default function EventDetailPage() {
   async function exportToExcel() {
     if (!entry) return
 
-    // Dynamic import to avoid SSR issues
     const XLSX = await import('xlsx')
 
     const headers = [
@@ -315,7 +485,7 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      {/* Fetch Description Banner - shows when original_description is empty */}
+      {/* Fetch Description Banner */}
       {!entry.original_description && entry.event_url && (
         <div className="pl-card p-4 mb-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-4">
           <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -368,16 +538,18 @@ export default function EventDetailPage() {
           const isProcessing = aiProcessing[step.field]
 
           return (
-            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-pl-gold/40' : ''} ${isProcessing ? 'border-purple-500/40' : ''}`}>
+            <div key={step.step} className={`pl-card overflow-hidden transition-all ${isActive ? 'border-pl-gold/40 shadow-lg shadow-pl-gold/5' : ''} ${isProcessing ? 'border-purple-500/40 shadow-lg shadow-purple-500/5' : ''}`}>
               {/* Step Header */}
               <div className="flex items-center">
                 <button
                   onClick={() => {
                     if (isActive) {
                       setActiveStep(null)
+                      setEditMode(false)
                     } else {
                       setActiveStep(step.step)
                       setEditValue(value)
+                      setEditMode(!value) // Auto-enter edit mode if empty
                     }
                   }}
                   className="flex-1 flex items-center gap-4 p-4 text-left hover:bg-pl-card/50 transition-colors"
@@ -400,7 +572,7 @@ export default function EventDetailPage() {
                   </div>
 
                   {/* Step info */}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-pl-gold/60">Step {step.step}</span>
                       <span className="text-xs text-pl-muted">Col {step.column}</span>
@@ -408,18 +580,25 @@ export default function EventDetailPage() {
                       {isAIStep && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">AI</span>}
                     </div>
                     <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
+                    {/* Content preview when collapsed */}
+                    {!isActive && <ContentPreview text={value} />}
                   </div>
 
-                  {/* Status */}
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    isProcessing ? 'bg-purple-500/20 text-purple-400' :
-                    status === 'done' ? 'badge-done' : 'badge-pending'
-                  }`}>
-                    {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
-                  </span>
+                  {/* Status + char count */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {value && !isActive && (
+                      <span className="text-[10px] text-pl-muted font-mono">{value.length.toLocaleString()}c</span>
+                    )}
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      isProcessing ? 'bg-purple-500/20 text-purple-400' :
+                      status === 'done' ? 'badge-done' : 'badge-pending'
+                    }`}>
+                      {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
+                    </span>
+                  </div>
 
                   {/* Expand icon */}
-                  <svg className={`w-5 h-5 text-pl-muted transition-transform ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className={`w-5 h-5 text-pl-muted transition-transform flex-shrink-0 ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
@@ -439,39 +618,43 @@ export default function EventDetailPage() {
                 )}
               </div>
 
-              {/* Expanded Editor */}
+              {/* Expanded Content */}
               {isActive && (
-                <div className="border-t border-pl-border p-4 bg-pl-dark/30">
-                  <textarea
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    placeholder={`Enter ${step.label} content...`}
-                    className="pl-input min-h-[200px] resize-y font-mono text-sm"
-                  />
-                  <div className="flex items-center gap-3 mt-3">
+                <div className="border-t border-pl-border">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-2 px-4 py-2 bg-pl-dark/40 border-b border-pl-border/50">
                     <button
-                      onClick={() => saveField(step.field, editValue)}
-                      disabled={saving}
-                      className="pl-btn-primary text-sm flex items-center gap-2"
+                      onClick={() => { setEditMode(false) }}
+                      className={`text-xs px-3 py-1 rounded-md transition-all ${!editMode ? 'bg-pl-gold/20 text-pl-gold font-medium' : 'text-pl-muted hover:text-white'}`}
                     >
-                      {saving ? (
-                        <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
-                      ) : 'Save'}
+                      View
                     </button>
+                    <button
+                      onClick={() => { setEditMode(true); setEditValue(value) }}
+                      className={`text-xs px-3 py-1 rounded-md transition-all ${editMode ? 'bg-pl-gold/20 text-pl-gold font-medium' : 'text-pl-muted hover:text-white'}`}
+                    >
+                      Edit
+                    </button>
+                    <div className="flex-1" />
+                    {value && (
+                      <span className="text-[10px] text-pl-muted font-mono">
+                        {value.length.toLocaleString()} chars Â· {value.split('\n').length} lines
+                      </span>
+                    )}
                     {isAIStep && (
                       <button
                         onClick={() => runAIStep(step.field)}
                         disabled={isProcessing || runningAll}
-                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
+                        className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
                       >
                         {isProcessing ? (
                           <>
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Running...
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
                             Run AI
@@ -479,13 +662,44 @@ export default function EventDetailPage() {
                         )}
                       </button>
                     )}
-                    <button onClick={() => setActiveStep(null)} className="pl-btn-secondary text-sm">
-                      Cancel
-                    </button>
-                    {value && (
-                      <span className="text-xs text-pl-muted ml-auto">
-                        {value.length} characters
-                      </span>
+                  </div>
+
+                  {/* Content Area */}
+                  <div className="p-4 bg-pl-dark/20">
+                    {editMode ? (
+                      <>
+                        <textarea
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          placeholder={`Enter ${step.label} content...`}
+                          className="pl-input min-h-[200px] resize-y font-mono text-sm"
+                        />
+                        <div className="flex items-center gap-3 mt-3">
+                          <button
+                            onClick={() => saveField(step.field, editValue)}
+                            disabled={saving}
+                            className="pl-btn-primary text-sm flex items-center gap-2"
+                          >
+                            {saving ? (
+                              <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Save
+                              </>
+                            )}
+                          </button>
+                          <button onClick={() => { setEditMode(false) }} className="pl-btn-secondary text-sm">
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        <FormattedContent text={value} />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -497,3 +711,4 @@ export default function EventDetailPage() {
     </div>
   )
 }
+
