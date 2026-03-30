@@ -209,13 +209,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Save result to the entry
+    // When resolver step completes, also copy original_description to prev_original_description (Step 10 addendum)
+    const updateData: Record<string, any> = {
+      [stepField]: aiResult,
+      updated_at: new Date().toISOString(),
+      status: 'in_progress',
+    }
+    if (stepField === 'resolver_output' && entry.original_description) {
+      updateData.prev_original_description = entry.original_description
+    }
+
     const { error: updateError } = await supabaseAuth
       .from('content_entries')
-      .update({
-        [stepField]: aiResult,
-        updated_at: new Date().toISOString(),
-        status: 'in_progress',
-      })
+      .update(updateData)
       .eq('id', entryId)
 
     if (updateError) {
