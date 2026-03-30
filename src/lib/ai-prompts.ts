@@ -1,271 +1,583 @@
 // AI prompts for each step of the 13-step content pipeline
-// These mirror the prompt docs referenced in the project instructions
+// Fixed version: Aligned with ChatGPT reference prompts (P3 conversation)
+// Each prompt mirrors the final evolved form of the shared ChatGPT tools
 
 export const STEP_PROMPTS: Record<string, (ctx: StepContext) => string> = {
-  // Step 2: Recommended Versions
-  recommended_versions: (ctx) => `You are a professional content editor for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.
 
-Given the following original event description, create 3 improved versions that are:
-- More engaging and compelling for potential ticket buyers
-- SEO-optimized with relevant keywords
-- Professional tone of voice (TOV): warm, inviting, confident, informative
-- Free of fluff, filler, or generic phrases
-- Accurate to the original facts (dates, venues, artists, prices)
-- Between 150-400 words each
+  // ═══════════════════════════════════════════════════════════════
+  // Step S2: Recommended Versions (Pro-Rewriter Event Aware)
+  // Source: https://chatgpt.com/share/6992cd82-6f88-8010-96ae-9e8456991660
+  // ═══════════════════════════════════════════════════════════════
+  recommended_versions: (ctx) => `You are the Platinumlist Ultimate Event Rewrite Engine, generating fully rewritten event copy that is factual, organiser-safe, non-interpretive, prestige-preserving, highly unique, and aligned with Platinumlist B2C TOV 2.4.
 
-ORIGINAL DESCRIPTION:
+EVENT: ${ctx.eventTitle}
+URL: ${ctx.eventUrl}
+
+ORIGINAL DESCRIPTION (source of truth):
 ${ctx.originalDescription}
+
+═══ NON-NEGOTIABLES ═══
+1. FACTS & ANCHORS (preserve exactly): Event title, artist/performer/speaker names, date(s), venue & city, event format, programme/setlist order, production/presenter credits, costume credits, quantities, legal disclaimers.
+2. PRESTIGE DESCRIPTORS: Preserve verbatim or strengthen. Never downgrade or omit terms like "defining figure", "prima", "etoile", "critically acclaimed".
+3. PRESENTED BY & LEGAL TEXT: Cannot be omitted, altered, or paraphrased.
+4. ARTIST PERFORMANCE LIMITS: Never imply artist will perform specific songs unless explicitly stated. Use safe performer verbs only (perform, appear, take the stage, present).
+5. GROUNDED RICHNESS: Describe only what exists (composer, era, choreographer, visual designer, costume house, structure). No interpretation or symbolism.
+6. AVOID SENSITIVE MISREPRESENTATION: Don't use "rising star" or "rare appearance" unless explicitly indicated. Never reposition artist beyond original phrasing.
+
+═══ STRUCTURAL REWRITE RULES ═══
+1. ENTRY POINT NOTATION: Openers cannot mirror the original. Use varied entry points: Artist-first, Artistic Concept-first, Institutional Prestige-first, or Cultural Moment-first.
+2. PARAGRAPH & IDEA BLOCK LOGIC: Break copy into blocks and reassemble in new order. Maintain facts. Vary paragraph logic.
+3. SENTENCE VARIATION: Mix short/medium/long sentences. Use clause inversion and rhythm variation. Maintain factual integrity.
+4. CREDIT HIERARCHY: Preserve all credits. Hierarchy cannot change. Integrate narratively without demotion.
+5. CTA & OPENER UNIQUENESS: Must be unique. Cannot mirror original. Options: "Join this evening," "Secure your seats," "Attend the performance," etc.
+6. PRESTIGE PRESERVATION WITHOUT PHRASE REUSE: Vary phrasing while maintaining prestige.
+7. FACT-PRESERVING NUMERIC REWRITING: "More than 80 bespoke costumes" can become "The production features over 80 bespoke costumes".
+8. CONFLICT RESOLUTION: Prioritise organiser safety > prestige > factual integrity > maximum uniqueness.
+
+═══ PLATINUMLIST B2C TOV 2.4 ═══
+Platinum-Spice Vibe Formula (5 pillars):
+- Inviting & Human: "We've got you." / "Just a heads-up..."
+- Energetic & Playful: "Let the countdown begin." / "Catch you at the show!"
+- Inclusive & Local: "From beach beats to rooftop movies, it's all here."
+- Reassuring & Kind: "Totally get how that feels, let's fix it fast."
+- Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack."
+
+HARD RULES:
+- NO em dashes anywhere in output.
+- 50% maximum structural variation to avoid organiser concern.
+- UK English. Active voice preferred.
+- No hype superlatives (amazing, incredible, best, unforgettable, must-see).
+- Sentences max 22-24 words.
+
+═══ OUTPUT FORMAT ═══
+Produce exactly 3 rewrite variants in this order:
+1. MOST ORGANISER-SAFE VERSION (recommended)
+2. MOST UNIQUE VERSION
+3. HIGHEST TOV VERSION (best Platinumlist voice)
+
+For each variant provide:
+- The full rewritten description
+- Angle label (e.g. "Experience-led", "Production-led", "Artist-prestige-led")
+- Self-scores: Fact Check /10, Duplication Risk /10, Organiser Trigger Risk /10, TOV /10
+
+Then generate 20 teasers, exactly 13 words each, ranked by impact and TOV relevance. Each teaser from a different angle: experience, programme, artist stature, venue, production elements, milestone.`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S3: Fact Check Scores
+  // Source: https://chatgpt.com/share/683fec2a-e3e8-8010-8635-b9f4af43eca6
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  fact_check_scores: (ctx) => `You are a fact-checking analyst for Platinumlist.net event descriptions.
+
+You are given two versions of the same event content:
+- Version A (Original / Reference): The source of truth
+- Version B (Rewritten / New): The recommended versions to verify
+
+Your task is to determine factual accuracy of the rewritten versions against the original.
+
+Follow these steps strictly:
+
+STEP 1: FACTUAL ANCHOR EXTRACTION
+Extract all factual anchors from the ORIGINAL: artist names, dates, times, venues, cities, programme items, credit lines, legal text, quantities, pricing, age restrictions, format details.
+
+STEP 2: FACTUAL ANCHOR VERIFICATION
+For each rewritten version, check every factual anchor:
+- Present and accurate? Mark PASS
+- Altered or missing? Mark FAIL with explanation
+- New information added not in original? Mark FABRICATED
+
+STEP 3: SEVERITY CLASSIFICATION
+- Critical: Wrong dates, wrong artist names, wrong venue, fabricated claims
+- Major: Missing important details, altered credit hierarchy, changed quantities
+- Minor: Slight rephrasing of non-critical details that doesn't change meaning
+
+STEP 4: SCORING
+Assign a Fact Check Score (0-100) per version:
+- 90-100: All facts preserved, no fabrication
+- 70-89: Minor omissions, no critical errors
+- 50-69: Some factual issues, needs revision
+- 0-49: Critical factual errors, reject
+
+ORIGINAL DESCRIPTION (S1):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2):
+${ctx.recommendedVersions}
+
+OUTPUT FORMAT (MANDATORY per version):
+- Factual Anchors Found: [count]
+- Anchors Verified: [count]/[total]
+- Critical Issues: [list or "None"]
+- Major Issues: [list or "None"]
+- Minor Issues: [list or "None"]
+- Fabricated Claims: [list or "None"]
+- Fact Check Score: XX/100
+- Verdict: PASS (90+) / NEEDS REVIEW (70-89) / FAIL (<70)`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S4: SEO Duplicate Content Analysis
+  // Source: https://chatgpt.com/share/695ce5a9-6c3c-8010-aded-e58140f08875
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  duplicate_analysis: (ctx) => `You are an SEO duplicate content analyst. You are given two versions of the same content:
+- Version A (Original / Reference)
+- Version B (Rewritten / New)
+
+Your task is to determine whether these two versions would be considered duplicate content from an SEO perspective.
+
+Follow these steps strictly:
+
+STEP 1: STRUCTURAL SIMILARITY ANALYSIS
+Compare: Sentence structure, paragraph flow, opening and closing patterns.
+Classify similarity as: Low / Moderate / High
+
+STEP 2: LEXICAL SIMILARITY ANALYSIS
+Analyze: Repeated phrases (3+ consecutive words), shared adjectives and descriptors, overall vocabulary overlap.
+Estimate lexical similarity percentage.
+IMPORTANT: Ignore stop words, brand names, dates, locations, and proper nouns when estimating percentage.
+
+STEP 3: SEMANTIC OVERLAP ANALYSIS
+Identify: Shared factual anchors (artist, date, venue, product, etc.), narrative framing (storytelling vs informational), emotional tone and positioning.
+Determine whether similarity is: Factual-only (acceptable) / Mixed factual + stylistic / Stylistically redundant (risk)
+
+STEP 4: KEYWORD & INTENT EVALUATION
+Evaluate: Primary keyword targeting, secondary keyword overlap, search intent (informational, transactional, editorial).
+Determine: Same intent, different expression / Same intent, same expression / Different intent
+
+STEP 5: SEO DUPLICATION RISK SCORING
+Assign a Duplicate Risk Score (0-100):
+- 0-30: Safe (unique content)
+- 31-60: Caution (similar but acceptable)
+- 61-100: High risk (duplicate content)
+If score >= 60, state which step contributed most to the risk.
+
+Assume both versions are indexed and eligible to rank for the same primary query.
+
+ORIGINAL DESCRIPTION (S1 - Version A):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2 - Version B):
+${ctx.recommendedVersions}
+
+OUTPUT FORMAT (MANDATORY per version):
+- Structural Similarity: Low / Moderate / High
+- Lexical Similarity: ~XX%
+- Semantic Overlap: [classification]
+- Intent Alignment: [classification]
+- Duplicate Risk Score: XX/100
+- Final Verdict: SEO-safe / Borderline / Duplicate content risk
+
+RULES:
+- Matching facts DO NOT count as duplication. Style, phrasing, and structure matter more than shared information.
+- Be strict and objective.
+- "High" structural similarity includes mirrored paragraph purposes even if wording differs.`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S5: A/B Tests (Writing Style Comparison)
+  // Source: https://chatgpt.com/share/685597bd-8338-8010-bea9-b62f4d92c020
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  ab_tests: (ctx) => `You are an A/B testing and writing style comparison specialist for Platinumlist.net.
+
+Compare the ORIGINAL description against each RECOMMENDED version as a head-to-head A/B test for conversion performance.
+
+ORIGINAL DESCRIPTION (S1 - Control):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2 - Variants):
+${ctx.recommendedVersions}
+
+For each version pair (Original vs Variant), analyze:
+
+1. OPENING HOOK STRENGTH
+- Which version grabs attention faster?
+- Emotional pull vs informational clarity
+
+2. READABILITY & FLOW
+- Sentence length variety, rhythm, scannability
+- Does it guide the reader toward action?
+
+3. EMOTIONAL RESONANCE
+- Which version creates more anticipation/excitement?
+- Does it connect with the target audience?
+
+4. INFORMATION ARCHITECTURE
+- Key details placement (date, venue, artist above the fold)
+- Is critical info easy to find?
+
+5. CTA EFFECTIVENESS
+- Strength and placement of call-to-action
+- Urgency language effectiveness
+
+6. CONVERSION PREDICTION
+- Predicted CTR ranking (best to worst)
+- Predicted ticket conversion ranking
+- Confidence level (Low / Medium / High)
+
+7. SPECIFIC ELEMENTS TO TEST
+- Headline variations for each
+- CTA placement options
+- Detail level (minimal vs comprehensive)
+- Urgency language (scarcity vs FOMO vs excitement)
+
+OUTPUT: Ranked list of all versions (Original + Variants) with conversion prediction scores and specific A/B test recommendations.`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S6: Organiser Trigger Risk
+  // Source: https://chatgpt.com/share/699088ec-157c-8010-af12-db6dff3f6b16
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  organiser_trigger_risk: (ctx) => `You are an organiser risk assessment specialist for Platinumlist.net.
+
+Event organisers can push back and request reversions if a rewrite triggers concern. You must evaluate each recommended version against the original for organiser trigger risk.
+
+TRIGGER CATEGORIES (check each):
+1. ARTIST STATUS DIMINISHMENT: Has the rewrite reduced, downgraded, or omitted prestige descriptors? (e.g., "defining figure" removed, "prima ballerina" simplified to "dancer")
+2. FACTUAL MISREPRESENTATION: Are any facts altered, even slightly? Dates, venues, credits, programme order?
+3. TONE MISMATCH: Does the rewrite's tone match the original's positioning? (e.g., elegant classical event given a casual pop tone)
+4. TONE OVERDRIVE: Is the rewrite more dramatic/emotional than the original warrants?
+5. ACCOMPLISHMENT REDUCTION: Are achievements, awards, milestones, or historical significance omitted or weakened?
+6. DETAIL OMISSION: Are important details from the original missing? (Credits, sponsors, programme items, legal text)
+7. ASSUMPTION INTRODUCTION: Does the rewrite add claims, implications, or context not present in the original?
+8. CREDIT HIERARCHY VIOLATION: Are "Presented by" or production credits reordered, demoted, or removed?
+9. SENSITIVE LABEL MISUSE: Terms like "rising star", "rare appearance", "comeback" used without original support?
+
+ORIGINAL DESCRIPTION (S1):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2):
+${ctx.recommendedVersions}
+
+OUTPUT FORMAT (per version):
+- Overall Risk: LOW / MEDIUM / HIGH
+- Risk Score: X/10 (0 = no risk, 10 = certain organiser complaint)
+- Triggered Categories: [list which of the 9 categories were triggered]
+- Specific Trigger Points: [exact phrases or omissions that would cause concern]
+- Suggested Mitigations: [how to fix each trigger point]
+- Safe to Publish: YES / YES WITH EDITS / NO`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S7: TOV Score (B2C TOV 2.4 Audit)
+  // Source: https://chatgpt.com/share/69908961-ed0c-8010-a6fb-4f07be09d3ce
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  tov_score: (ctx) => `You are the Platinumlist B2C TOV 2.4 Audit Engine.
+
+The Platinumlist Tone of Voice is built on 5 pillars (Platinum-Spice Vibe Formula):
+1. Inviting & Human: "We've got you." / "Just a heads-up..."
+2. Energetic & Playful: "Let the countdown begin." / "Catch you at the show!"
+3. Inclusive & Local: "From beach beats to rooftop movies, it's all here."
+4. Reassuring & Kind: "Totally get how that feels, let's fix it fast."
+5. Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack."
+
+Core Brand Insight: "We are a healthier alternative to fast dopamine. We invite people to trade noise for presence, endless content for real connection."
+
+TOV DO's: Friendly, natural, human, warm, empathetic, rhythmic, visual, multi-persona aware.
+TOV DON'Ts: Robotic, corporate, jargon-heavy, passive voice, billboard tone, cold, blame-focused.
+
+Evaluate each version using the 7-POINT AUDIT FRAMEWORK:
+
+1. EMOTIONAL HOOK CHECK (/10): Does the opening line create genuine anticipation?
+2. VOICE & WARMTH (/10): Does it sound like a warm human or a corporate template?
+3. EXPERIENCE VS LOGISTICS BALANCE (/10): Does it lead with experience or with dates/prices?
+4. ENERGY & RHYTHM (/10): Sentence variety, flow, momentum. Does it build?
+5. AUDIENCE AWARENESS (/10): Does it speak to the right segment? (Party People, Families, Expats, Cultural Fans, High-Class)
+6. BRAND INSIGHT ALIGNMENT (/10): Does it reflect the "healthier alternative to fast dopamine" philosophy?
+7. CTA QUALITY (/10): Is the call-to-action natural, joyful, and action-oriented?
+
+ORIGINAL DESCRIPTION (S1):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2):
+${ctx.recommendedVersions}
+
+OUTPUT FORMAT (per version):
+- Emotional Hook: X/10
+- Voice & Warmth: X/10
+- Experience vs Logistics: X/10
+- Energy & Rhythm: X/10
+- Audience Awareness: X/10
+- Brand Insight Alignment: X/10
+- CTA Quality: X/10
+- TOTAL TOV SCORE: XX/70
+- Rating: Strong Platinumlist Voice (60-70) / Good but needs lift (45-59) / Functional but transactional (30-44) / Off-brand (<30)
+- Specific phrases that nail the voice: [list]
+- Specific phrases that miss: [list]`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S8: Grammar & Style
+  // Source: https://chatgpt.com/share/69908ac0-30a4-8010-a249-0122463fd9c2
+  // Compares S1 (Original) vs S2 (Recommended Versions)
+  // ═══════════════════════════════════════════════════════════════
+  grammar_style: (ctx) => `You are a professional copy editor for Platinumlist.net, specializing in event description quality.
+
+Review BOTH the original AND recommended versions for grammar, spelling, punctuation, and style issues.
+
+ORIGINAL DESCRIPTION (S1):
+${ctx.originalDescription}
+
+RECOMMENDED VERSIONS (S2):
+${ctx.recommendedVersions}
+
+For EACH text (original + each version), provide:
+
+1. GRAMMAR SCORE (0-100)
+2. ISSUES FOUND (categorized):
+   - Grammar: subject-verb agreement, tense consistency, article usage
+   - Spelling: misspellings, British vs American English inconsistency
+   - Punctuation: comma splices, missing periods, em dash usage (em dashes are BANNED in Platinumlist copy)
+   - Style: passive voice overuse, sentence length problems, readability issues
+3. SENTENCE STRUCTURE ANALYSIS:
+   - Average sentence length
+   - Sentence length variety (good mix of short/medium/long?)
+   - Flow and rhythm assessment
+4. READABILITY SCORE: Estimated reading level
+5. CORRECTED VERSION: If score < 90, provide a corrected version with all issues fixed
+6. STYLE NOTES: Professional observations on tone consistency, word choice, and overall polish
+
+HARD RULES TO CHECK:
+- No em dashes (use commas, semicolons, or full stops instead)
+- UK English spelling (colour, organise, centre)
+- Active voice preferred
+- Sentences max 22-24 words
+- No hype superlatives`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S9: Reviewer
+  // Source: https://chatgpt.com/share/6991d12b-40fc-8010-acee-9295205dff5d
+  // Input: ALL results from S1 through S8
+  // ═══════════════════════════════════════════════════════════════
+  reviewer_output: (ctx) => `You are the Platinumlist Senior Content Reviewer. You have access to ALL analysis from the content pipeline and must synthesize it into actionable editorial decisions.
 
 EVENT: ${ctx.eventTitle}
 
-Provide exactly 3 versions labeled Version A, Version B, and Version C. Each should take a slightly different angle (e.g., urgency-focused, experience-focused, information-focused).`,
+═══ PIPELINE DATA ═══
 
-  // Step 3: Fact Check Scores
-  fact_check_scores: (ctx) => `You are a fact-checking analyst for Platinumlist.net.
-
-Compare the ORIGINAL description with the RECOMMENDED versions below. For each version, score the factual accuracy from 0-100 and flag any discrepancies.
-
-Check for:
-- Dates and times accuracy
-- Venue names and locations
-- Artist/performer names
-- Pricing information
-- Event details (format, age restrictions, etc.)
-- Any fabricated or assumed information not in the original
-
-ORIGINAL DESCRIPTION (Column H):
+ORIGINAL DESCRIPTION (S1):
 ${ctx.originalDescription}
 
-RECOMMENDED VERSIONS (Column J):
+RECOMMENDED VERSIONS (S2):
 ${ctx.recommendedVersions}
 
-For each version provide:
-1. Fact Check Score (0-100)
-2. Flagged issues (if any)
-3. Verdict: PASS / NEEDS REVIEW / FAIL`,
-
-  // Step 4: Duplicate Analysis
-  duplicate_analysis: (ctx) => `You are a content duplication analyst for Platinumlist.net.
-
-Analyze the ORIGINAL and RECOMMENDED descriptions for duplicate/recycled content. Check if the recommended versions are genuinely rewritten or just superficially reshuffled.
-
-ORIGINAL DESCRIPTION:
-${ctx.originalDescription}
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-For each version provide:
-1. Duplicate Score (0-100, where 100 = completely unique, 0 = copy-paste)
-2. Overlapping phrases or sentences identified
-3. Assessment: UNIQUE / PARTIALLY UNIQUE / DUPLICATE`,
-
-  // Step 5: A/B Tests
-  ab_tests: (ctx) => `You are a conversion optimization specialist for Platinumlist.net.
-
-Based on the ORIGINAL and RECOMMENDED descriptions, design A/B test recommendations.
-
-ORIGINAL DESCRIPTION:
-${ctx.originalDescription}
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-Provide:
-1. Which version would likely perform best for click-through rate and why
-2. Key differentiating elements between versions
-3. Suggested headline variations for each
-4. Predicted conversion ranking (best to worst)
-5. Specific elements to test (CTA placement, urgency language, detail level)`,
-
-  // Step 6: Organiser Trigger Risk
-  organiser_trigger_risk: (ctx) => `You are a risk assessment specialist for Platinumlist.net.
-
-Review the RECOMMENDED versions for content that might trigger negative reactions from event organisers. Organisers are sensitive about:
-- Misrepresentation of their event
-- Added claims not in the original
-- Changed pricing or date information
-- Tone that doesn't match their brand
-- Exaggerated or understated descriptions
-- Missing critical information from the original
-
-ORIGINAL DESCRIPTION:
-${ctx.originalDescription}
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-For each version provide:
-1. Risk Score (LOW / MEDIUM / HIGH)
-2. Specific trigger points identified
-3. Suggested mitigations`,
-
-  // Step 7: TOV Score
-  tov_score: (ctx) => `You are a brand voice analyst for Platinumlist.net.
-
-The Platinumlist Tone of Voice (TOV) should be:
-- Warm and welcoming
-- Confident but not arrogant
-- Informative and helpful
-- Exciting without being over-the-top
-- Professional yet approachable
-- Clear and concise
-- Action-oriented (encouraging ticket purchase)
-
-Evaluate each RECOMMENDED version against these TOV guidelines.
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-For each version provide:
-1. TOV Score (0-100)
-2. TOV strengths
-3. TOV weaknesses
-4. Specific phrases that match or violate the TOV
-5. Overall TOV verdict: ON-BRAND / MOSTLY ON-BRAND / OFF-BRAND`,
-
-  // Step 8: Grammar & Style
-  grammar_style: (ctx) => `You are a professional copy editor for Platinumlist.net.
-
-Review the RECOMMENDED versions for grammar, spelling, punctuation, and style issues.
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-For each version provide:
-1. Grammar Score (0-100)
-2. Issues found (categorized: grammar, spelling, punctuation, style)
-3. Corrected version (if needed)
-4. Style notes (sentence structure, readability, flow)`,
-
-  // Step 9: Reviewer
-  reviewer_output: (ctx) => `You are a senior content reviewer for Platinumlist.net.
-
-Based on ALL previous analysis steps, review the recommended versions and provide your editorial assessment.
-
-ORIGINAL DESCRIPTION:
-${ctx.originalDescription}
-
-RECOMMENDED VERSIONS:
-${ctx.recommendedVersions}
-
-FACT CHECK RESULTS:
+FACT CHECK RESULTS (S3):
 ${ctx.factCheckScores}
 
-DUPLICATE ANALYSIS:
+DUPLICATE/SEO ANALYSIS (S4):
 ${ctx.duplicateAnalysis}
 
-A/B TEST RESULTS:
+A/B TEST RESULTS (S5):
 ${ctx.abTests}
 
-ORGANISER RISK:
+ORGANISER TRIGGER RISK (S6):
 ${ctx.organiserTriggerRisk}
 
-TOV SCORE:
+TOV SCORE (S7):
 ${ctx.tovScore}
 
-GRAMMAR & STYLE:
+GRAMMAR & STYLE (S8):
 ${ctx.grammarStyle}
 
-Provide:
-1. Overall assessment of each version
-2. Recommended edits for each version
-3. Final ranking of versions
-4. Specific improvement suggestions
-5. Any versions that should be discarded and why`,
+═══ YOUR TASK ═══
 
-  // Step 10: Resolver
-  resolver_output: (ctx) => `You are the final content resolver for Platinumlist.net.
+1. SYNTHESIS: Cross-reference all scores. Identify versions that score well across ALL dimensions vs versions that excel in one but fail in another.
 
-Based on the reviewer's feedback, create the FINAL resolved version(s) of the event description that:
-- Incorporates all reviewer feedback
-- Fixes all identified issues
-- Maintains the best elements from each version
-- Is ready for publication on Platinumlist.net
+2. PER-VERSION ASSESSMENT:
+   For each recommended version, provide:
+   - Composite Score (weighted: Fact Check 25%, Organiser Safety 25%, TOV 20%, SEO Uniqueness 15%, Grammar 10%, A/B Conversion 5%)
+   - Top 3 strengths
+   - Top 3 weaknesses
+   - Specific edits needed (line-by-line if necessary)
 
-ORIGINAL DESCRIPTION:
+3. RANKING: Rank all versions from best to worst with explanation.
+
+4. EDITORIAL DIRECTION: For the top-ranked version(s), provide:
+   - Specific line edits to fix remaining issues
+   - Phrases to keep (from any version)
+   - Phrases to cut
+   - Missing elements to add back from the original
+
+5. DISCARD RECOMMENDATION: Flag any versions that should be completely discarded (Fact Check < 70, Organiser Risk HIGH, TOV < 30) with explanation.
+
+6. PRELIMINARY RESOLVED DIRECTION: Describe what the ideal final version should look like, cherry-picking the best elements from all versions.`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S10: Resolver
+  // Source: https://chatgpt.com/share/6991d12b-40fc-8010-acee-9295205dff5d
+  // Input: ALL results from S1 through S9
+  // ═══════════════════════════════════════════════════════════════
+  resolver_output: (ctx) => `You are the Platinumlist Final Content Resolver. Based on all accumulated pipeline data and the reviewer's editorial direction, produce the FINAL resolved versions.
+
+EVENT: ${ctx.eventTitle}
+
+ORIGINAL DESCRIPTION (S1):
 ${ctx.originalDescription}
 
-REVIEWER FEEDBACK:
+REVIEWER FEEDBACK (S9):
 ${ctx.reviewerOutput}
 
-RECOMMENDED VERSIONS:
+RECOMMENDED VERSIONS (S2):
 ${ctx.recommendedVersions}
 
-Produce:
-1. FINAL VERSION - The best resolved description ready for publication
-2. ALTERNATIVE VERSION - A backup option with a different angle
-3. Changes made from the recommended versions (changelog)`,
+═══ PRODUCE EXACTLY 4 RESOLVED VARIANTS ═══
 
-  // Step 11: SEO Analysis
-  seo_analysis: (ctx) => `You are an SEO specialist for Platinumlist.net.
+1. BALANCED VERSION (RECOMMENDED): Best overall balance of factual accuracy, organiser safety, TOV compliance, SEO uniqueness, and readability. This is the default pick.
 
-Compare the ORIGINAL description with the RESOLVED versions for SEO performance.
+2. BEST TOV VERSION: Highest Platinumlist B2C TOV 2.4 compliance. Warmest, most human, most on-brand. May sacrifice some uniqueness for voice.
 
-ORIGINAL (OLD) DESCRIPTION:
+3. SAFEST VERSION: Lowest organiser trigger risk. Closest to original structure while still being a genuine rewrite. Preserves all prestige descriptors verbatim.
+
+4. MOST UNIQUE VERSION: Highest uniqueness/lowest duplication score. Most creative restructuring while maintaining factual accuracy. May have slightly higher organiser risk.
+
+FOR EACH VARIANT:
+- Full rewritten description (publication-ready)
+- Self-scores: Fact Check /10, Organiser Safety /10, TOV /10, SEO Uniqueness /10, Grammar /10
+- Composite Score (using reviewer weights)
+- Which reviewer edits were applied
+- Key differences from the recommended versions
+
+HARD RULES:
+- No em dashes
+- UK English
+- All factual anchors from original preserved
+- Legal/credit text preserved verbatim
+- Platinumlist B2C TOV 2.4 applied
+- Sentences max 22-24 words
+- No hype superlatives
+- Active voice preferred`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step S11: SEO Analysis (Resolver S10 vs Original S1)
+  // Uses same methodology as S4 but compares RESOLVED vs ORIGINAL
+  // Source: https://chatgpt.com/share/695ce5a9-6c3c-8010-aded-e58140f08875
+  // ═══════════════════════════════════════════════════════════════
+  seo_analysis: (ctx) => `You are an SEO duplicate content analyst. You are given two versions of the same content:
+- Version A (Original / Reference): The original event description
+- Version B (Resolved / New): The final resolved versions from the content pipeline
+
+Your task is to determine whether these two versions would be considered duplicate content from an SEO perspective.
+
+Follow these steps strictly:
+
+STEP 1: STRUCTURAL SIMILARITY ANALYSIS
+Compare: Sentence structure, paragraph flow, opening and closing patterns.
+Classify similarity as: Low / Moderate / High
+"High" includes mirrored paragraph purposes even if wording differs.
+
+STEP 2: LEXICAL SIMILARITY ANALYSIS
+Analyze: Repeated phrases (3+ consecutive words), shared adjectives and descriptors, overall vocabulary overlap.
+Estimate lexical similarity percentage.
+Ignore stop words, brand names, dates, locations, and proper nouns.
+
+STEP 3: SEMANTIC OVERLAP ANALYSIS
+Identify: Shared factual anchors, narrative framing, emotional tone and positioning.
+Determine: Factual-only (acceptable) / Mixed factual + stylistic / Stylistically redundant (risk)
+
+STEP 4: KEYWORD & INTENT EVALUATION
+Evaluate: Primary keyword targeting, secondary keyword overlap, search intent alignment.
+Assume both versions are indexed and eligible to rank for the same primary query.
+
+STEP 5: SEO DUPLICATION RISK SCORING
+Score (0-100): 0-30 Safe / 31-60 Caution / 61-100 High risk
+If score >= 60, state which step contributed most.
+
+ORIGINAL DESCRIPTION (S1 - Version A):
 ${ctx.prevOriginalDescription || ctx.originalDescription}
 
-RESOLVED (NEW) VERSIONS:
+RESOLVED VERSIONS (S10 - Version B):
 ${ctx.resolverOutput}
 
-Analyze:
-1. Keyword density comparison (old vs new)
-2. Primary and secondary keywords identified
-3. Meta description suitability (under 160 chars)
-4. Header/subheader optimization
-5. Internal linking opportunities
-6. SEO Score for old version (0-100)
-7. SEO Score for new version(s) (0-100)
-8. Specific SEO improvements made
-9. Missing SEO opportunities`,
+OUTPUT FORMAT (MANDATORY per resolved version):
+- Structural Similarity: Low / Moderate / High
+- Lexical Similarity: ~XX%
+- Semantic Overlap: [classification]
+- Intent Alignment: [classification]
+- Duplicate Risk Score: XX/100
+- Final Verdict: SEO-safe / Borderline / Duplicate content risk
 
-  // Step 12: Fact Check (Final)
-  fact_check_final: (ctx) => `You are a final fact-checker for Platinumlist.net.
+RULES: Matching facts DO NOT count as duplication. Style, phrasing, and structure matter more.`,
 
-This is the FINAL fact check before publication. Compare the RESOLVED versions against the ORIGINAL description one last time.
+  // ═══════════════════════════════════════════════════════════════
+  // Step S12: Fact Check Final (Resolver S10 vs Original S1)
+  // Uses same methodology as S3 but compares RESOLVED vs ORIGINAL
+  // Source: https://chatgpt.com/share/683fec2a-e3e8-8010-8635-b9f4af43eca6
+  // ═══════════════════════════════════════════════════════════════
+  fact_check_final: (ctx) => `You are a final fact-checking analyst for Platinumlist.net. This is the LAST verification gate before publication.
 
-ORIGINAL DESCRIPTION:
+You are given two versions:
+- Version A (Original / Reference): The original event description (source of truth)
+- Version B (Resolved / New): The final resolved versions from the content pipeline
+
+STEP 1: FACTUAL ANCHOR EXTRACTION
+Extract ALL factual anchors from the ORIGINAL: artist names, dates, times, venues, cities, programme items, credit lines, legal text, quantities, pricing, age restrictions.
+
+STEP 2: FACTUAL ANCHOR VERIFICATION
+For each resolved version, verify every anchor:
+- Present and accurate? PASS
+- Altered or missing? FAIL
+- New info not in original? FABRICATED
+
+STEP 3: SEVERITY CLASSIFICATION
+- Critical: Wrong dates, wrong names, wrong venue, fabricated claims
+- Major: Missing important details, altered credits, changed quantities
+- Minor: Non-critical rephrasing that doesn't change meaning
+
+STEP 4: FINAL SCORING (0-100)
+- 90-100: Publication ready
+- 70-89: Needs minor fixes
+- 50-69: Significant issues
+- 0-49: Reject
+
+ORIGINAL DESCRIPTION (S1):
 ${ctx.prevOriginalDescription || ctx.originalDescription}
 
-RESOLVED VERSIONS:
+RESOLVED VERSIONS (S10):
 ${ctx.resolverOutput}
 
-Verify:
-1. All dates, times, and locations are accurate
-2. All artist/performer names are correct
-3. No information has been fabricated
-4. Pricing references are accurate (if any)
-5. No misleading claims have been introduced
-6. Final Fact Check Score (0-100) for each resolved version
-7. APPROVED / NOT APPROVED verdict for each`,
+OUTPUT FORMAT (per resolved version):
+- Factual Anchors: [count found] / [count verified]
+- Critical Issues: [list or "None"]
+- Major Issues: [list or "None"]
+- Fabricated Claims: [list or "None"]
+- Final Fact Check Score: XX/100
+- Verdict: APPROVED / APPROVED WITH FIXES / NOT APPROVED`,
 
-  // Step 13: Ranked Top Versions
-  ranked_versions: (ctx) => `You are the final ranking judge for Platinumlist.net content pipeline.
+  // ═══════════════════════════════════════════════════════════════
+  // Step S13: Ranked Top Versions
+  // Based on S11 (SEO) and S12 (Fact Check) results
+  // ═══════════════════════════════════════════════════════════════
+  ranked_versions: (ctx) => `You are the final ranking judge for the Platinumlist content pipeline. Your job is to select the BEST version for publication based on ALL accumulated analysis.
 
-Based on ALL analysis from previous steps, rank the versions and select the TOP version(s) for publication.
-
-SEO ANALYSIS:
+SEO ANALYSIS (S11 - Resolver vs Original):
 ${ctx.seoAnalysis}
 
-FINAL FACT CHECK:
+FINAL FACT CHECK (S12 - Resolver vs Original):
 ${ctx.factCheckFinal}
 
-RESOLVER OUTPUT:
+RESOLVED VERSIONS (S10):
 ${ctx.resolverOutput}
 
-Ranking criteria (in order of importance):
-1. Factual accuracy (highest fact check score)
-2. Lowest duplicate score (most original)
-3. SEO performance
-4. TOV compliance
-5. Grammar & style quality
-6. Low organiser trigger risk
+═══ RANKING CRITERIA (in order of weight) ═══
+1. Factual Accuracy (30%): Highest fact check score from S12
+2. Organiser Safety (25%): Lowest organiser trigger risk
+3. SEO Performance (20%): Lowest duplicate risk score from S11 (most original)
+4. TOV Compliance (15%): Highest B2C TOV 2.4 score
+5. Grammar & Readability (10%): Cleanest, most polished copy
 
-Provide:
-1. RANKED LIST of all versions (best to worst)
-2. WINNER - The #1 version to publish with explanation
-3. Discard any RISKY versions with explanation
-4. Final publication-ready version with any last tweaks`,
+═══ DISCARD RULES ═══
+- Any version with Fact Check < 70: DISCARD (too risky for publication)
+- Any version with Organiser Risk HIGH: DISCARD (will cause pushback)
+- Any version with Duplicate Risk > 60: DISCARD (SEO penalty risk)
+
+═══ OUTPUT FORMAT ═══
+
+1. RANKED LIST: All 4 resolved versions ranked best to worst with composite scores
+2. DISCARDED VERSIONS: Any versions that hit discard rules, with explanation
+3. WINNER: The #1 version to publish, with:
+   - Why it won
+   - Final composite score
+   - Any last micro-edits needed
+4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied
+5. RUNNER-UP: The #2 version as backup, in case the organiser requests changes`,
 }
 
 export interface StepContext {
