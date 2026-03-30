@@ -7,26 +7,36 @@ import { createPLClient } from '@/lib/pl-supabase'
 // Server-side only route - credentials never exposed to browser
 export async function POST(request: NextRequest) {
   try {
-    const { entryId, stepField, authToken } = await request.json()
+    const { entryId, stepField, authToken, adminKey } = await request.json()
 
     if (!entryId || !stepField) {
       return NextResponse.json({ error: 'Missing entryId or stepField' }, { status: 400 })
     }
 
-    // Verify user is authenticated via Rockstary auth
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${authToken}` } } }
-    )
+    // Admin mode: bypass Supabase auth using service key (for server-to-server / testing)
+    const isAdmin = adminKey && process.env.ADMIN_API_KEY && adminKey === process.env.ADMIN_API_KEY
+    let dbClient: any
 
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(authToken)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAdmin) {
+      // Use PL service client (bypasses RLS)
+      dbClient = createPLClient()
+    } else {
+      // Verify user is authenticated via Rockstary auth
+      const supabaseAuth = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${authToken}` } } }
+      )
+
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(authToken)
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      dbClient = supabaseAuth
     }
 
-    // Load the entry from Rockstary DB (RLS will filter to user's own entries)
-    const { data: entry, error: fetchError } = await supabaseAuth
+    // Load the entry from Rockstary DB
+    const { data: entry, error: fetchError } = await dbClient
       .from('content_entries')
       .select('*')
       .eq('id', entryId)
@@ -219,7 +229,7 @@ export async function POST(request: NextRequest) {
       updateData.prev_original_description = entry.original_description
     }
 
-    const { error: updateError } = await supabaseAuth
+    const { error: updateError } = await dbClient
       .from('content_entries')
       .update(updateData)
       .eq('id', entryId)

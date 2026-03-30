@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // This calls the process endpoint for each step in order
 export async function POST(request: NextRequest) {
   try {
-    const { entryId, authToken } = await request.json()
+    const { entryId, authToken, adminKey } = await request.json()
     const baseUrl = request.nextUrl.origin
 
     const steps = [
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       const res = await fetch(`${baseUrl}/api/ai/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entryId, stepField: step, authToken }),
+        body: JSON.stringify({ entryId, stepField: step, authToken, adminKey }),
       })
 
       const data = await res.json()
