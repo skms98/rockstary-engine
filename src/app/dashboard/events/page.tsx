@@ -104,7 +104,7 @@ export default function EventsDashboard() {
     if (!user) return
 
     let screenshot_url = ''
-    if (inputMethod === 'screenshot_url' && formData.screenshot_file) {
+    if (formData.screenshot_file) {
       const fileName = `${Date.now()}-${formData.screenshot_file.name}`
       const { data: uploadData } = await supabase.storage
         .from('screenshots')
@@ -427,7 +427,7 @@ export default function EventsDashboard() {
                 </>
               )}
 
-              {/* Screenshot Upload */}
+              {/* Screenshot Upload — required for screenshot_url, optional for others */}
               {inputMethod === 'screenshot_url' && (
                 <div>
                   <label className="block text-sm text-pl-text-dim mb-2">Screenshot</label>
@@ -462,6 +462,48 @@ export default function EventsDashboard() {
                     className="pl-input min-h-[200px] resize-y"
                     required
                   />
+                </div>
+              )}
+
+              {/* Optional Screenshot — for Raw Text + URL and URL Only methods */}
+              {(inputMethod === 'rawtext_url' || inputMethod === 'url_only') && (
+                <div>
+                  <label className="block text-sm text-pl-text-dim mb-2">
+                    Screenshot <span className="text-emerald-400 text-xs">(optional, helps with QA and category tagging)</span>
+                  </label>
+                  <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${formData.screenshot_file ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-pl-border hover:border-pl-gold/30'}`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setFormData({ ...formData, screenshot_file: e.target.files?.[0] || null })}
+                      className="hidden"
+                      id="optional-screenshot-upload"
+                    />
+                    <label htmlFor="optional-screenshot-upload" className="cursor-pointer">
+                      {formData.screenshot_file ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-sm text-emerald-400">{formData.screenshot_file.name}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setFormData({ ...formData, screenshot_file: null }) }}
+                            className="text-xs text-red-400 hover:text-red-300 ml-2"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="w-5 h-5 text-pl-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-sm text-pl-muted">Add a screenshot for better QA and tagging</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
                 </div>
               )}
 
