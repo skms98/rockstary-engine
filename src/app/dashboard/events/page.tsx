@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { parseExcelFile, type ParsedRow } from '@/lib/excel-parser'
 import type { InputMethod, EventEntry } from '@/types'
@@ -28,8 +28,6 @@ export default function EventsDashboard() {
   const dropZoneRef = useRef<HTMLDivElement>(null)
   const dragCounterRef = useRef(0)
   const previewUrlsRef = useRef<Map<File, string>>(new Map())
-
-  const DEFAULT_LABELS = useMemo(() => ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer'], [])
 
   // Get or create a stable object URL for a File (avoids re-creating on every render)
   const getPreviewUrl = useCallback((file: File) => {
@@ -59,11 +57,11 @@ export default function EventsDashboard() {
     setFormData(prev => {
       const newFiles = imageFiles.map((file, i) => ({
         file,
-        label: DEFAULT_LABELS[prev.screenshot_files.length + i] || 'Full page',
+        label: `Screenshot ${prev.screenshot_files.length + i + 1}`,
       }))
       return { ...prev, screenshot_files: [...prev.screenshot_files, ...newFiles] }
     })
-  }, [DEFAULT_LABELS])
+  }, [])
 
   // Paste handler: listen for Ctrl+V / Cmd+V with images
   useEffect(() => {
@@ -545,7 +543,7 @@ export default function EventsDashboard() {
                     <div className="space-y-2 mb-3">
                       {formData.screenshot_files.map((item, index) => (
                         <div key={index} className="flex items-center gap-3 bg-pl-card border border-pl-border rounded-lg px-3 py-2">
-                          {/* Order badge */}
+                          {/* Order number */}
                           <div className="flex-shrink-0 w-7 h-7 rounded-full bg-pl-gold/20 text-pl-gold flex items-center justify-center text-xs font-bold">
                             {index + 1}
                           </div>
@@ -559,31 +557,8 @@ export default function EventsDashboard() {
                             />
                           </div>
 
-                          {/* Label dropdown */}
-                          <select
-                            value={item.label}
-                            onChange={(e) => {
-                              const updated = [...formData.screenshot_files]
-                              updated[index] = { ...updated[index], label: e.target.value }
-                              setFormData({ ...formData, screenshot_files: updated })
-                            }}
-                            className="pl-input text-xs py-1 flex-1 min-w-0"
-                          >
-                            <option value="Top of page">Top of page</option>
-                            <option value="Header / Hero">Header / Hero</option>
-                            <option value="Description">Description</option>
-                            <option value="Event details">Event details</option>
-                            <option value="Lineup / Programme">Lineup / Programme</option>
-                            <option value="Pricing / Tickets">Pricing / Tickets</option>
-                            <option value="Venue / Map">Venue / Map</option>
-                            <option value="T&Cs / Legal">T&Cs / Legal</option>
-                            <option value="Gallery">Gallery</option>
-                            <option value="Footer">Footer</option>
-                            <option value="Full page">Full page</option>
-                          </select>
-
                           {/* File name */}
-                          <span className="text-xs text-pl-muted truncate max-w-[100px]" title={item.file.name}>
+                          <span className="text-xs text-pl-muted truncate flex-1 min-w-0" title={item.file.name}>
                             {item.file.name}
                           </span>
 
@@ -704,7 +679,7 @@ export default function EventsDashboard() {
                   </div>
                   {formData.screenshot_files.length > 0 && (
                     <p className="text-xs text-pl-muted mt-2">
-                      Arrange in page order (top to bottom). Use arrows to reorder, dropdown to label each section.
+                      Arrange in page order (top to bottom). Use arrows to reorder. AI auto-detects sections.
                     </p>
                   )}
                 </div>

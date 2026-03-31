@@ -118,10 +118,10 @@ export async function POST(request: NextRequest) {
       if (entry.screenshots && Array.isArray(entry.screenshots) && entry.screenshots.length > 0) {
         screenshotsText = entry.screenshots
           .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-          .map((s: any) => `Screenshot ${s.order}: [${s.label}] ${s.url}`)
+          .map((s: any, i: number) => `Screenshot ${i + 1} of ${entry.screenshots.length}: ${s.url}`)
           .join('\n')
       } else if (entry.screenshot_url) {
-        screenshotsText = `Screenshot 1: [Full page] ${entry.screenshot_url}`
+        screenshotsText = `Screenshot 1 of 1: ${entry.screenshot_url}`
       }
 
       const ctx: StepContext = {
