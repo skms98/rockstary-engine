@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { plSupabase } from 'A/lib/pl-supabase'
+import { plSupabase } from '@/lib/pl-supabase'
 import Link from 'next/link'
 import { OverviewTab } from './detail-overview'
-import { SeoTab, FactCheckTab, TaggingTab, ReviewTab } from './detail-tabs'
+import { SeoTab, TaggingTab, ReviewTab } from './detail-tabs'
+import { FactCheckTab } from './detail-factcheck'
 import { ScreenshotsTab } from './detail-tabs-screenshots'
 
-// ── Types (inline to keep this page self-contained) ──────────
+// â”€â”€ Types (inline to keep this page self-contained) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
 type SeoStatus = 'pending' | 'processing' | 'completed' | 'failed'
 type TaggingStatus = 'pending' | 'gathering' | 'classifying' | 'validating' | 'completed' | 'failed' | 'unclassifiable'
@@ -69,7 +70,7 @@ const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: 
   exported:          { label: 'Exported',          icon: '\uD83D\uDCE4', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
 }
 
-// ── Main Component ──────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -215,7 +216,7 @@ export default function AttractionDetailPage() {
             <div className={`flex-1 h-2 rounded-full transition-all ${
               i < currentStageIdx ? 'bg-emerald-500' : stage === entry.stage ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'
             }`} />
-            #�b <div className="w-1" />}
+            {i < STAGE_ORDER.length - 1 && <div className="w-1" />}
           </div>
         ))}
       </div>
@@ -229,7 +230,7 @@ export default function AttractionDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-lg w-fit">
-        {(['overview', 'Overview'], ['seo', 'SEO'], ['factcheck', 'Fact Check'], ['tagging', 'Tagging'], ['review', 'Review'], ['screenshots', 'Screenshots']] as const).map(([tab, label]) => (
+        {(['overview', 'Overview'], ['seo', 'SEO'], ['factcheck', 'Fact Check'], ['tagging', 'Tagging'], ['review', 'Review'], ['screenshots', 'Screenshots']) as const).map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
