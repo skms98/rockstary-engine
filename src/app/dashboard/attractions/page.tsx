@@ -7,6 +7,8 @@ import { AttractionCard, SeoStatusBadge, TaggingStatusBadge } from './attraction
 import { AttractionModal } from './attraction-modal'
 
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
+type SeoStatus = 'pending' | 'processing' | 'completed' | 'failed'
+type TaggingStatus = 'pending' | 'gathering' | 'classifying' | 'validating' | 'completed' | 'failed' | 'unclassifiable'
 
 interface AttractionEntry {
   id: string
@@ -15,10 +17,10 @@ interface AttractionEntry {
   country: string | null
   city: string | null
   stage: AttractionStage
-  seo_status: string
+  seo_status: SeoStatus
   keywords_used: number
   keywords_total: number
-  tagging_status: string
+  tagging_status: TaggingStatus
   validation_gates_passed: number
   batch_name: string | null
   created_at: string
