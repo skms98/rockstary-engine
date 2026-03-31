@@ -83,6 +83,16 @@ export default function TaggingPage() {
   const [editingPromptText, setEditingPromptText] = useState('');
   const [savingPromptKey, setSavingPromptKey] = useState<'tagging_beast' | 'validator' | null>(null);
 
+  // Inline subcategory add under a parent
+  const [addingSubcategoryTo, setAddingSubcategoryTo] = useState<string | null>(null);
+  const [newSubcatName, setNewSubcatName] = useState('');
+  const [newSubcatDomain, setNewSubcatDomain] = useState<'event' | 'attraction' | 'both'>('both');
+
+  // Drag and drop
+  const [dragItem, setDragItem] = useState<{ id: string; type: 'category' | 'tag'; index: number } | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragContext, setDragContext] = useState<string | null>(null); // parent name or 'standalone' or 'tags' or tag section
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -469,6 +479,144 @@ export default function TaggingPage() {
     }
   };
 
+  // Quick add subcategory under a parent
+  const handleAddSubcategory = async (parentName: string) => {
+    if (!newSubcatName.trim()) {
+      setError('Subcategory name required');
+      return;
+    }
+
+    try {
+      const parentChildren = categories.filter(c => c.parent_group === parentName);
+      const maxOrder = parentChildren.length > 0
+        ? Math.max(...parentChildren.map(c => c.sort_order)) + 10
+        : (categories.length + 1) * 10;
+
+      const { data, error: insertError } = await supabase
+        .from('tagging_taxonomy')
+        .insert({
+          type: 'category',
+          name: newSubcatName,
+          domain: newSubcatDomain,
+          is_selectable: true,
+          parent_group: parentName,
+          sort_order: maxOrder,
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      setCategories([...categories, data]);
+      setNewSubcatName('');
+      setNewSubcatDomain('both');
+      setAddingSubcategoryTo(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add subcategory');
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (id: string, type: 'category' | 'tag', index: number, context: string) => {
+    setDragItem({ id, type, index });
+    setDragContext(context);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDragItem(null);
+    setDragOverIndex(null);
+    setDragContext(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number, context: string) => {
+    e.preventDefault();
+    if (!dragItem || dragContext !== context) {
+      handleDragEnd();
+      return;
+    }
+
+    const sourceIndex = dragItem.index;
+    if (sourceIndex === targetIndex) {
+      handleDragEnd();
+      return;
+    }
+
+    try {
+      if (dragItem.type === 'category') {
+        // Get the list of items in this context
+        let itemsInContext: TaxonomyItem[];
+        if (context === 'standalone') {
+          itemsInContext = categories.filter(c => c.is_selectable && !c.parent_group);
+        } else if (context === 'parents') {
+          itemsInContext = categories.filter(c => !c.is_selectable && !c.parent_group);
+        } else {
+          // subcategories of a parent
+          itemsInContext = categories.filter(c => c.parent_group === context);
+        }
+
+        const reordered = [...itemsInContext];
+        const [moved] = reordered.splice(sourceIndex, 1);
+        reordered.splice(targetIndex, 0, moved);
+
+        // Update sort_orders
+        const updates = reordered.map((item, idx) => ({
+          id: item.id,
+          sort_order: (idx + 1) * 10,
+        }));
+
+        // Optimistic update
+        const updatedCategories = categories.map(c => {
+          const update = updates.find(u => u.id === c.id);
+          return update ? { ...c, sort_order: update.sort_order } : c;
+        });
+        updatedCategories.sort((a, b) => a.sort_order - b.sort_order);
+        setCategories(updatedCategories);
+
+        // Persist
+        for (const update of updates) {
+          await supabase
+            .from('tagging_taxonomy')
+            .update({ sort_order: update.sort_order, updated_at: new Date().toISOString() })
+            .eq('id', update.id);
+        }
+      } else {
+        // Tags - context is section name
+        const sectionTags = tags.filter(t => t.section === context);
+        const reordered = [...sectionTags];
+        const [moved] = reordered.splice(sourceIndex, 1);
+        reordered.splice(targetIndex, 0, moved);
+
+        const updates = reordered.map((item, idx) => ({
+          id: item.id,
+          sort_order: (idx + 1) * 10,
+        }));
+
+        const updatedTags = tags.map(t => {
+          const update = updates.find(u => u.id === t.id);
+          return update ? { ...t, sort_order: update.sort_order } : t;
+        });
+        updatedTags.sort((a, b) => a.sort_order - b.sort_order);
+        setTags(updatedTags);
+
+        for (const update of updates) {
+          await supabase
+            .from('tagging_taxonomy')
+            .update({ sort_order: update.sort_order, updated_at: new Date().toISOString() })
+            .eq('id', update.id);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reorder');
+    } finally {
+      handleDragEnd();
+    }
+  };
+
   const handleSavePrompt = async (promptKey: 'tagging_beast' | 'validator') => {
     try {
       setSavingPromptKey(promptKey);
@@ -586,6 +734,18 @@ export default function TaggingPage() {
   const TrashIcon = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+
+  const GripIcon = () => (
+    <svg className="w-4 h-4 text-pl-muted cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M7 2a2 2 0 10.001 4.001A2 2 0 007 2zm0 6a2 2 0 10.001 4.001A2 2 0 007 8zm0 6a2 2 0 10.001 4.001A2 2 0 007 14zm6-8a2 2 0 10-.001-4.001A2 2 0 0013 6zm0 2a2 2 0 10.001 4.001A2 2 0 0013 8zm0 6a2 2 0 10.001 4.001A2 2 0 0013 14z" />
+    </svg>
+  );
+
+  const SmallPlusIcon = () => (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
     </svg>
   );
 
@@ -897,10 +1057,21 @@ export default function TaggingPage() {
                           <div>
                             <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Parent Categories</h3>
                             <div className="space-y-4">
-                              {parentCats.map(parent => (
-                                <div key={parent.id}>
+                              {parentCats.map((parent, parentIdx) => (
+                                <div
+                                  key={parent.id}
+                                  draggable
+                                  onDragStart={() => handleDragStart(parent.id, 'category', parentIdx, 'parents')}
+                                  onDragOver={(e) => handleDragOver(e, parentIdx)}
+                                  onDrop={(e) => handleDrop(e, parentIdx, 'parents')}
+                                  onDragEnd={handleDragEnd}
+                                  className={`${dragContext === 'parents' && dragOverIndex === parentIdx ? 'border-t-2 border-pl-gold' : ''}`}
+                                >
                                   <div className="pl-card p-4 border border-pl-border flex items-start justify-between bg-pl-navy/50">
                                     <div className="flex-1 flex items-center gap-3">
+                                      <div className="flex-shrink-0 pt-1" title="Drag to reorder">
+                                        <GripIcon />
+                                      </div>
                                       <svg className="w-5 h-5 text-pl-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                       </svg>
@@ -910,13 +1081,27 @@ export default function TaggingPage() {
                                           <span className="text-xs px-2 py-1 bg-pl-dark text-pl-muted rounded border border-pl-gold/30 font-semibold">
                                             [PARENT]
                                           </span>
+                                          <span className="text-xs text-pl-muted">
+                                            ({(childCatsMap.get(parent.name) || []).length})
+                                          </span>
                                         </div>
                                         <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
                                           {parent.domain}
                                         </span>
                                       </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => {
+                                          setAddingSubcategoryTo(addingSubcategoryTo === parent.name ? null : parent.name);
+                                          setNewSubcatName('');
+                                          setNewSubcatDomain('both');
+                                        }}
+                                        className={`p-2 rounded transition ${addingSubcategoryTo === parent.name ? 'bg-pl-gold/20 text-pl-gold' : 'text-pl-success hover:bg-pl-success/10'}`}
+                                        title="Add subcategory"
+                                      >
+                                        <SmallPlusIcon />
+                                      </button>
                                       <button
                                         onClick={() => handleDeleteCategory(parent.id)}
                                         className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
@@ -928,29 +1113,80 @@ export default function TaggingPage() {
                                   </div>
 
                                   {/* Subcategories */}
-                                  {childCatsMap.has(parent.name) && (
-                                    <div className="space-y-2 mt-2 ml-6 pl-4 border-l-2 border-pl-dark">
-                                      {childCatsMap.get(parent.name)!.map(child => (
-                                        <div key={child.id} className="pl-card p-3 border border-pl-border/50 flex items-center justify-between bg-pl-dark/30">
+                                  <div className="space-y-2 mt-2 ml-6 pl-4 border-l-2 border-pl-dark">
+                                    {(childCatsMap.get(parent.name) || []).map((child, childIdx) => (
+                                      <div
+                                        key={child.id}
+                                        draggable
+                                        onDragStart={(e) => { e.stopPropagation(); handleDragStart(child.id, 'category', childIdx, parent.name); }}
+                                        onDragOver={(e) => { e.stopPropagation(); handleDragOver(e, childIdx); }}
+                                        onDrop={(e) => { e.stopPropagation(); handleDrop(e, childIdx, parent.name); }}
+                                        onDragEnd={handleDragEnd}
+                                        className={`pl-card p-3 border border-pl-border/50 flex items-center justify-between bg-pl-dark/30 transition-all ${
+                                          dragContext === parent.name && dragOverIndex === childIdx ? 'border-t-2 border-pl-gold' : ''
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 flex-1">
+                                          <div className="flex-shrink-0" title="Drag to reorder">
+                                            <GripIcon />
+                                          </div>
                                           <div className="flex-1">
                                             <h5 className="font-semibold text-white text-sm">{child.name}</h5>
                                             <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-1 inline-block border border-pl-accent/30">
                                               {child.domain}
                                             </span>
                                           </div>
-                                          <div className="flex gap-2">
-                                            <button
-                                              onClick={() => handleDeleteCategory(child.id)}
-                                              className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
-                                              title="Delete"
-                                            >
-                                              <TrashIcon />
-                                            </button>
-                                          </div>
                                         </div>
-                                      ))}
-                                    </div>
-                                  )}
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={() => handleDeleteCategory(child.id)}
+                                            className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                            title="Delete"
+                                          >
+                                            <TrashIcon />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+
+                                    {/* Inline add subcategory form */}
+                                    {addingSubcategoryTo === parent.name && (
+                                      <div className="pl-card p-3 border border-pl-gold/30 bg-pl-dark/50 space-y-2">
+                                        <input
+                                          type="text"
+                                          placeholder="New subcategory name"
+                                          value={newSubcatName}
+                                          onChange={(e) => setNewSubcatName(e.target.value)}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubcategory(parent.name); }}
+                                          className="pl-input w-full text-sm"
+                                          autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                          <select
+                                            value={newSubcatDomain}
+                                            onChange={(e) => setNewSubcatDomain(e.target.value as 'event' | 'attraction' | 'both')}
+                                            className="pl-input text-sm flex-1"
+                                          >
+                                            {domains.map(d => (
+                                              <option key={d} value={d}>{d}</option>
+                                            ))}
+                                          </select>
+                                          <button
+                                            onClick={() => handleAddSubcategory(parent.name)}
+                                            className="pl-btn-primary text-sm px-3"
+                                          >
+                                            Add
+                                          </button>
+                                          <button
+                                            onClick={() => { setAddingSubcategoryTo(null); setNewSubcatName(''); }}
+                                            className="pl-btn-secondary text-sm px-3"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -962,13 +1198,28 @@ export default function TaggingPage() {
                           <div>
                             <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Standalone Categories</h3>
                             <div className="space-y-2">
-                              {standaloneCats.map(cat => (
-                                <div key={cat.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-white">{cat.name}</h4>
-                                    <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
-                                      {cat.domain}
-                                    </span>
+                              {standaloneCats.map((cat, catIdx) => (
+                                <div
+                                  key={cat.id}
+                                  draggable
+                                  onDragStart={() => handleDragStart(cat.id, 'category', catIdx, 'standalone')}
+                                  onDragOver={(e) => handleDragOver(e, catIdx)}
+                                  onDrop={(e) => handleDrop(e, catIdx, 'standalone')}
+                                  onDragEnd={handleDragEnd}
+                                  className={`pl-card p-4 border border-pl-border flex items-center justify-between transition-all ${
+                                    dragContext === 'standalone' && dragOverIndex === catIdx ? 'border-t-2 border-pl-gold' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <div className="flex-shrink-0" title="Drag to reorder">
+                                      <GripIcon />
+                                    </div>
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-white">{cat.name}</h4>
+                                      <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
+                                        {cat.domain}
+                                      </span>
+                                    </div>
                                   </div>
                                   <div className="flex gap-2">
                                     <button
@@ -1034,26 +1285,65 @@ export default function TaggingPage() {
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {tags.map(tag => (
-                    <div key={tag.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-white">{tag.name}</h4>
-                        <span className="text-xs px-2 py-1 bg-pl-gold/10 text-pl-gold rounded mt-2 inline-block border border-pl-gold/30">
-                          {tag.section}
-                        </span>
+                <div className="space-y-4">
+                  {tagSections.map(section => {
+                    const sectionTags = tags.filter(t => t.section === section);
+                    if (sectionTags.length === 0) return null;
+                    return (
+                      <div key={section}>
+                        <h3 className="text-xs font-semibold text-pl-muted mb-2 uppercase tracking-wider">{section} ({sectionTags.length})</h3>
+                        <div className="space-y-1">
+                          {sectionTags.map((tag, tagIdx) => (
+                            <div
+                              key={tag.id}
+                              draggable
+                              onDragStart={() => handleDragStart(tag.id, 'tag', tagIdx, section)}
+                              onDragOver={(e) => handleDragOver(e, tagIdx)}
+                              onDrop={(e) => handleDrop(e, tagIdx, section)}
+                              onDragEnd={handleDragEnd}
+                              className={`pl-card p-3 border border-pl-border flex items-center justify-between transition-all ${
+                                dragContext === section && dragOverIndex === tagIdx ? 'border-t-2 border-pl-gold' : ''
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="flex-shrink-0" title="Drag to reorder">
+                                  <GripIcon />
+                                </div>
+                                <h4 className="font-semibold text-white text-sm">{tag.name}</h4>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDeleteTag(tag.id)}
+                                  className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                  title="Delete"
+                                >
+                                  <TrashIcon />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDeleteTag(tag.id)}
-                          className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
-                          title="Delete"
-                        >
-                          <TrashIcon />
-                        </button>
+                    );
+                  })}
+                  {/* Tags with no matching section */}
+                  {tags.filter(t => !tagSections.includes(t.section || '')).length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-pl-muted mb-2 uppercase tracking-wider">Other</h3>
+                      <div className="space-y-1">
+                        {tags.filter(t => !tagSections.includes(t.section || '')).map(tag => (
+                          <div key={tag.id} className="pl-card p-3 border border-pl-border flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className="flex-shrink-0"><GripIcon /></div>
+                              <h4 className="font-semibold text-white text-sm">{tag.name}</h4>
+                              <span className="text-xs px-2 py-0.5 bg-pl-gold/10 text-pl-gold rounded border border-pl-gold/30">{tag.section}</span>
+                            </div>
+                            <button onClick={() => handleDeleteTag(tag.id)} className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"><TrashIcon /></button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
