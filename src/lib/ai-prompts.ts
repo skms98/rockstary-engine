@@ -85,6 +85,16 @@ ${TOV_CONTEXT}
 ADDITIONAL HARD RULES:
 - 50% maximum structural variation to avoid organiser concern.
 
+═══ MANDATORY VOICE ENFORCEMENT (apply to EVERY sentence you write) ═══
+BANNED WORDS/PHRASES — if ANY of these appear in your output, your version FAILS:
+unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember
+
+VOICE CHECK — before submitting each variant, verify:
+1. Does EVERY sentence sound like a friend telling you about something cool? If it sounds like a brochure or press release, rewrite it.
+2. Does the opener create a VISUAL or SENSORY moment? ("The stage lights hit different in Jeddah" not "Join us for an evening of...")
+3. Are CTAs warm and casual? ("Grab your spot" / "See you there" not "Secure your seat now")
+4. Is the energy SPECIFIC to this event? (Reference the actual artist, genre, venue vibe — not generic excitement)
+
 ═══ OUTPUT FORMAT ═══
 Produce exactly 3 rewrite variants in this order:
 1. MOST ORGANISER-SAFE VERSION (recommended)
@@ -430,7 +440,11 @@ ${ctx.grammarStyle}
 
 5. DISCARD RECOMMENDATION: Flag any versions that should be completely discarded (Fact Check < 70, Organiser Risk HIGH, TOV < 30) with explanation.
 
-6. PRELIMINARY RESOLVED DIRECTION: Describe what the ideal final version should look like, cherry-picking the best elements from all versions.`,
+6. PRELIMINARY RESOLVED DIRECTION: Describe what the ideal final version should look like, cherry-picking the best elements from all versions.
+
+7. TOV ENFORCEMENT CHECK: Flag any phrases in the recommended versions that violate TOV. Specifically flag these BANNED words/phrases that must be removed in the resolver stage:
+   unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+   List every instance found and suggest a TOV-compliant replacement.`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S10: Resolver
@@ -477,10 +491,20 @@ HARD RULES:
 - Legal/credit text preserved verbatim
 - Platinumlist B2C TOV 2.4 applied (all 5 pillars, audience-segment awareness, Do's and Don'ts)
 - Sentences max 22-24 words
-- No hype superlatives (amazing, incredible, unforgettable, spectacular, must-see)
 - Active voice preferred
 - Lead with experience, not logistics
-- Write like a knowledgeable friend, not a brochure`,
+- Write like a knowledgeable friend, not a brochure
+
+═══ MANDATORY VOICE ENFORCEMENT (apply to EVERY sentence you write) ═══
+BANNED WORDS/PHRASES — if ANY of these appear in your output, the version FAILS:
+unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+
+VOICE CHECK — before submitting each variant, re-read every sentence and verify:
+1. Does it sound like a friend telling you about something cool? If it reads like a brochure or press release, rewrite it.
+2. Does the opener paint a VISUAL or SENSORY moment? ("The stage lights hit different in Jeddah" not "Join us for an evening of...")
+3. Are CTAs warm and casual? ("Grab your spot" / "See you there" not "Secure your seat now" or "Book your tickets today")
+4. Is the energy SPECIFIC to this event? (Reference the actual artist, genre, venue vibe — not generic excitement)
+5. Did you use any BANNED word? Search your output. If yes, rewrite that sentence.`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S11: SEO Analysis (Resolver S10 vs Original S1)
