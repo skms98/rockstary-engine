@@ -18,6 +18,7 @@ export default function EventsDashboard() {
     event_url: '',
     raw_text: '',
     screenshot_file: null as File | null,
+    screenshot_files: [] as { file: File; label: string }[],
   })
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -103,8 +104,28 @@ export default function EventsDashboard() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
+    // Upload multiple ordered screenshots
     let screenshot_url = ''
-    if (formData.screenshot_file) {
+    const screenshotsArray: { order: number; url: string; label: string }[] = []
+
+    if (formData.screenshot_files.length > 0) {
+      for (let i = 0; i < formData.screenshot_files.length; i++) {
+        const { file, label } = formData.screenshot_files[i]
+        const fileName = `${Date.now()}-${i}-${file.name}`
+        const { data: uploadData } = await supabase.storage
+          .from('screenshots')
+          .upload(fileName, file)
+        if (uploadData) {
+          const { data: urlData } = supabase.storage.from('screenshots').getPublicUrl(fileName)
+          screenshotsArray.push({ order: i + 1, url: urlData.publicUrl, label })
+        }
+      }
+      // First screenshot URL for backwards compatibility
+      if (screenshotsArray.length > 0) {
+        screenshot_url = screenshotsArray[0].url
+      }
+    } else if (formData.screenshot_file) {
+      // Legacy single file fallback
       const fileName = `${Date.now()}-${formData.screenshot_file.name}`
       const { data: uploadData } = await supabase.storage
         .from('screenshots')
@@ -112,6 +133,7 @@ export default function EventsDashboard() {
       if (uploadData) {
         const { data: urlData } = supabase.storage.from('screenshots').getPublicUrl(fileName)
         screenshot_url = urlData.publicUrl
+        screenshotsArray.push({ order: 1, url: urlData.publicUrl, label: 'Full page' })
       }
     }
 
@@ -123,6 +145,7 @@ export default function EventsDashboard() {
       event_url: formData.event_url,
       input_method: inputMethod,
       screenshot_url,
+      screenshots: screenshotsArray,
       original_description: inputMethod === 'rawtext_url' ? formData.raw_text : '',
       recommended_versions: '',
       fact_check_scores: '',
@@ -146,7 +169,7 @@ export default function EventsDashboard() {
     const { error } = await supabase.from('content_entries').insert([entry])
     if (!error) {
       setShowNewForm(false)
-      setFormData({ event_id: '', event_title: '', event_url: '', raw_text: '', screenshot_file: null })
+      setFormData({ event_id: '', event_title: '', event_url: '', raw_text: '', screenshot_file: null, screenshot_files: [] })
       loadEntries()
     }
     setSubmitting(false)
@@ -427,30 +450,6 @@ export default function EventsDashboard() {
                 </>
               )}
 
-              {/* Screenshot Upload — required for screenshot_url, optional for others */}
-              {inputMethod === 'screenshot_url' && (
-                <div>
-                  <label className="block text-sm text-pl-text-dim mb-2">Screenshot</label>
-                  <div className="border-2 border-dashed border-pl-border rounded-xl p-8 text-center hover:border-pl-gold/30 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setFormData({ ...formData, screenshot_file: e.target.files?.[0] || null })}
-                      className="hidden"
-                      id="screenshot-upload"
-                    />
-                    <label htmlFor="screenshot-upload" className="cursor-pointer">
-                      <svg className="w-8 h-8 text-pl-muted mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <p className="text-sm text-pl-text-dim">
-                        {formData.screenshot_file ? formData.screenshot_file.name : 'Click to upload screenshot'}
-                      </p>
-                    </label>
-                  </div>
-                </div>
-              )}
-
               {/* Raw Text */}
               {inputMethod === 'rawtext_url' && (
                 <div>
@@ -465,45 +464,161 @@ export default function EventsDashboard() {
                 </div>
               )}
 
-              {/* Optional Screenshot — for Raw Text + URL and URL Only methods */}
-              {(inputMethod === 'rawtext_url' || inputMethod === 'url_only') && (
+              {/* Multi-Screenshot Upload — required for screenshot_url, optional for others */}
+              {inputMethod !== 'excel_upload' && (
                 <div>
                   <label className="block text-sm text-pl-text-dim mb-2">
-                    Screenshot <span className="text-emerald-400 text-xs">(optional, helps with QA and category tagging)</span>
+                    Page Screenshots
+                    {inputMethod === 'screenshot_url' ? (
+                      <span className="text-amber-400 text-xs ml-1">(required, upload in page order: top to bottom)</span>
+                    ) : (
+                      <span className="text-emerald-400 text-xs ml-1">(optional, helps with QA and category tagging)</span>
+                    )}
                   </label>
-                  <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${formData.screenshot_file ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-pl-border hover:border-pl-gold/30'}`}>
+
+                  {/* Uploaded screenshots list */}
+                  {formData.screenshot_files.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {formData.screenshot_files.map((item, index) => (
+                        <div key={index} className="flex items-center gap-3 bg-pl-card border border-pl-border rounded-lg px-3 py-2">
+                          {/* Order badge */}
+                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-pl-gold/20 text-pl-gold flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </div>
+
+                          {/* Thumbnail preview */}
+                          <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-pl-dark">
+                            <img
+                              src={URL.createObjectURL(item.file)}
+                              alt={`Screenshot ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+
+                          {/* Label dropdown */}
+                          <select
+                            value={item.label}
+                            onChange={(e) => {
+                              const updated = [...formData.screenshot_files]
+                              updated[index] = { ...updated[index], label: e.target.value }
+                              setFormData({ ...formData, screenshot_files: updated })
+                            }}
+                            className="pl-input text-xs py-1 flex-1 min-w-0"
+                          >
+                            <option value="Top of page">Top of page</option>
+                            <option value="Header / Hero">Header / Hero</option>
+                            <option value="Description">Description</option>
+                            <option value="Event details">Event details</option>
+                            <option value="Lineup / Programme">Lineup / Programme</option>
+                            <option value="Pricing / Tickets">Pricing / Tickets</option>
+                            <option value="Venue / Map">Venue / Map</option>
+                            <option value="T&Cs / Legal">T&Cs / Legal</option>
+                            <option value="Gallery">Gallery</option>
+                            <option value="Footer">Footer</option>
+                            <option value="Full page">Full page</option>
+                          </select>
+
+                          {/* File name */}
+                          <span className="text-xs text-pl-muted truncate max-w-[100px]" title={item.file.name}>
+                            {item.file.name}
+                          </span>
+
+                          {/* Move up */}
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => {
+                              const updated = [...formData.screenshot_files]
+                              ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
+                              setFormData({ ...formData, screenshot_files: updated })
+                            }}
+                            className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
+                            title="Move up"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+
+                          {/* Move down */}
+                          <button
+                            type="button"
+                            disabled={index === formData.screenshot_files.length - 1}
+                            onClick={() => {
+                              const updated = [...formData.screenshot_files]
+                              ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
+                              setFormData({ ...formData, screenshot_files: updated })
+                            }}
+                            className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
+                            title="Move down"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+
+                          {/* Remove */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                screenshot_files: formData.screenshot_files.filter((_, i) => i !== index),
+                              })
+                            }}
+                            className="text-red-400/60 hover:text-red-400 transition-colors"
+                            title="Remove"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add more screenshots button */}
+                  <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-colors ${formData.screenshot_files.length > 0 ? 'border-pl-border/50 hover:border-pl-gold/20' : 'border-pl-border hover:border-pl-gold/30'}`}>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setFormData({ ...formData, screenshot_file: e.target.files?.[0] || null })}
+                      multiple
+                      onChange={(e) => {
+                        const files = e.target.files
+                        if (!files) return
+                        const defaultLabels = ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer']
+                        const newFiles = Array.from(files).map((file, i) => ({
+                          file,
+                          label: defaultLabels[formData.screenshot_files.length + i] || 'Full page',
+                        }))
+                        setFormData({
+                          ...formData,
+                          screenshot_files: [...formData.screenshot_files, ...newFiles],
+                        })
+                        e.target.value = ''
+                      }}
                       className="hidden"
-                      id="optional-screenshot-upload"
+                      id="multi-screenshot-upload"
                     />
-                    <label htmlFor="optional-screenshot-upload" className="cursor-pointer">
-                      {formData.screenshot_file ? (
-                        <div className="flex items-center justify-center gap-3">
-                          <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="text-sm text-emerald-400">{formData.screenshot_file.name}</span>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); setFormData({ ...formData, screenshot_file: null }) }}
-                            className="text-xs text-red-400 hover:text-red-300 ml-2"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center gap-2">
-                          <svg className="w-5 h-5 text-pl-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          <p className="text-sm text-pl-muted">Add a screenshot for better QA and tagging</p>
-                        </div>
-                      )}
+                    <label htmlFor="multi-screenshot-upload" className="cursor-pointer">
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5 text-pl-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <p className="text-sm text-pl-muted">
+                          {formData.screenshot_files.length > 0
+                            ? `Add more screenshots (${formData.screenshot_files.length} added)`
+                            : 'Click to add page screenshots (select multiple)'}
+                        </p>
+                      </div>
                     </label>
                   </div>
+                  {formData.screenshot_files.length > 0 && (
+                    <p className="text-xs text-pl-muted mt-2">
+                      Arrange in page order (top to bottom). Use arrows to reorder, dropdown to label each section.
+                    </p>
+                  )}
                 </div>
               )}
 
