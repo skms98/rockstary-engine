@@ -844,14 +844,18 @@ ${ctx.resolverOutput}
 
 ═══ OUTPUT FORMAT ═══
 
-1. RANKED LIST: All 4 resolved versions ranked best to worst with composite scores
-2. DISCARDED VERSIONS: Any versions that hit discard rules, with explanation
-3. WINNER: The #1 version to publish, with:
-   - Why it won
+1. RANKED LIST: All resolved versions ranked best to worst. For EACH version include:
+   - Version label (e.g. "Balanced Version", "SEO-Optimised Version", etc.)
+   - Composite score breakdown (Fact Check, Organiser Safety, SEO, TOV, Grammar)
    - Final composite score
-   - Any last micro-edits needed
-4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied
-5. RUNNER-UP: The #2 version as backup, in case the organiser requests changes
+   - THE COMPLETE FULL TEXT of that version (reproduce the entire description body — do NOT summarise or abbreviate)
+2. DISCARDED VERSIONS: Any versions that hit discard rules, with the full text body and explanation of why discarded
+3. WINNER SUMMARY:
+   - Which version won and why
+   - Final composite score
+   - Any last micro-edits needed (if none, say "None")
+4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied. This MUST be the full event description body — every sentence, fully written out.
+5. RUNNER-UP: The #2 version as backup. MUST include the COMPLETE FULL TEXT of this version — every sentence, fully written out. Do NOT just label it; reproduce the entire description body.
 6. TEASERS: Generate exactly 10 event teasers following these strict rules:
    - MAXIMUM 13 words each (hard limit, count carefully)
    - Must respect the artist/event — never trivialise, mock, or diminish
