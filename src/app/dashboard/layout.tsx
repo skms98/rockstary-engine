@@ -14,6 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isEvents = pathname.startsWith('/dashboard/events')
   const isAttractions = pathname.startsWith('/dashboard/attractions')
   const isAIRunner = pathname.startsWith('/dashboard/ai-runner')
+  const isTagging = pathname.startsWith('/dashboard/tagging')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -95,6 +96,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {sidebarOpen && <span className="font-medium">Attractions</span>}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard/tagging')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isTagging
+                ? 'bg-pl-gold/10 border border-pl-gold/30 text-pl-gold'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">Tagging</span>}
           </button>
 
           {sidebarOpen && (
