@@ -50,7 +50,7 @@ export interface EventEntry {
   event_url: string
   input_method: InputMethod
   screenshot_url?: string
-  screenshots?: { order: number; url: string; label: string }[]
+  screenshots?: { order: number; url: string; label: string; group?: number }[]
   // Step data columns
   original_description: string        // I - Original Description
   recommended_versions: string        // K - Recommended versions

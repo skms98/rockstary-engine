@@ -113,13 +113,36 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `No AI prompt available for step: ${stepField}` }, { status: 400 })
       }
 
-      // Format screenshots as ordered text for prompt context
+      // Format screenshots as ordered text with section grouping for prompt context
       let screenshotsText = ''
       if (entry.screenshots && Array.isArray(entry.screenshots) && entry.screenshots.length > 0) {
-        screenshotsText = entry.screenshots
-          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
-          .map((s: any, i: number) => `Screenshot ${i + 1} of ${entry.screenshots.length}: ${s.url}`)
-          .join('\n')
+        const sorted = [...entry.screenshots].sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+        // Build section display: group-aware labelling
+        const seenGroups: number[] = []
+        sorted.forEach((s: any) => { if (s.group && !seenGroups.includes(s.group)) seenGroups.push(s.group) })
+        const hasGroups = seenGroups.length > 0
+
+        if (hasGroups) {
+          const groupCounts: Record<number, number> = {}
+          sorted.forEach((s: any) => { groupCounts[s.group] = (groupCounts[s.group] || 0) + 1 })
+          const groupRunning: Record<number, number> = {}
+          screenshotsText = sorted.map((s: any) => {
+            const gIdx = seenGroups.indexOf(s.group) + 1
+            groupRunning[s.group] = (groupRunning[s.group] || 0) + 1
+            const partNum = groupRunning[s.group]
+            const total = groupCounts[s.group]
+            if (total > 1) {
+              return `Section ${gIdx}, part ${partNum} of ${total}: ${s.url}`
+            }
+            return `Section ${gIdx}: ${s.url}`
+          }).join('\n')
+          screenshotsText = `${sorted.length} screenshots across ${seenGroups.length} sections (screenshots in the same section cover the same page area, stitched together):\n${screenshotsText}`
+        } else {
+          // Legacy: no group info, flat numbering
+          screenshotsText = sorted
+            .map((s: any, i: number) => `Screenshot ${i + 1} of ${sorted.length}: ${s.url}`)
+            .join('\n')
+        }
       } else if (entry.screenshot_url) {
         screenshotsText = `Screenshot 1 of 1: ${entry.screenshot_url}`
       }

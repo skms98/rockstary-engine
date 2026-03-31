@@ -18,7 +18,7 @@ export default function EventsDashboard() {
     event_url: '',
     raw_text: '',
     screenshot_file: null as File | null,
-    screenshot_files: [] as { file: File; label: string }[],
+    screenshot_files: [] as { file: File; label: string; group: number }[],
   })
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -51,13 +51,17 @@ export default function EventsDashboard() {
   }, [showNewForm])
 
   // Shared helper: add image files to screenshot_files array
+  // Files uploaded in the same batch get the same group number (same section)
   const addScreenshotFiles = useCallback((files: File[]) => {
     const imageFiles = files.filter(f => f.type.startsWith('image/'))
     if (imageFiles.length === 0) return
     setFormData(prev => {
+      const maxGroup = prev.screenshot_files.reduce((max, s) => Math.max(max, s.group), 0)
+      const nextGroup = maxGroup + 1
       const newFiles = imageFiles.map((file, i) => ({
         file,
         label: `Screenshot ${prev.screenshot_files.length + i + 1}`,
+        group: nextGroup,
       }))
       return { ...prev, screenshot_files: [...prev.screenshot_files, ...newFiles] }
     })
@@ -166,18 +170,18 @@ export default function EventsDashboard() {
 
     // Upload multiple ordered screenshots
     let screenshot_url = ''
-    const screenshotsArray: { order: number; url: string; label: string }[] = []
+    const screenshotsArray: { order: number; url: string; label: string; group: number }[] = []
 
     if (formData.screenshot_files.length > 0) {
       for (let i = 0; i < formData.screenshot_files.length; i++) {
-        const { file, label } = formData.screenshot_files[i]
+        const { file, label, group } = formData.screenshot_files[i]
         const fileName = `${Date.now()}-${i}-${file.name}`
         const { data: uploadData } = await supabase.storage
           .from('screenshots')
           .upload(fileName, file)
         if (uploadData) {
           const { data: urlData } = supabase.storage.from('screenshots').getPublicUrl(fileName)
-          screenshotsArray.push({ order: i + 1, url: urlData.publicUrl, label })
+          screenshotsArray.push({ order: i + 1, url: urlData.publicUrl, label, group })
         }
       }
       // First screenshot URL for backwards compatibility
@@ -193,7 +197,7 @@ export default function EventsDashboard() {
       if (uploadData) {
         const { data: urlData } = supabase.storage.from('screenshots').getPublicUrl(fileName)
         screenshot_url = urlData.publicUrl
-        screenshotsArray.push({ order: 1, url: urlData.publicUrl, label: 'Full page' })
+        screenshotsArray.push({ order: 1, url: urlData.publicUrl, label: 'Full page', group: 1 })
       }
     }
 
@@ -538,87 +542,173 @@ export default function EventsDashboard() {
                     )}
                   </label>
 
-                  {/* Uploaded screenshots list */}
-                  {formData.screenshot_files.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {formData.screenshot_files.map((item, index) => (
-                        <div key={index} className="flex items-center gap-3 bg-pl-card border border-pl-border rounded-lg px-3 py-2">
-                          {/* Order number */}
-                          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-pl-gold/20 text-pl-gold flex items-center justify-center text-xs font-bold">
-                            {index + 1}
+                  {/* Uploaded screenshots list — grouped by section */}
+                  {formData.screenshot_files.length > 0 && (() => {
+                    // Build ordered unique groups for display labels
+                    const seenGroups: number[] = []
+                    formData.screenshot_files.forEach(s => { if (!seenGroups.includes(s.group)) seenGroups.push(s.group) })
+                    const groupDisplayIndex = (g: number) => seenGroups.indexOf(g) + 1
+                    const groupColors = ['bg-pl-gold/20 text-pl-gold', 'bg-blue-500/20 text-blue-400', 'bg-emerald-500/20 text-emerald-400', 'bg-purple-500/20 text-purple-400', 'bg-rose-500/20 text-rose-400', 'bg-amber-500/20 text-amber-400', 'bg-cyan-500/20 text-cyan-400', 'bg-pink-500/20 text-pink-400']
+                    const getGroupColor = (g: number) => groupColors[(groupDisplayIndex(g) - 1) % groupColors.length]
+                    // Count per group for "part X of Y" display
+                    const groupCounts: Record<number, number> = {}
+                    const groupPartIndex: number[] = []
+                    formData.screenshot_files.forEach(s => {
+                      groupCounts[s.group] = (groupCounts[s.group] || 0) + 1
+                    })
+                    const groupRunning: Record<number, number> = {}
+                    formData.screenshot_files.forEach(s => {
+                      groupRunning[s.group] = (groupRunning[s.group] || 0) + 1
+                      groupPartIndex.push(groupRunning[s.group])
+                    })
+
+                    return (
+                    <div className="space-y-1 mb-3">
+                      {formData.screenshot_files.map((item, index) => {
+                        const gIdx = groupDisplayIndex(item.group)
+                        const gCount = groupCounts[item.group]
+                        const partNum = groupPartIndex[index]
+                        const sectionLabel = gCount > 1 ? `S${gIdx}.${partNum}` : `S${gIdx}`
+                        const prevGroup = index > 0 ? formData.screenshot_files[index - 1].group : null
+                        const isGroupStart = index === 0 || item.group !== prevGroup
+
+                        return (
+                        <div key={index}>
+                          {/* Group separator line for new sections */}
+                          {isGroupStart && index > 0 && (
+                            <div className="flex items-center gap-2 py-1 px-1">
+                              <div className="flex-1 border-t border-pl-border/30" />
+                              <span className="text-[10px] text-pl-muted/50 uppercase tracking-wider">Section {gIdx}</span>
+                              <div className="flex-1 border-t border-pl-border/30" />
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 bg-pl-card border border-pl-border rounded-lg px-3 py-2">
+                            {/* Section badge */}
+                            <div className={`flex-shrink-0 px-2 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${getGroupColor(item.group)}`}>
+                              {sectionLabel}
+                            </div>
+
+                            {/* Thumbnail preview */}
+                            <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-pl-dark">
+                              <img
+                                src={getPreviewUrl(item.file)}
+                                alt={sectionLabel}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+
+                            {/* File name */}
+                            <span className="text-xs text-pl-muted truncate flex-1 min-w-0" title={item.file.name}>
+                              {item.file.name}
+                            </span>
+
+                            {/* Link/Unlink with previous — merge into same section or split */}
+                            {index > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...formData.screenshot_files]
+                                  if (item.group === prevGroup) {
+                                    // Unlink: give this and all subsequent same-group items a new group
+                                    const maxG = updated.reduce((m, s) => Math.max(m, s.group), 0)
+                                    const oldGroup = item.group
+                                    let splitting = false
+                                    for (let i = index; i < updated.length; i++) {
+                                      if (i === index) splitting = true
+                                      if (splitting && updated[i].group === oldGroup) {
+                                        updated[i] = { ...updated[i], group: maxG + 1 }
+                                      }
+                                    }
+                                  } else {
+                                    // Link: merge this item's group into the previous item's group
+                                    const targetGroup = prevGroup!
+                                    const sourceGroup = item.group
+                                    for (let i = 0; i < updated.length; i++) {
+                                      if (updated[i].group === sourceGroup) {
+                                        updated[i] = { ...updated[i], group: targetGroup }
+                                      }
+                                    }
+                                  }
+                                  setFormData({ ...formData, screenshot_files: updated })
+                                }}
+                                className={`flex-shrink-0 transition-colors ${item.group === prevGroup ? 'text-pl-gold hover:text-red-400' : 'text-pl-muted/40 hover:text-pl-gold'}`}
+                                title={item.group === prevGroup ? 'Unlink from section above (split into new section)' : 'Link to section above (same page area)'}
+                              >
+                                {item.group === prevGroup ? (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 20L20 4" />
+                                  </svg>
+                                )}
+                              </button>
+                            )}
+
+                            {/* Move up */}
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => {
+                                const updated = [...formData.screenshot_files]
+                                ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
+                                setFormData({ ...formData, screenshot_files: updated })
+                              }}
+                              className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
+                              title="Move up"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                            </button>
+
+                            {/* Move down */}
+                            <button
+                              type="button"
+                              disabled={index === formData.screenshot_files.length - 1}
+                              onClick={() => {
+                                const updated = [...formData.screenshot_files]
+                                ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
+                                setFormData({ ...formData, screenshot_files: updated })
+                              }}
+                              className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
+                              title="Move down"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+
+                            {/* Remove */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const removed = formData.screenshot_files[index]
+                                const url = previewUrlsRef.current.get(removed.file)
+                                if (url) { URL.revokeObjectURL(url); previewUrlsRef.current.delete(removed.file) }
+                                setFormData({
+                                  ...formData,
+                                  screenshot_files: formData.screenshot_files.filter((_, i) => i !== index),
+                                })
+                              }}
+                              className="text-red-400/60 hover:text-red-400 transition-colors"
+                              title="Remove"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
-
-                          {/* Thumbnail preview */}
-                          <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-pl-dark">
-                            <img
-                              src={getPreviewUrl(item.file)}
-                              alt={`Screenshot ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-
-                          {/* File name */}
-                          <span className="text-xs text-pl-muted truncate flex-1 min-w-0" title={item.file.name}>
-                            {item.file.name}
-                          </span>
-
-                          {/* Move up */}
-                          <button
-                            type="button"
-                            disabled={index === 0}
-                            onClick={() => {
-                              const updated = [...formData.screenshot_files]
-                              ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
-                              setFormData({ ...formData, screenshot_files: updated })
-                            }}
-                            className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
-                            title="Move up"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                            </svg>
-                          </button>
-
-                          {/* Move down */}
-                          <button
-                            type="button"
-                            disabled={index === formData.screenshot_files.length - 1}
-                            onClick={() => {
-                              const updated = [...formData.screenshot_files]
-                              ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
-                              setFormData({ ...formData, screenshot_files: updated })
-                            }}
-                            className="text-pl-muted hover:text-pl-gold disabled:opacity-20 transition-colors"
-                            title="Move down"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-
-                          {/* Remove */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const removed = formData.screenshot_files[index]
-                              const url = previewUrlsRef.current.get(removed.file)
-                              if (url) { URL.revokeObjectURL(url); previewUrlsRef.current.delete(removed.file) }
-                              setFormData({
-                                ...formData,
-                                screenshot_files: formData.screenshot_files.filter((_, i) => i !== index),
-                              })
-                            }}
-                            className="text-red-400/60 hover:text-red-400 transition-colors"
-                            title="Remove"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
-                  )}
+                    )
+                  })()}
 
                   {/* Add more screenshots — click, drag-and-drop, or paste */}
                   <div
@@ -679,7 +769,7 @@ export default function EventsDashboard() {
                   </div>
                   {formData.screenshot_files.length > 0 && (
                     <p className="text-xs text-pl-muted mt-2">
-                      Arrange in page order (top to bottom). Use arrows to reorder. AI auto-detects sections.
+                      Screenshots uploaded together are auto-grouped as one section. Use the link/unlink icon to merge or split sections. Files in the same section (e.g. S1.1, S1.2) are treated as parts of the same page area.
                     </p>
                   )}
                 </div>
