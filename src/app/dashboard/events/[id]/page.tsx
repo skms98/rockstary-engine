@@ -395,29 +395,36 @@ export default function EventDetailPage() {
     URL.revokeObjectURL(url)
   }
 
-  function openInGoogleSheets() {
+  async function openInGoogleSheets() {
     const data = getExportData()
     if (!data) return
-    const escapeCSV = (val: string) => {
+    // Build TSV (Google Sheets natively parses pasted TSV into cells)
+    const escapeTSV = (val: string) => {
       if (!val) return ''
-      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-        return `"${val.replace(/"/g, '""')}"`
-      }
-      return val
+      // Replace tabs and newlines so they don't break cell boundaries
+      return val.replace(/\t/g, ' ').replace(/\n/g, ' | ')
     }
-    const csv = [data.headers.map(escapeCSV).join(','), data.row.map(escapeCSV).join(',')].join('\n')
-    // Create a temporary CSV file and download it, then open Google Sheets import
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `rockstary-event-${entry?.event_id}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    // Open Google Sheets — user can File > Import > Upload the CSV
-    setTimeout(() => {
-      window.open('https://sheets.new', '_blank')
-    }, 500)
+    const tsv = [data.headers.map(escapeTSV).join('\t'), data.row.map(escapeTSV).join('\t')].join('\n')
+    // Copy TSV to clipboard
+    try {
+      await navigator.clipboard.writeText(tsv)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = tsv
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    // Open a new Google Sheet
+    window.open('https://sheets.new', '_blank')
+    // Show a brief toast-like alert
+    const toast = document.createElement('div')
+    toast.textContent = 'Data copied! Paste (Ctrl+V) into the new sheet.'
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#c8a832;color:#1a1a2e;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;transition:opacity 0.5s;'
+    document.body.appendChild(toast)
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => document.body.removeChild(toast), 500) }, 3500)
   }
 
   async function exportToExcel() {
@@ -525,7 +532,7 @@ export default function EventDetailPage() {
               CSV
             </button>
             <div className="w-px h-6 bg-pl-border" />
-            <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download CSV and open a new Google Sheet">
+            <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Copy data to clipboard and open a new Google Sheet — just paste">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zM9 17H6v-3h3v3zm0-5H6V9h3v3zm5 5h-4v-3h4v3zm0-5h-4V9h4v3zm4 5h-3v-3h3v3zm0-5h-3V9h3v3z"/>
               </svg>
