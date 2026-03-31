@@ -3,11 +3,90 @@
 import { useState, useEffect } from 'react'
 import type { AttractionEntry } from './page'
 
-// ── SEO Tab ────────────────────────────────────────────────────
+// Helper: render keyword annotations like (keyword) [1] with highlights
+function HighlightedText({ text }: { text: string }) {
+  if (!text) return null
+  // Split on (keyword) [number] pattern and highlight them
+  const parts = text.split(/(\([^)]+\)\s*\[\d+\])/)
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (/^\([^)]+\)\s*\[\d+\]$/.test(part)) {
+          return <span key={i} className="text-blue-400 font-medium bg-blue-500/10 px-1 rounded">{part}</span>
+        }
+        return <span key={i}>{part}</span>
+      })}
+    </span>
+  )
+}
+
+// Section card for SEO content display
+function SeoSection({ label, content, isTitle }: { label: string; content: string; isTitle?: boolean }) {
+  if (!content || content.trim() === '') return null
+  return (
+    <div className="border border-gray-700/40 rounded-lg overflow-hidden">
+      <div className="px-4 py-2 bg-gray-700/30 border-b border-gray-700/40">
+        <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</span>
+      </div>
+      <div className={`px-4 py-3 ${isTitle ? 'text-white text-base font-semibold' : 'text-gray-300 text-sm'}`}>
+        {content.split('\n').map((line, i) => (
+          <p key={i} className={`${i > 0 ? 'mt-1.5' : ''} leading-relaxed`}>
+            <HighlightedText text={line} />
+          </p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── SEO Tab ──────────────────────────────────────────────────
 export function SeoTab({ entry }: { entry: AttractionEntry }) {
+  const seo = entry.seo_content || {}
+  const hasSeoContent = Object.keys(seo).length > 0 && Object.values(seo).some(v => v && String(v).trim() !== '')
+  
+  // Define section display order and labels
+  const seoSections: { key: string; label: string; isTitle?: boolean }[] = [
+    { key: 'h1', label: 'H1 Headline', isTitle: true },
+    { key: 'teaser', label: 'Teaser / Subtitle' },
+    { key: 'what_to_expect_title', label: 'Section Title' },
+    { key: 'what_to_expect', label: 'What To Expect' },
+    { key: 'highlights_title', label: 'Section Title' },
+    { key: 'highlights', label: 'Highlights' },
+    { key: 'inclusions_title', label: 'Section Title' },
+    { key: 'inclusions', label: 'What\'s Included' },
+    { key: 'exclusions_title', label: 'Section Title' },
+    { key: 'exclusions', label: 'Exclusions' },
+    { key: 'timing_title', label: 'Section Title' },
+    { key: 'ticket_info_title', label: 'Section Title' },
+    { key: 'ticket_info', label: 'Ticket Information' },
+    { key: 'important_info_title', label: 'Section Title' },
+    { key: 'important_info', label: 'Important Info' },
+    { key: 'cancellation_title', label: 'Section Title' },
+    { key: 'cancellation', label: 'Cancellation Policy' },
+    { key: 'address_title', label: 'Section Title' },
+    { key: 'how_to_get_there_title', label: 'Section Title' },
+    { key: 'by_car', label: 'By Car' },
+    { key: 'by_public_transport', label: 'By Public Transport' },
+    { key: 'by_taxi', label: 'By Taxi' },
+  ]
+
+  // Group sections into logical blocks for cleaner display
+  const mainSections = [
+    { label: 'H1 Headline', keys: ['h1'], isTitle: true },
+    { label: 'Teaser', keys: ['teaser'] },
+    { label: 'What To Expect', keys: ['what_to_expect'] },
+    { label: 'Highlights', keys: ['highlights'] },
+    { label: "What's Included", keys: ['inclusions'] },
+    { label: 'Exclusions', keys: ['exclusions'] },
+    { label: 'Ticket Information', keys: ['ticket_info'] },
+    { label: 'Important Info', keys: ['important_info'] },
+    { label: 'Cancellation Policy', keys: ['cancellation'] },
+    { label: 'Location & Directions', keys: ['by_car', 'by_public_transport', 'by_taxi'] },
+  ]
+
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <h3 className="text-white font-semibold">SEO Optimization — Column D Rewrite</h3>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
           entry.seo_status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
@@ -15,42 +94,65 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
           'bg-gray-600/30 text-gray-400'
         }`}>{entry.seo_status}</span>
       </div>
+
       <div className="grid grid-cols-2 gap-6">
+        {/* Column C: Original */}
         <div>
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Original Content (Column C)</h4>
-          <div className="bg-gray-900/50 rounded-lg p-4 text-gray-300 text-sm whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono text-xs">
+          <div className="bg-gray-900/50 rounded-lg p-4 text-gray-300 text-sm whitespace-pre-wrap max-h-[700px] overflow-y-auto leading-relaxed">
             {entry.raw_text || 'No content yet'}
           </div>
         </div>
+
+        {/* Column D: SEO Optimised — segmented */}
         <div>
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">SEO Optimised (Column D)</h4>
-          <div className="bg-gray-900/50 rounded-lg p-4 text-gray-300 text-sm whitespace-pre-wrap max-h-[500px] overflow-y-auto font-mono text-xs">
-            {Object.keys(entry.seo_content).length > 0
-              ? JSON.stringify(entry.seo_content, null, 2)
-              : 'Not yet processed — advance to SEO stage to begin optimization'}
-          </div>
+          {hasSeoContent ? (
+            <div className="space-y-3 max-h-[700px] overflow-y-auto pr-1">
+              {mainSections.map((section) => {
+                const values = section.keys.map(k => seo[k] ? String(seo[k]).trim() : '').filter(Boolean)
+                if (values.length === 0) return null
+                const combined = values.join('\n')
+                return (
+                  <SeoSection
+                    key={section.label}
+                    label={section.label}
+                    content={combined}
+                    isTitle={section.isTitle}
+                  />
+                )
+              })}
+              {/* Catch any extra keys not in mainSections */}
+              {Object.entries(seo).filter(([k, v]) => {
+                const knownKeys = mainSections.flatMap(s => s.keys)
+                const titleKeys = ['h1', 'what_to_expect_title', 'highlights_title', 'inclusions_title', 'exclusions_title', 'timing_title', 'ticket_info_title', 'important_info_title', 'cancellation_title', 'address_title', 'how_to_get_there_title']
+                return !knownKeys.includes(k) && !titleKeys.includes(k) && v && String(v).trim() !== ''
+              }).map(([k, v]) => (
+                <SeoSection
+                  key={k}
+                  label={k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  content={String(v)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-gray-900/50 rounded-lg p-4 text-gray-500 text-sm italic">
+              Not yet processed — advance to SEO stage to begin optimization
+            </div>
+          )}
         </div>
       </div>
+
       {entry.keywords_list && (
-        <div className="mt-4 pt-4 border-t border-gray-700/50">
+        <div className="mt-5 pt-5 border-t border-gray-700/50">
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Keywords ({entry.keywords_used}/{entry.keywords_total} used)</h4>
-          <div className="bg-gray-900/50 rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-700/50">
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium w-16">#</th>
-                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Keyword</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => (
-                  <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                    <td className="px-3 py-1.5 text-blue-400 font-mono font-medium">{i + 1}</td>
-                    <td className="px-3 py-1.5 text-blue-300">{i + 1} ({kw.trim()})</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-wrap gap-2">
+            {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900/50 border border-gray-700/50 text-sm">
+                <span className="text-blue-400 font-mono font-medium text-xs">[{i + 1}]</span>
+                <span className="text-blue-300">{kw.trim()}</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -58,7 +160,7 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
   )
 }
 
-// ── Tagging Tab ───────────────────────────────────────────────
+// ── Tagging Tab ──────────────────────────────────────────────
 export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [editDomain, setEditDomain] = useState(entry.domain || '')
   const [editP1, setEditP1] = useState(entry.primary_category || '')
@@ -160,7 +262,14 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
       {Object.keys(entry.fact_sheet).length > 0 && (
         <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-5">
           <h3 className="text-white font-semibold mb-3">Fact Sheet (Phase 1 Output)</h3>
-          <pre className="text-gray-300 text-xs font-mono bg-gray-900/50 rounded-lg p-4 overflow-x-auto">{JSON.stringify(entry.fact_sheet, null, 2)}</pre>
+          <div className="grid grid-cols-2 gap-3">
+            {Object.entries(entry.fact_sheet).map(([key, value]) => (
+              <div key={key} className="bg-gray-900/40 rounded-lg px-3 py-2">
+                <span className="text-xs text-gray-500 font-medium">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                <p className="text-gray-300 text-sm mt-0.5">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -178,7 +287,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ─────────────────────────────────────────────────
+// ── Review Tab ──────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
