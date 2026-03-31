@@ -395,36 +395,31 @@ export default function EventDetailPage() {
     URL.revokeObjectURL(url)
   }
 
+  const [sheetsExporting, setSheetsExporting] = useState(false)
+
   async function openInGoogleSheets() {
-    const data = getExportData()
-    if (!data) return
-    // Build TSV (Google Sheets natively parses pasted TSV into cells)
-    const escapeTSV = (val: string) => {
-      if (!val) return ''
-      // Replace tabs and newlines so they don't break cell boundaries
-      return val.replace(/\t/g, ' ').replace(/\n/g, ' | ')
-    }
-    const tsv = [data.headers.map(escapeTSV).join('\t'), data.row.map(escapeTSV).join('\t')].join('\n')
-    // Copy TSV to clipboard
+    if (!entry) return
+    const authToken = await getAuthToken()
+    if (!authToken) return
+
+    setSheetsExporting(true)
     try {
-      await navigator.clipboard.writeText(tsv)
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea')
-      textarea.value = tsv
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
+      const res = await fetch('/api/export/google-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: params.id, authToken }),
+      })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        window.open(data.url, '_blank')
+      } else {
+        alert(`Google Sheets export failed: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`Export error: ${err.message}`)
+    } finally {
+      setSheetsExporting(false)
     }
-    // Open a new Google Sheet
-    window.open('https://sheets.new', '_blank')
-    // Show a brief toast-like alert
-    const toast = document.createElement('div')
-    toast.textContent = 'Data copied! Paste (Ctrl+V) into the new sheet.'
-    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#c8a832;color:#1a1a2e;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;transition:opacity 0.5s;'
-    document.body.appendChild(toast)
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => document.body.removeChild(toast), 500) }, 3500)
   }
 
   async function exportToExcel() {
@@ -524,9 +519,13 @@ export default function EventDetailPage() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             XLSX
           </button>
-          <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-[#0f9d58]/15 hover:bg-[#0f9d58]/25 text-[#34a853] border border-[#0f9d58]/30 transition-colors" title="Open in Google Sheets (copies data, opens new sheet)">
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1.5"/><line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" strokeWidth="1.5"/></svg>
-            Google Sheets
+          <button onClick={openInGoogleSheets} disabled={sheetsExporting} className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${sheetsExporting ? 'opacity-60 cursor-wait bg-[#0f9d58]/10 text-[#34a853]/60 border-[#0f9d58]/20' : 'bg-[#0f9d58]/15 hover:bg-[#0f9d58]/25 text-[#34a853] border-[#0f9d58]/30'}`} title="Export to Google Sheets">
+            {sheetsExporting ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1.5"/><line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" strokeWidth="1.5"/></svg>
+            )}
+            {sheetsExporting ? 'Exporting…' : 'Google Sheets'}
           </button>
           <button
             onClick={deleteEntry}
