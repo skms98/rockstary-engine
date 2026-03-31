@@ -2,14 +2,9 @@
 
 import { useState } from 'react'
 import { plSupabase } from '@/lib/pl-supabase'
-import { parseExcelFile, type ParsedRow } from '@/lib/excel-parser'
+import { parseAttractionExcel, type AttractionParsedRow } from '@/lib/attraction-excel-parser'
 
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
-
-interface AttractionEntry {
-  id: string
-  title: string
-}
 
 interface AttractionModalProps {
   show: boolean
@@ -19,7 +14,7 @@ interface AttractionModalProps {
 
 export function AttractionModal({ show, onClose, onSuccess }: AttractionModalProps) {
   const [excelFile, setExcelFile] = useState<File | null>(null)
-  const [excelPreview, setExcelPreview] = useState<ParsedRow[]>([])
+  const [excelPreview, setExcelPreview] = useState<AttractionParsedRow[]>([])
   const [importingExcel, setImportingExcel] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -35,7 +30,7 @@ export function AttractionModal({ show, onClose, onSuccess }: AttractionModalPro
     setExcelFile(file)
     try {
       const buffer = await file.arrayBuffer()
-      const rows = await parseExcelFile(buffer)
+      const rows = await parseAttractionExcel(buffer)
       setExcelPreview(rows)
     } catch {
       setExcelPreview([])
