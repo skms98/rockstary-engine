@@ -8,6 +8,9 @@ interface TaggingEntry {
   user_id: string;
   title: string;
   source_text: string;
+  source_url?: string;
+  screenshots?: string[];
+  source_type?: 'text' | 'url' | 'mixed';
   status: 'draft' | 'initial_done' | 'validated' | 'error';
   initial_result?: any;
   validated_result?: any;
@@ -56,6 +59,11 @@ export default function TaggingPage() {
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
   const [newEntryTitle, setNewEntryTitle] = useState('');
   const [newEntryText, setNewEntryText] = useState('');
+
+  const [newEntryUrl, setNewEntryUrl] = useState('');
+  const [newEntryScreenshots, setNewEntryScreenshots] = useState<File[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
+  const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
 
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [processingEntryId, setProcessingEntryId] = useState<string | null>(null);
@@ -131,21 +139,34 @@ export default function TaggingPage() {
   };
 
   const handleNewEntry = async () => {
-    if (!newEntryTitle.trim() || !newEntryText.trim()) {
-      setError('Please fill in all fields');
+    if (!newEntryTitle.trim()) {
+      setError('Please provide a title');
+      return;
+    }
+    if (!newEntryText.trim() && !newEntryUrl.trim()) {
+      setError('Please provide source text or a URL');
       return;
     }
 
     try {
+      setUploadingScreenshots(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) throw new Error('Not authenticated');
+
+      // Determine source type
+      let sourceType: 'text' | 'url' | 'mixed' = 'text';
+      if (newEntryUrl.trim() && newEntryText.trim()) sourceType = 'mixed';
+      else if (newEntryUrl.trim()) sourceType = 'url';
 
       const { data, error: insertError } = await supabase
         .from('tagging_entries')
         .insert({
           user_id: session.user.id,
           title: newEntryTitle,
-          source_text: newEntryText,
+          source_text: newEntryText || '',
+          source_url: newEntryUrl || null,
+          source_type: sourceType,
+          screenshots: [],
           status: 'draft',
           initial_result: null,
           validated_result: null,
@@ -155,15 +176,78 @@ export default function TaggingPage() {
 
       if (insertError) throw insertError;
 
+      // Upload screenshots if any
+      if (newEntryScreenshots.length > 0) {
+        const screenshotUrls = await uploadScreenshotsToStorage(data.id);
+        const { error: updateError } = await supabase
+          .from('tagging_entries')
+          .update({ screenshots: screenshotUrls })
+          .eq('id', data.id);
+        if (updateError) throw updateError;
+        data.screenshots = screenshotUrls;
+      }
+
       setEntries([data, ...entries]);
       setNewEntryTitle('');
       setNewEntryText('');
+      setNewEntryUrl('');
+      setNewEntryScreenshots([]);
+      setScreenshotPreviews([]);
       setShowNewEntryModal(false);
       calculateStats([data, ...entries]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create entry');
+    } finally {
+      setUploadingScreenshots(false);
     }
+  }
+
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + newEntryScreenshots.length > 5) {
+      setError('Maximum 5 screenshots allowed');
+      return;
+    }
+    const newFiles = [...newEntryScreenshots, ...files];
+    setNewEntryScreenshots(newFiles);
+    
+    // Generate previews
+    const newPreviews = [...screenshotPreviews];
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        setScreenshotPreviews([...newPreviews]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
+
+  const removeScreenshot = (index: number) => {
+    setNewEntryScreenshots(prev => prev.filter((_, i) => i !== index));
+    setScreenshotPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadScreenshotsToStorage = async (entryId: string): Promise<string[]> => {
+    const urls: string[] = [];
+    for (let i = 0; i < newEntryScreenshots.length; i++) {
+      const file = newEntryScreenshots[i];
+      const fileName = `${entryId}/${Date.now()}_${i}_${file.name}`;
+      const { data, error: uploadError } = await supabase.storage
+        .from('tagging-screenshots')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('tagging-screenshots')
+        .getPublicUrl(fileName);
+      
+      urls.push(urlData.publicUrl);
+    }
+    return urls;
+  };
+
 
   const handleRunInitialTagging = async (entryId: string) => {
     try {
@@ -611,12 +695,36 @@ export default function TaggingPage() {
                     {/* Entry Details */}
                     {expandedEntryId === entry.id && (
                       <div className="p-6 bg-pl-dark border-t border-pl-border space-y-6">
+                                                {/* Source URL */}
+                        {entry.source_url && (
+                          <div className="mb-4">
+                            <label className="block text-pl-gold font-semibold mb-2">Source URL</label>
+                            <a href={entry.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">
+                              {entry.source_url}
+                            </a>
+                          </div>
+                        )}
+
                         {/* Source Text */}
                         <div>
                           <label className="block text-pl-gold font-semibold mb-2">Source Text</label>
                           <div className="bg-pl-navy p-4 rounded border border-pl-border max-h-60 overflow-y-auto">
                             <p className="text-pl-muted whitespace-pre-wrap">{entry.source_text}</p>
+                          
+                        {/* Screenshots */}
+                        {entry.screenshots && entry.screenshots.length > 0 && (
+                          <div className="mt-4">
+                            <label className="block text-pl-gold font-semibold mb-2">Screenshots ({entry.screenshots.length})</label>
+                            <div className="flex gap-3 flex-wrap">
+                              {entry.screenshots.map((url: string, idx: number) => (
+                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                                  <img src={url} alt={`Screenshot ${idx + 1}`} className="w-32 h-32 object-cover rounded border border-pl-border hover:border-pl-gold transition-colors" />
+                                </a>
+                              ))}
+                            </div>
                           </div>
+                        )}
+                        </div>
                         </div>
 
                         {/* Initial Tagging */}
@@ -891,7 +999,7 @@ export default function TaggingPage() {
               {/* Tags */}
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-pl-gold">Tags</h2>
+                  <h2 className="text-2xl font-bold text-pl-gold">Marketing Tags</h2>
                   <button
                     onClick={() => setShowAddTag(true)}
                     className="pl-btn-secondary flex items-center gap-2"
@@ -1056,8 +1164,8 @@ export default function TaggingPage() {
 
       {/* New Entry Modal */}
       {showNewEntryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="pl-card p-8 border border-pl-border max-w-2xl w-full space-y-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="pl-card p-8 border border-pl-border max-w-2xl w-full space-y-6 my-8">
             <h2 className="text-2xl font-bold text-pl-gold">New Tagging Entry</h2>
 
             <div>
@@ -1073,13 +1181,63 @@ export default function TaggingPage() {
             </div>
 
             <div>
+              <label className="block text-pl-gold font-semibold mb-2">Event/Attraction URL</label>
+              <input
+                type="url"
+                value={newEntryUrl}
+                onChange={(e) => setNewEntryUrl(e.target.value)}
+                placeholder="https://platinumlist.net/event/..."
+                className="pl-input w-full"
+              />
+              <p className="text-xs text-gray-500 mt-1">Paste the Platinumlist event or attraction URL for live page scanning</p>
+            </div>
+
+            <div>
               <label className="block text-pl-gold font-semibold mb-2">Source Text</label>
               <textarea
                 value={newEntryText}
                 onChange={(e) => setNewEntryText(e.target.value)}
-                placeholder="Paste the content to be tagged..."
-                className="pl-input w-full h-64 p-4 font-mono text-sm"
+                placeholder="Paste the page content to be tagged (or leave empty if URL provided)..."
+                className="pl-input w-full h-48 p-4 font-mono text-sm"
               />
+            </div>
+
+            <div>
+              <label className="block text-pl-gold font-semibold mb-2">Screenshots</label>
+              <div className="border-2 border-dashed border-pl-border rounded-lg p-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleScreenshotUpload}
+                  className="hidden"
+                  id="screenshot-upload"
+                />
+                <label
+                  htmlFor="screenshot-upload"
+                  className="flex flex-col items-center cursor-pointer text-gray-400 hover:text-pl-gold transition-colors"
+                >
+                  <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm">Click to upload screenshots (max 5)</span>
+                </label>
+              </div>
+              {screenshotPreviews.length > 0 && (
+                <div className="flex gap-3 mt-3 flex-wrap">
+                  {screenshotPreviews.map((preview, idx) => (
+                    <div key={idx} className="relative group">
+                      <img src={preview} alt={`Screenshot ${idx + 1}`} className="w-20 h-20 object-cover rounded border border-pl-border" />
+                      <button
+                        onClick={() => removeScreenshot(idx)}
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4 justify-end">
@@ -1088,13 +1246,20 @@ export default function TaggingPage() {
                   setShowNewEntryModal(false);
                   setNewEntryTitle('');
                   setNewEntryText('');
+                  setNewEntryUrl('');
+                  setNewEntryScreenshots([]);
+                  setScreenshotPreviews([]);
                 }}
                 className="pl-btn-secondary"
               >
                 Cancel
               </button>
-              <button onClick={handleNewEntry} className="pl-btn-primary">
-                Create Entry
+              <button
+                onClick={handleNewEntry}
+                className="pl-btn-primary"
+                disabled={uploadingScreenshots}
+              >
+                {uploadingScreenshots ? 'Uploading...' : 'Create Entry'}
               </button>
             </div>
           </div>
