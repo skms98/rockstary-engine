@@ -275,9 +275,11 @@ export default function EventDetailPage() {
 
     setRunningAll(true)
 
+    // Steps A & B can run without original_description (they use screenshots/URL)
+    // S2+ requires original_description
+    const optionalSteps = ['page_qa_comments', 'categories']
     for (const stepField of AI_STEPS) {
-      if (!entry?.original_description && stepField !== 'recommended_versions') continue
-      if (stepField === 'recommended_versions' && !entry?.original_description) continue
+      if (!optionalSteps.includes(stepField) && !entry?.original_description) continue
 
       setAiProcessing(prev => ({ ...prev, [stepField]: true }))
 
@@ -350,31 +352,77 @@ export default function EventDetailPage() {
 
     const XLSX = await import('xlsx')
 
+    // 33 columns (A-AG) matching EXCEL_COLUMN_MAP exactly
     const headers = [
-      'Event ID', 'Event Title', 'Event URL', 'Page QA (Step A)', 'Categories (Step B)',
-      'Tags (Step B)', '', 'Original Description (H)', '',
-      'Recommended Versions (J)', '', 'Fact Check Scores (Step 3)',
-      'Duplicate Analysis (Step 4)', 'A/B Tests (Step 5)',
-      'Organiser Trigger Risk (Step 6)', 'TOV Score (Step 7)',
-      'Grammar & Style (Step 8)', '', '', '', '', '',
-      'Reviewer (W - Step 9)', '', 'Resolver (Y - Step 10)', '',
-      '', '', 'Prev Original (AC)', '', 'SEO Analysis (AA - Step 11)',
-      '', 'Fact Check Final (Step 12)', '', '', '', '',
-      'Ranked Top Versions (AG - Step 13)'
+      /* A */ 'Event ID',
+      /* B */ 'Event Title',
+      /* C */ 'Event URL',
+      /* D */ 'Page QA (Step A)',
+      /* E */ 'Categories (Step B)',
+      /* F */ 'Tags',
+      /* G */ '',  // spacer
+      /* H */ '',  // spacer
+      /* I */ 'Original Description (S1)',
+      /* J */ '',  // label spacer
+      /* K */ 'Recommended Versions (S2)',
+      /* L */ '',  // spacer
+      /* M */ '',  // spacer
+      /* N */ 'Fact Check Scores (S3)',
+      /* O */ '',  // spacer
+      /* P */ 'Duplicate Analysis (S4)',
+      /* Q */ '',  // spacer
+      /* R */ 'A/B Tests (S5)',
+      /* S */ '',  // spacer
+      /* T */ 'Organiser Trigger Risk (S6)',
+      /* U */ '',  // spacer
+      /* V */ 'TOV Score (S7)',
+      /* W */ '',  // spacer
+      /* X */ 'Grammar & Style (S8)',
+      /* Y */ '',  // spacer
+      /* Z */ 'Reviewer (S9)',
+      /* AA */ '', // spacer
+      /* AB */ 'Resolver (S10)',
+      /* AC */ '', // spacer
+      /* AD */ 'Prev Original Description',
+      /* AE */ 'SEO Analysis (S11)',
+      /* AF */ 'Fact Check Final (S12)',
+      /* AG */ 'Ranked Top Versions (S13)',
     ]
 
     const row = [
-      entry.event_id, entry.event_title, entry.event_url,
-      entry.page_qa_comments, entry.categories, entry.tags,
-      '', entry.original_description, '',
-      entry.recommended_versions, '', entry.fact_check_scores,
-      entry.duplicate_analysis, entry.ab_tests,
-      entry.organiser_trigger_risk, entry.tov_score,
-      entry.grammar_style, '', '', '', '', '',
-      entry.reviewer_output, '', entry.resolver_output, '',
-      '', '', entry.prev_original_description, '', entry.seo_analysis,
-      '', entry.fact_check_final, '', '', '', '',
-      entry.ranked_versions,
+      /* A */ entry.event_id,
+      /* B */ entry.event_title,
+      /* C */ entry.event_url,
+      /* D */ entry.page_qa_comments,
+      /* E */ entry.categories,
+      /* F */ entry.tags,
+      /* G */ '',
+      /* H */ '',
+      /* I */ entry.original_description,
+      /* J */ '',
+      /* K */ entry.recommended_versions,
+      /* L */ '',
+      /* M */ '',
+      /* N */ entry.fact_check_scores,
+      /* O */ '',
+      /* P */ entry.duplicate_analysis,
+      /* Q */ '',
+      /* R */ entry.ab_tests,
+      /* S */ '',
+      /* T */ entry.organiser_trigger_risk,
+      /* U */ '',
+      /* V */ entry.tov_score,
+      /* W */ '',
+      /* X */ entry.grammar_style,
+      /* Y */ '',
+      /* Z */ entry.reviewer_output,
+      /* AA */ '',
+      /* AB */ entry.resolver_output,
+      /* AC */ '',
+      /* AD */ entry.prev_original_description,
+      /* AE */ entry.seo_analysis,
+      /* AF */ entry.fact_check_final,
+      /* AG */ entry.ranked_versions,
     ]
 
     const ws = XLSX.utils.aoa_to_sheet([headers, row])
