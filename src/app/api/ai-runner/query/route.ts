@@ -84,7 +84,9 @@ export async function POST(request: NextRequest) {
       steps: r.workflow_steps,
       prerequisites: r.prerequisites || '',
       notes: r.notes || '',
-      mode: r.mode
+      mode: r.mode,
+      reference_url: r.reference_url || '',
+      screenshots: r.screenshots || []
     }))
 
     return NextResponse.json({
