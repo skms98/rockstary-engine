@@ -347,86 +347,86 @@ export default function EventDetailPage() {
     }
   }
 
-  async function exportToExcel() {
-    if (!entry) return
-
-    const XLSX = await import('xlsx')
-
+  function getExportData() {
+    if (!entry) return null
     // 33 columns (A-AG) matching EXCEL_COLUMN_MAP exactly
     const headers = [
-      /* A */ 'Event ID',
-      /* B */ 'Event Title',
-      /* C */ 'Event URL',
-      /* D */ 'Page QA (Step A)',
-      /* E */ 'Categories (Step B)',
-      /* F */ 'Tags',
-      /* G */ '',  // spacer
-      /* H */ '',  // spacer
-      /* I */ 'Original Description (S1)',
-      /* J */ '',  // label spacer
-      /* K */ 'Recommended Versions (S2)',
-      /* L */ '',  // spacer
-      /* M */ '',  // spacer
-      /* N */ 'Fact Check Scores (S3)',
-      /* O */ '',  // spacer
-      /* P */ 'Duplicate Analysis (S4)',
-      /* Q */ '',  // spacer
-      /* R */ 'A/B Tests (S5)',
-      /* S */ '',  // spacer
-      /* T */ 'Organiser Trigger Risk (S6)',
-      /* U */ '',  // spacer
-      /* V */ 'TOV Score (S7)',
-      /* W */ '',  // spacer
-      /* X */ 'Grammar & Style (S8)',
-      /* Y */ '',  // spacer
-      /* Z */ 'Reviewer (S9)',
-      /* AA */ '', // spacer
-      /* AB */ 'Resolver (S10)',
-      /* AC */ '', // spacer
-      /* AD */ 'Prev Original Description',
-      /* AE */ 'SEO Analysis (S11)',
-      /* AF */ 'Fact Check Final (S12)',
-      /* AG */ 'Ranked Top Versions (S13)',
+      'Event ID', 'Event Title', 'Event URL', 'Page QA (Step A)',
+      'Categories (Step B)', 'Tags', '', '',
+      'Original Description (S1)', '', 'Recommended Versions (S2)', '', '',
+      'Fact Check Scores (S3)', '', 'Duplicate Analysis (S4)', '',
+      'A/B Tests (S5)', '', 'Organiser Trigger Risk (S6)', '',
+      'TOV Score (S7)', '', 'Grammar & Style (S8)', '',
+      'Reviewer (S9)', '', 'Resolver (S10)', '',
+      'Prev Original Description', 'SEO Analysis (S11)',
+      'Fact Check Final (S12)', 'Ranked Top Versions (S13)',
     ]
-
     const row = [
-      /* A */ entry.event_id,
-      /* B */ entry.event_title,
-      /* C */ entry.event_url,
-      /* D */ entry.page_qa_comments,
-      /* E */ entry.categories,
-      /* F */ entry.tags,
-      /* G */ '',
-      /* H */ '',
-      /* I */ entry.original_description,
-      /* J */ '',
-      /* K */ entry.recommended_versions,
-      /* L */ '',
-      /* M */ '',
-      /* N */ entry.fact_check_scores,
-      /* O */ '',
-      /* P */ entry.duplicate_analysis,
-      /* Q */ '',
-      /* R */ entry.ab_tests,
-      /* S */ '',
-      /* T */ entry.organiser_trigger_risk,
-      /* U */ '',
-      /* V */ entry.tov_score,
-      /* W */ '',
-      /* X */ entry.grammar_style,
-      /* Y */ '',
-      /* Z */ entry.reviewer_output,
-      /* AA */ '',
-      /* AB */ entry.resolver_output,
-      /* AC */ '',
-      /* AD */ entry.prev_original_description,
-      /* AE */ entry.seo_analysis,
-      /* AF */ entry.fact_check_final,
-      /* AG */ entry.ranked_versions,
+      entry.event_id, entry.event_title, entry.event_url,
+      entry.page_qa_comments, entry.categories, entry.tags, '', '',
+      entry.original_description, '', entry.recommended_versions, '', '',
+      entry.fact_check_scores, '', entry.duplicate_analysis, '',
+      entry.ab_tests, '', entry.organiser_trigger_risk, '',
+      entry.tov_score, '', entry.grammar_style, '',
+      entry.reviewer_output, '', entry.resolver_output, '',
+      entry.prev_original_description, entry.seo_analysis,
+      entry.fact_check_final, entry.ranked_versions,
     ]
+    return { headers, row }
+  }
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, row])
-    ws['!cols'] = headers.map(() => ({ wch: 30 }))
+  function exportToCSV() {
+    const data = getExportData()
+    if (!data) return
+    const escapeCSV = (val: string) => {
+      if (!val) return ''
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`
+      }
+      return val
+    }
+    const csv = [data.headers.map(escapeCSV).join(','), data.row.map(escapeCSV).join(',')].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `rockstary-event-${entry?.event_id}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function openInGoogleSheets() {
+    const data = getExportData()
+    if (!data) return
+    const escapeCSV = (val: string) => {
+      if (!val) return ''
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`
+      }
+      return val
+    }
+    const csv = [data.headers.map(escapeCSV).join(','), data.row.map(escapeCSV).join(',')].join('\n')
+    // Create a temporary CSV file and download it, then open Google Sheets import
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `rockstary-event-${entry?.event_id}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    // Open Google Sheets — user can File > Import > Upload the CSV
+    setTimeout(() => {
+      window.open('https://sheets.new', '_blank')
+    }, 500)
+  }
+
+  async function exportToExcel() {
+    const data = getExportData()
+    if (!data || !entry) return
+
+    const XLSX = await import('xlsx')
+    const ws = XLSX.utils.aoa_to_sheet([data.headers, data.row])
+    ws['!cols'] = data.headers.map(() => ({ wch: 30 }))
 
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Event Pipeline')
@@ -512,12 +512,26 @@ export default function EventDetailPage() {
             <option value="review">Review</option>
             <option value="completed">Completed</option>
           </select>
-          <button onClick={exportToExcel} className="pl-btn-secondary flex items-center gap-2 text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export XLSX
-          </button>
+          {/* Export dropdown group */}
+          <div className="flex items-center rounded-lg border border-pl-border overflow-hidden">
+            <button onClick={exportToExcel} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download as Excel">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              XLSX
+            </button>
+            <div className="w-px h-6 bg-pl-border" />
+            <button onClick={exportToCSV} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download as CSV">
+              CSV
+            </button>
+            <div className="w-px h-6 bg-pl-border" />
+            <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download CSV and open a new Google Sheet">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zM9 17H6v-3h3v3zm0-5H6V9h3v3zm5 5h-4v-3h4v3zm0-5h-4V9h4v3zm4 5h-3v-3h3v3zm0-5h-3V9h3v3z"/>
+              </svg>
+              Sheets
+            </button>
+          </div>
           <button
             onClick={deleteEntry}
             disabled={deletingEntry}
