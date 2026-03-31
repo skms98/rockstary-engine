@@ -15,6 +15,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isAttractions = pathname.startsWith('/dashboard/attractions')
   const isAIRunner = pathname.startsWith('/dashboard/ai-runner')
   const isTagging = pathname.startsWith('/dashboard/tagging')
+  const isMiniTools = pathname.startsWith('/dashboard/mini-tools')
+  const isB2BTOV = pathname.startsWith('/dashboard/b2b-tov')
+  const isB2CTOV = pathname.startsWith('/dashboard/b2c-tov')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -130,6 +133,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
             </svg>
             {sidebarOpen && <span className="font-medium">AI Runner</span>}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard/mini-tools')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isMiniTools
+                ? 'bg-pl-gold/10 border border-pl-gold/30 text-pl-gold'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">Mini Tools</span>}
+          </button>
+
+          {sidebarOpen && (
+            <div className="pt-4 pb-2">
+              <p className="text-[10px] text-pl-muted uppercase tracking-wider px-3 mb-3">Voice</p>
+            </div>
+          )}
+
+          <button
+            onClick={() => router.push('/dashboard/b2b-tov')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isB2BTOV
+                ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">B2B TOV</span>}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard/b2c-tov')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isB2CTOV
+                ? 'bg-pink-500/10 border border-pink-500/30 text-pink-400'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">B2C TOV</span>}
           </button>
         </div>
 
