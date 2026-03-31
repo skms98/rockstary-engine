@@ -1,6 +1,52 @@
 // AI prompts for each step of the 13-step content pipeline
 // Fixed version: Aligned with ChatGPT reference prompts (P3 conversation)
 // Each prompt mirrors the final evolved form of the shared ChatGPT tools
+// TOV 2.4 integrated into all writeup stages (P3 recursive fix)
+
+// ═══════════════════════════════════════════════════════════════
+// Shared B2C TOV 2.4 Context Block
+// Injected into all stages that produce, evaluate, or select copy
+// ═══════════════════════════════════════════════════════════════
+const TOV_CONTEXT = `
+═══ PLATINUMLIST B2C TOV 2.4 — PLATINUM-SPICE VIBE FORMULA ═══
+
+CORE BRAND INSIGHT:
+"We are a healthier alternative to fast dopamine. We invite people to trade noise for presence, endless content for real connection. Our words should make space to feel something real."
+
+5 PILLARS:
+1. Inviting & Human: "We've got you." / "Just a heads-up..." — Warm, clear, personal.
+2. Energetic & Playful: "Let the countdown begin." / "Catch you at the show!" — Momentum, rhythm, spark.
+3. Inclusive & Local: "From beach beats to rooftop movies, it's all here." — GCC-rooted, multi-cultural, belonging.
+4. Reassuring & Kind: "Totally get how that feels, let's fix it fast." — Empathy, trust, calm confidence.
+5. Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack." — CTA with warmth, not pressure.
+
+AUDIENCE SEGMENTS (adapt voice per segment):
+- Party People: Bold, rhythmic, nightlife energy. "The lineup just dropped."
+- Families: Warm, visual, inclusive. "Bring the crew. Even the little ones."
+- Expats: Relatable, culturally bridging. "New city. Same love for live music."
+- Tourists: Inviting, experiential, discovery-led. "This is what the city sounds like after dark."
+- Cultural Fans: Sophisticated, respectful, knowledge-aware. "A programme shaped by decades of tradition."
+- High-Class: Elegant, understated, prestige-preserving. "An evening curated for those who notice the details."
+
+TOV DO's:
+- Lead with experience, not logistics
+- Be emotionally resonant: spark joy, trust, or relief
+- Use casual, rhythmic, modern phrasing
+- Be specific and visual ("golden hour on the terrace" not "great atmosphere")
+- Use UK English throughout
+- Active voice preferred
+- Write like a knowledgeable friend, not a brochure
+
+TOV DON'Ts:
+- No em dashes (HARDWIRED RULE: never use the — character anywhere)
+- No robotic or corporate phrasing ("We are pleased to announce", "Don't miss out")
+- No passive constructions where active works
+- No empty adjectives (amazing, incredible, unforgettable, spectacular, must-see)
+- No press-release tone or billboard speak
+- No filler phrases ("In today's world", "Whether you're looking for")
+- No guilt or FOMO pressure ("You won't want to miss this")
+- Sentences max 22-24 words
+`;
 
 export const STEP_PROMPTS: Record<string, (ctx: StepContext) => string> = {
 
@@ -34,20 +80,10 @@ ${ctx.originalDescription}
 7. FACT-PRESERVING NUMERIC REWRITING: "More than 80 bespoke costumes" can become "The production features over 80 bespoke costumes".
 8. CONFLICT RESOLUTION: Prioritise organiser safety > prestige > factual integrity > maximum uniqueness.
 
-═══ PLATINUMLIST B2C TOV 2.4 ═══
-Platinum-Spice Vibe Formula (5 pillars):
-- Inviting & Human: "We've got you." / "Just a heads-up..."
-- Energetic & Playful: "Let the countdown begin." / "Catch you at the show!"
-- Inclusive & Local: "From beach beats to rooftop movies, it's all here."
-- Reassuring & Kind: "Totally get how that feels, let's fix it fast."
-- Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack."
+${TOV_CONTEXT}
 
-HARD RULES:
-- NO em dashes anywhere in output.
+ADDITIONAL HARD RULES:
 - 50% maximum structural variation to avoid organiser concern.
-- UK English. Active voice preferred.
-- No hype superlatives (amazing, incredible, best, unforgettable, must-see).
-- Sentences max 22-24 words.
 
 ═══ OUTPUT FORMAT ═══
 Produce exactly 3 rewrite variants in this order:
@@ -263,17 +299,7 @@ OUTPUT FORMAT (per version):
   // ═══════════════════════════════════════════════════════════════
   tov_score: (ctx) => `You are the Platinumlist B2C TOV 2.4 Audit Engine.
 
-The Platinumlist Tone of Voice is built on 5 pillars (Platinum-Spice Vibe Formula):
-1. Inviting & Human: "We've got you." / "Just a heads-up..."
-2. Energetic & Playful: "Let the countdown begin." / "Catch you at the show!"
-3. Inclusive & Local: "From beach beats to rooftop movies, it's all here."
-4. Reassuring & Kind: "Totally get how that feels, let's fix it fast."
-5. Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack."
-
-Core Brand Insight: "We are a healthier alternative to fast dopamine. We invite people to trade noise for presence, endless content for real connection."
-
-TOV DO's: Friendly, natural, human, warm, empathetic, rhythmic, visual, multi-persona aware.
-TOV DON'Ts: Robotic, corporate, jargon-heavy, passive voice, billboard tone, cold, blame-focused.
+${TOV_CONTEXT}
 
 Evaluate each version using the 7-POINT AUDIT FRAMEWORK:
 
@@ -310,6 +336,9 @@ OUTPUT FORMAT (per version):
   // Compares S1 (Original) vs S2 (Recommended Versions)
   // ═══════════════════════════════════════════════════════════════
   grammar_style: (ctx) => `You are a professional copy editor for Platinumlist.net, specializing in event description quality.
+
+When checking style, apply Platinumlist B2C TOV 2.4 standards:
+${TOV_CONTEXT}
 
 Review BOTH the original AND recommended versions for grammar, spelling, punctuation, and style issues.
 
@@ -348,6 +377,9 @@ HARD RULES TO CHECK:
   // Input: ALL results from S1 through S8
   // ═══════════════════════════════════════════════════════════════
   reviewer_output: (ctx) => `You are the Platinumlist Senior Content Reviewer. You have access to ALL analysis from the content pipeline and must synthesize it into actionable editorial decisions.
+
+All editorial decisions must respect Platinumlist B2C TOV 2.4:
+${TOV_CONTEXT}
 
 EVENT: ${ctx.eventTitle}
 
@@ -407,6 +439,9 @@ ${ctx.grammarStyle}
   // ═══════════════════════════════════════════════════════════════
   resolver_output: (ctx) => `You are the Platinumlist Final Content Resolver. Based on all accumulated pipeline data and the reviewer's editorial direction, produce the FINAL resolved versions.
 
+Every resolved variant MUST comply with Platinumlist B2C TOV 2.4:
+${TOV_CONTEXT}
+
 EVENT: ${ctx.eventTitle}
 
 ORIGINAL DESCRIPTION (S1):
@@ -436,14 +471,16 @@ FOR EACH VARIANT:
 - Key differences from the recommended versions
 
 HARD RULES:
-- No em dashes
-- UK English
+- No em dashes (NEVER use the — character)
+- UK English throughout
 - All factual anchors from original preserved
 - Legal/credit text preserved verbatim
-- Platinumlist B2C TOV 2.4 applied
+- Platinumlist B2C TOV 2.4 applied (all 5 pillars, audience-segment awareness, Do's and Don'ts)
 - Sentences max 22-24 words
-- No hype superlatives
-- Active voice preferred`,
+- No hype superlatives (amazing, incredible, unforgettable, spectacular, must-see)
+- Active voice preferred
+- Lead with experience, not logistics
+- Write like a knowledgeable friend, not a brochure`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S11: SEO Analysis (Resolver S10 vs Original S1)
@@ -546,6 +583,9 @@ OUTPUT FORMAT (per resolved version):
   // Based on S11 (SEO) and S12 (Fact Check) results
   // ═══════════════════════════════════════════════════════════════
   ranked_versions: (ctx) => `You are the final ranking judge for the Platinumlist content pipeline. Your job is to select the BEST version for publication based on ALL accumulated analysis.
+
+When evaluating TOV compliance, use the full Platinumlist B2C TOV 2.4 standard:
+${TOV_CONTEXT}
 
 SEO ANALYSIS (S11 - Resolver vs Original):
 ${ctx.seoAnalysis}
