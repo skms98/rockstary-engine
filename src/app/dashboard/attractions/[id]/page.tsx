@@ -1,611 +1,209 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { ATTRACTIONS_STEPS_CONFIG, type EventEntry } from '@/types'
-import { ATTRACTION_AI_STEPS } from '@/lib/ai-prompts-attractions'
+import { plSupabase } from '@/lib/pl-supabase'
+import Link from 'next/link'
+import { OverviewTab } from './detail-overview'
+import { SeoTab, TaggingTab, ReviewTab } from './detail-tabs'
 
-// AI-processable step fields for attractions
-const AI_STEPS = ATTRACTION_AI_STEPS
+// ── Types (inline to keep this page self-contained) ──────────
+type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
+type SeoStatus = 'pending' | 'processing' | 'completed' | 'failed'
+type TaggingStatus = 'pending' | 'gathering' | 'classifying' | 'validating' | 'completed' | 'failed' | 'unclassifiable'
 
+export interface AttractionEntry {
+  id: string
+  attraction_id: string | null
+  title: string
+  url: string | null
+  country: string | null
+  city: string | null
+  stage: AttractionStage
+  raw_text: string | null
+  keywords_list: string | null
+  excel_sheet_name: string | null
+  original_content: Record<string, unknown>
+  seo_content: Record<string, unknown>
+  seo_status: SeoStatus
+  keywords_used: number
+  keywords_total: number
+  domain: string | null
+  fact_sheet: Record<string, unknown>
+  primary_category: string | null
+  secondary_category: string | null
+  tertiary_category: string | null
+  quaternary_category: string | null
+  marketing_tags: string[]
+  tagging_status: TaggingStatus
+  validation_gates_passed: number
+  tagging_loops: number
+  tagging_log: unknown[]
+  review_notes: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  excel_file_url: string | null
+  screenshot_url: string | null
+  batch_id: string | null
+  batch_name: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
+
+const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: string; bgColor: string; borderColor: string }> = {
+  intake:            { label: 'Intake',           icon: '📥', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
+  seo_optimization:  { label: 'SEO Optimization', icon: '✍️', color: 'text-amber-400',   bgColor: 'bg-amber-500/10',   borderColor: 'border-amber-500/30' },
+  tagging:           { label: 'Tagging',          icon: '🏷️', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
+  review:            { label: 'Review',           icon: '✅', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
+  exported:          { label: 'Exported',         icon: '📤', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
+}
+
+// ── Main Component ───────────────────────────────────────────
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [entry, setEntry] = useState<EventEntry | null>(null)
+  const id = params.id as string
+
+  const [entry, setEntry] = useState<AttractionEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeStep, setActiveStep] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState('')
-  const [aiProcessing, setAiProcessing] = useState<Record<string, boolean>>({})
-  const [runningAll, setRunningAll] = useState(false)
-  const [fetchingDesc, setFetchingDesc] = useState(false)
-  const [deletingEntry, setDeletingEntry] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'tagging' | 'review'>('overview')
 
-  useEffect(() => {
-    loadEntry()
-  }, [params.id])
-
-  async function loadEntry() {
-    const { data } = await supabase
-      .from('content_entries')
+  const fetchEntry = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await plSupabase
+      .from('attractions')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
-    if (data) setEntry(data as EventEntry)
+    if (!error && data) setEntry(data as AttractionEntry)
     setLoading(false)
-  }
+  }, [id])
 
-  async function saveField(field: string, value: string) {
+  useEffect(() => { fetchEntry() }, [fetchEntry])
+
+  const save = async (updates: Partial<AttractionEntry>) => {
     setSaving(true)
-    const { error } = await supabase
-      .from('content_entries')
-      .update({ [field]: value, updated_at: new Date().toISOString() })
-      .eq('id', params.id)
-    if (!error) {
-      setEntry(prev => prev ? { ...prev, [field]: value } : null)
-      setActiveStep(null)
-    }
+    const { error } = await plSupabase.from('attractions').update(updates).eq('id', id)
+    if (!error) await fetchEntry()
     setSaving(false)
   }
 
-  async function updateStatus(status: string) {
-    await supabase
-      .from('content_entries')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', params.id)
-    setEntry(prev => prev ? { ...prev, status: status as EventEntry['status'] } : null)
-  }
-
-  async function getAuthToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession()
-    return data.session?.access_token || null
-  }
-
-  async function runAIStep(stepField: string) {
-    const authToken = await getAuthToken()
-    if (!authToken) return
-
-    setAiProcessing(prev => ({ ...prev, [stepField]: true }))
-
-    try {
-      const res = await fetch('/api/ai/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entryId: params.id,
-          stepField,
-          authToken,
-        }),
-      })
-
-      const data = await res.json()
-      if (res.ok && data.result) {
-        setEntry(prev => prev ? { ...prev, [stepField]: data.result, status: 'in_progress' } : null)
-        if (activeStep) {
-          setEditValue(data.result)
-        }
-      } else {
-        alert(`AI Error: ${data.error}`)
-      }
-    } catch (err: any) {
-      alert(`Network error: ${err.message}`)
-    } finally {
-      setAiProcessing(prev => ({ ...prev, [stepField]: false }))
-    }
-  }
-
-  async function runAllAISteps() {
-    const authToken = await getAuthToken()
-    if (!authToken) return
-
-    setRunningAll(true)
-
-    for (const stepField of AI_STEPS) {
-      if (!entry?.original_description) continue
-      // keywords_list needs original_description
-      // recommended_versions needs keywords_list
-      if (stepField === 'recommended_versions' && !entry?.keywords_list && !(entry as any)?.keywords_list) {
-        // Run keywords first if not done
-      }
-
-      setAiProcessing(prev => ({ ...prev, [stepField]: true }))
-
-      try {
-        const res = await fetch('/api/ai/process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ entryId: params.id, stepField, authToken }),
-        })
-
-        const data = await res.json()
-        if (res.ok && data.result) {
-          setEntry(prev => prev ? { ...prev, [stepField]: data.result } : null)
-        }
-      } catch {
-        // Continue to next step
-      } finally {
-        setAiProcessing(prev => ({ ...prev, [stepField]: false }))
-      }
-    }
-
-    await loadEntry()
-    setRunningAll(false)
-  }
-
-  async function deleteEntry() {
-    if (!confirm('Are you sure you want to remove this attraction?')) return
-    setDeletingEntry(true)
-    const { error } = await supabase.from('content_entries').delete().eq('id', params.id)
-    if (!error) {
-      router.push('/dashboard/attractions')
-    } else {
-      alert('Failed to delete: ' + error.message)
-      setDeletingEntry(false)
-    }
-  }
-
-  async function fetchDescriptionFromURL() {
-    if (!entry?.event_url) return
-    setFetchingDesc(true)
-    try {
-      const res = await fetch('/api/fetch-description', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: entry.event_url }),
-      })
-      const data = await res.json()
-      if (res.ok && data.description) {
-        await saveField('original_description', data.description)
-        if (activeStep === 'S1') {
-          setEditValue(data.description)
-        }
-      } else if (data.queue_detected) {
-        setActiveStep('S1')
-        setEditValue('')
-        alert('The page is behind queue protection (Cloudflare). Please open the URL in your browser, copy the description text, and paste it into Step S1 below.')
-      } else {
-        alert(data.error || 'Could not fetch description from URL')
-      }
-    } catch (err: any) {
-      alert('Network error: ' + err.message)
-    } finally {
-      setFetchingDesc(false)
-    }
-  }
-
-  async function exportToExcel() {
+  const advanceStage = async () => {
     if (!entry) return
-    const XLSX = await import('xlsx')
-    const wb = XLSX.utils.book_new()
-
-    // Parse the optimized_description into sections
-    const optimized = entry.optimized_description || ''
-    const sections: Record<string, string> = {}
-    const sectionPattern = /===\s*([^=]+?)\s*===/g
-    let match
-    const sectionNames: string[] = []
-    const sectionPositions: number[] = []
-    while ((match = sectionPattern.exec(optimized)) !== null) {
-      sectionNames.push(match[1].trim())
-      sectionPositions.push(match.index + match[0].length)
-    }
-    for (let i = 0; i < sectionNames.length; i++) {
-      const start = sectionPositions[i]
-      const end = i + 1 < sectionPositions.length ? optimized.lastIndexOf('===', sectionPositions[i + 1]) : optimized.length
-      sections[sectionNames[i].toUpperCase()] = optimized.substring(start, end).trim()
-    }
-
-    // Parse original description sections from original_description
-    const orig = entry.original_description || ''
-
-    // Build the reference-format rows: A=keywords+URL, B=section label, C=original, D=optimised
-    const rows: (string | null)[][] = []
-
-    // Row 1: Header + H1
-    rows.push(['Keywords can be combined with each other', 'Section 1 - Headline / H1', entry.event_title, ' ', entry.categories || null, entry.tags || null])
-    // Row 2: URL
-    rows.push([entry.event_url, null, null, null, null, null])
-    // Row 3: Keywords + Teaser
-    rows.push([`keywords to include: \n\n${entry.keywords_list || ''}`, 'Section 2 - Teaser', null, sections['TEASER'] || null, null, null])
-    // Row 4: Icons
-    rows.push([null, 'Section 3 - Icons', null, null, null, null])
-    // Row 5: What to Expect header
-    rows.push([null, 'Section 5', 'What To Expect', 'What To Expect', null, null])
-    // Row 6: What to Expect content
-    rows.push([null, null, orig, sections['WHAT TO EXPECT'] || null, null, null])
-    // Row 7: CTA
-    rows.push([null, null, null, sections['CTA'] || 'Book your spot now and experience it for yourself.', null, null])
-    // Row 8: Highlights header
-    rows.push([null, 'Section 6', 'Highlights', 'Highlights', null, null])
-    // Row 9: Highlights content
-    rows.push([null, null, null, sections['HIGHLIGHTS'] || null, null, null])
-    // Row 10: blank
-    rows.push([null, null, null, null, null, null])
-    // Row 11: Inclusions header
-    rows.push([null, 'Section 7 ', "What\u2019s included in the ticket", "What\u2019s included in the ticket", null, null])
-    // Row 12: Inclusions content
-    rows.push([null, null, null, sections['INCLUSIONS'] || null, null, null])
-    // Row 13: Exclusions header
-    rows.push([null, null, 'Exclusions', 'Exclusions', null, null])
-    // Row 14: Exclusions content
-    rows.push([null, null, null, sections['EXCLUSIONS'] || null, null, null])
-    // Row 15: Timing header
-    rows.push([null, 'Section 8', 'Timing: ', 'Timing: ', null, null])
-    // Row 16: Timing content
-    rows.push([null, null, null, sections['TIMINGS'] || null, null, null])
-    // Row 17: Ticket info header
-    rows.push([null, 'Section 9', 'Ticket Information: ', 'Ticket Information: ', null, null])
-    // Row 18: Ticket info auto
-    rows.push([null, null, 'the price will be displayed automatically', 'the price will be displayed automatically', null, null])
-    // Row 19: Important info header
-    rows.push([null, 'Section 10', 'Important things to know before your visit', 'Important things to know before your visit', null, null])
-    // Row 20: Important info content
-    rows.push([null, null, null, sections['IMPORTANT THINGS TO KNOW'] || null, null, null])
-    // Row 21: Cancellation header
-    rows.push([null, null, 'Cancelation policy: ', 'Cancelation policy: ', null, null])
-    // Row 22: Cancellation content
-    rows.push([null, null, null, sections['CANCELLATION POLICY'] || null, null, null])
-    // Row 23: Location header
-    rows.push([null, 'Section 10 - Location + How To Get There', 'Address:', 'Address:', null, null])
-    // Row 24: Address content
-    rows.push([null, null, null, null, null, null])
-    // Row 25: Directions header
-    rows.push([null, null, 'How to get there:', 'How to get there:', null, null])
-    // Row 26+: Direction subsections
-    const directions = sections['DIRECTIONS'] || ''
-    const byCarMatch = directions.match(/By car:([\s\S]*?)(?=By taxi:|By public|$)/i)
-    const byTaxiMatch = directions.match(/By taxi:([\s\S]*?)(?=By car:|By public|$)/i)
-    const byPublicMatch = directions.match(/By public transportation:([\s\S]*?)(?=By car:|By taxi:|$)/i)
-    rows.push([null, null, 'By car: ', 'By car: ', null, null])
-    rows.push([null, null, null, byCarMatch ? byCarMatch[1].trim() : null, null, null])
-    rows.push([null, null, 'By taxi: ', 'By taxi: ', null, null])
-    rows.push([null, null, null, byTaxiMatch ? byTaxiMatch[1].trim() : null, null, null])
-    rows.push([null, null, 'By public transportation: ', 'By public transportation: ', null, null])
-    rows.push([null, null, null, byPublicMatch ? byPublicMatch[1].trim() : null, null, null])
-
-    // Add tagging JSON to E1 and reasoning to F1
-    if (entry.categories || entry.tags) {
-      rows[0][4] = JSON.stringify({
-        final_status: 'VALID',
-        domain: 'ATTRACTION',
-        primary_category: entry.categories?.split(',')[0]?.trim() || '',
-        tags: entry.tags?.split(',').map((t: string) => t.trim()) || [],
-      }, null, 2)
-      rows[0][5] = entry.page_qa_comments || ''
-    }
-
-    const ws = XLSX.utils.aoa_to_sheet(rows)
-    ws['!cols'] = [{ wch: 45 }, { wch: 35 }, { wch: 50 }, { wch: 50 }, { wch: 40 }, { wch: 40 }]
-
-    // Truncate sheet name to 31 chars (Excel limit)
-    const sheetName = (entry.event_title || 'Attraction').substring(0, 31)
-    XLSX.utils.book_append_sheet(wb, ws, sheetName)
-
-    XLSX.writeFile(wb, `rockstary-attraction-${entry.event_id}.xlsx`)
+    const idx = STAGE_ORDER.indexOf(entry.stage)
+    if (idx >= STAGE_ORDER.length - 1) return
+    await save({ stage: STAGE_ORDER[idx + 1] } as Partial<AttractionEntry>)
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-10 h-10 border-4 border-pl-gold/30 border-t-pl-gold rounded-full animate-spin" />
-    </div>
-  )
-
-  if (!entry) return (
-    <div className="p-8 text-center">
-      <p className="text-pl-muted">Entry not found</p>
-      <button onClick={() => router.push('/dashboard/attractions')} className="pl-btn-secondary mt-4">
-        Back to Attractions
-      </button>
-    </div>
-  )
-
-  const getFieldValue = (field: string): string => {
-    return (entry as any)[field] || ''
+  const revertStage = async () => {
+    if (!entry) return
+    const idx = STAGE_ORDER.indexOf(entry.stage)
+    if (idx <= 0) return
+    await save({ stage: STAGE_ORDER[idx - 1] } as Partial<AttractionEntry>)
   }
 
-  const getStepStatus = (field: string): 'pending' | 'done' => {
-    const value = getFieldValue(field)
-    return value && value.trim() !== '' ? 'done' : 'pending'
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    )
   }
 
-  const completedCount = ATTRACTIONS_STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
-  const totalSteps = ATTRACTIONS_STEPS_CONFIG.length
-  const canRunAI = (field: string) => AI_STEPS.includes(field)
+  if (!entry) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <p className="text-gray-400">Attraction not found</p>
+        <Link href="/dashboard/attractions" className="text-blue-400 hover:text-blue-300 text-sm">Back to funnel</Link>
+      </div>
+    )
+  }
 
-  // Check if keywords step is needed
-  const hasKeywords = !!(entry.keywords_list && entry.keywords_list.trim())
-  const hasDescription = !!(entry.original_description && entry.original_description.trim())
+  const currentStageIdx = STAGE_ORDER.indexOf(entry.stage)
+  const meta = STAGE_META[entry.stage]
 
   return (
-    <div className="p-8 max-w-5xl">
-      {/* Back button & Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => router.push('/dashboard/attractions')} className="p-2 rounded-lg hover:bg-pl-card transition-colors text-pl-muted hover:text-white">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <span className="bg-emerald-500/10 text-emerald-400 font-mono font-bold px-3 py-1 rounded-lg text-sm">
-              #{entry.event_id}
+    <div className="min-h-screen p-6 max-w-6xl mx-auto">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
+        <Link href="/dashboard/attractions" className="hover:text-white transition-colors">Attractions Funnel</Link>
+        <span>/</span>
+        <span className="text-white">{entry.title}</span>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">{entry.title}</h1>
+          <div className="flex items-center gap-3 mt-2">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${meta.bgColor} ${meta.color} border ${meta.borderColor}`}>
+              {meta.icon} {meta.label}
             </span>
-            <h1 className="text-xl font-bold text-white">{entry.event_title}</h1>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider">Attraction</span>
+            {entry.batch_name && (
+              <span className="text-gray-500 text-xs bg-gray-700/50 px-2 py-1 rounded">{entry.batch_name}</span>
+            )}
+            {entry.city && (
+              <span className="text-gray-500 text-sm">{entry.city}{entry.country ? `, ${entry.country}` : ''}</span>
+            )}
           </div>
-          <p className="text-sm text-pl-muted mt-1">{entry.event_url}</p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Run All AI Button */}
-          <button
-            onClick={runAllAISteps}
-            disabled={runningAll || !hasDescription}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            title={!hasDescription ? 'Add original description first' : 'Run all AI steps (keywords + optimization pipeline)'}
-          >
-            {runningAll ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Running AI...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Run All AI
-              </>
-            )}
-          </button>
-          <select
-            value={entry.status}
-            onChange={(e) => updateStatus(e.target.value)}
-            className="pl-input text-sm w-auto"
-          >
-            <option value="draft">Draft</option>
-            <option value="in_progress">In Progress</option>
-            <option value="review">Review</option>
-            <option value="completed">Completed</option>
-          </select>
-          <button onClick={exportToExcel} className="pl-btn-secondary flex items-center gap-2 text-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Export XLSX
-          </button>
-          <button
-            onClick={deleteEntry}
-            disabled={deletingEntry}
-            className="p-2 rounded-lg text-pl-muted hover:text-red-400 hover:bg-red-600/10 transition-all"
-            title="Remove attraction"
-          >
-            {deletingEntry ? (
-              <div className="w-5 h-5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            )}
-          </button>
+        <div className="flex items-center gap-2">
+          {currentStageIdx > 0 && (
+            <button onClick={revertStage} className="px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-600 transition-colors">
+              ← Back
+            </button>
+          )}
+          {currentStageIdx < STAGE_ORDER.length - 1 && (
+            <button onClick={advanceStage} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
+              Advance to {STAGE_META[STAGE_ORDER[currentStageIdx + 1]].label} →
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Fetch Description Banner */}
-      {!hasDescription && entry.event_url && (
-        <div className="pl-card p-4 mb-4 border-amber-500/30 bg-amber-500/5 flex items-center gap-4">
-          <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-sm text-amber-200 flex-1">Original description is needed before AI can process. Fetch it from the URL or enter it manually in Step S1.</p>
-          <button
-            onClick={fetchDescriptionFromURL}
-            disabled={fetchingDesc}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium disabled:opacity-40 transition-all flex-shrink-0"
-          >
-            {fetchingDesc ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Fetching...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Fetch from URL
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Keywords Needed Banner */}
-      {hasDescription && !hasKeywords && (
-        <div className="pl-card p-4 mb-4 border-emerald-500/30 bg-emerald-500/5 flex items-center gap-4">
-          <svg className="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-          </svg>
-          <p className="text-sm text-emerald-200 flex-1">Generate keywords next! The keyword list drives the optimization of all subsequent steps.</p>
-          <button
-            onClick={() => runAIStep('keywords_list')}
-            disabled={aiProcessing['keywords_list']}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all flex-shrink-0"
-          >
-            {aiProcessing['keywords_list'] ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Generate Keywords
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Progress Bar */}
-      <div className="pl-card p-4 mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-pl-text-dim">Attraction Pipeline Progress</span>
-          <span className="text-sm font-medium text-emerald-400">{completedCount}/{totalSteps} steps</span>
-        </div>
-        <div className="w-full h-3 bg-pl-dark rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 rounded-full transition-all duration-500"
-            style={{ width: `${(completedCount / totalSteps) * 100}%` }}
-          />
-        </div>
+      {/* Funnel Progress Bar */}
+      <div className="flex items-center gap-1 mb-8">
+        {STAGE_ORDER.map((stage, i) => (
+          <div key={stage} className="flex-1 flex items-center">
+            <div className={`flex-1 h-2 rounded-full transition-all ${
+              i < currentStageIdx ? 'bg-emerald-500' : stage === entry.stage ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'
+            }`} />
+            {i < STAGE_ORDER.length - 1 && <div className="w-1" />}
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between text-[10px] text-gray-500 -mt-6 mb-8 px-1">
+        {STAGE_ORDER.map((stage) => (
+          <span key={stage} className={stage === entry.stage ? STAGE_META[stage].color + ' font-medium' : ''}>
+            {STAGE_META[stage].icon} {STAGE_META[stage].label}
+          </span>
+        ))}
       </div>
 
-      {/* Steps */}
-      <div className="space-y-3">
-        {ATTRACTIONS_STEPS_CONFIG.map((step, idx) => {
-          const status = getStepStatus(step.field)
-          const isActive = activeStep === step.step
-          const value = getFieldValue(step.field)
-          const isAIStep = canRunAI(step.field)
-          const isProcessing = aiProcessing[step.field]
-          const isKeywordsStep = step.field === 'keywords_list'
-          const isOptimizedStep = step.field === 'optimized_description'
-
-          return (
-            <div key={step.step} className={`pl-card overflow-hidden ${isActive ? 'border-emerald-500/40' : ''} ${isProcessing ? 'border-emerald-500/40' : ''} ${isKeywordsStep ? 'ring-1 ring-emerald-500/20' : ''}`}>
-              {/* Step Header */}
-              <div className="flex items-center">
-                <button
-                  onClick={() => {
-                    if (isActive) {
-                      setActiveStep(null)
-                    } else {
-                      setActiveStep(step.step)
-                      setEditValue(value)
-                    }
-                  }}
-                  className="flex-1 flex items-center gap-4 p-4 text-left hover:bg-pl-card/50 transition-colors"
-                >
-                  {/* Step number */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                    isProcessing
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : status === 'done'
-                        ? 'bg-pl-success/20 text-pl-success'
-                        : 'bg-pl-muted/20 text-pl-muted'
-                  }`}>
-                    {isProcessing ? (
-                      <div className="w-4 h-4 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
-                    ) : status === 'done' ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : idx + 1}
-                  </div>
-
-                  {/* Step info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-emerald-500/60">Step {step.step}</span>
-                      {step.column !== '-' && <span className="text-xs text-pl-muted">Col {step.column}</span>}
-                      {step.optional && <span className="text-[10px] bg-pl-muted/20 text-pl-muted px-2 py-0.5 rounded-full">Optional</span>}
-                      {isAIStep && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">AI</span>}
-                      {isKeywordsStep && <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">SEO Keywords</span>}
-                      {isOptimizedStep && <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full">Final Output</span>}
-                    </div>
-                    <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
-                  </div>
-
-                  {/* Status */}
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    isProcessing ? 'bg-emerald-500/20 text-emerald-400' :
-                    status === 'done' ? 'badge-done' : 'badge-pending'
-                  }`}>
-                    {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
-                  </span>
-
-                  {/* Expand icon */}
-                  <svg className={`w-5 h-5 text-pl-muted transition-transform ${isActive ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {/* AI Run Button (outside the expand button) */}
-                {isAIStep && !isActive && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
-                    disabled={isProcessing || runningAll}
-                    className="mr-4 p-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 hover:text-emerald-300 transition-all disabled:opacity-30"
-                    title={`Run AI for ${step.label}`}
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {/* Expanded Editor */}
-              {isActive && (
-                <div className="border-t border-pl-border p-4 bg-pl-dark/30">
-                  <textarea
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    placeholder={isKeywordsStep
-                      ? 'Enter keywords (comma-separated) or click "Run AI" to auto-generate from the description...'
-                      : `Enter ${step.label} content...`
-                    }
-                    className="pl-input min-h-[200px] resize-y font-mono text-sm"
-                  />
-                  <div className="flex items-center gap-3 mt-3">
-                    <button
-                      onClick={() => saveField(step.field, editValue)}
-                      disabled={saving}
-                      className="pl-btn-primary text-sm flex items-center gap-2"
-                    >
-                      {saving ? (
-                        <div className="w-4 h-4 border-2 border-pl-dark/30 border-t-pl-dark rounded-full animate-spin" />
-                      ) : 'Save'}
-                    </button>
-                    {isAIStep && (
-                      <button
-                        onClick={() => runAIStep(step.field)}
-                        disabled={isProcessing || runningAll}
-                        className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium disabled:opacity-40 transition-all"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Running...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Run AI
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <button onClick={() => setActiveStep(null)} className="pl-btn-secondary text-sm">
-                      Cancel
-                    </button>
-                    {value && (
-                      <span className="text-xs text-pl-muted ml-auto">
-                        {value.length} characters
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-lg w-fit">
+        {(['overview', 'seo', 'tagging', 'review'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors ${
+              activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {tab === 'seo' ? 'SEO' : tab}
+          </button>
+        ))}
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && <OverviewTab entry={entry} save={save} saving={saving} />}
+      {activeTab === 'seo' && <SeoTab entry={entry} />}
+      {activeTab === 'tagging' && <TaggingTab entry={entry} save={save} saving={saving} />}
+      {activeTab === 'review' && <ReviewTab entry={entry} save={save} saving={saving} advanceStage={advanceStage} />}
     </div>
   )
 }
