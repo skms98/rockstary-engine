@@ -460,6 +460,7 @@ export default function EventDetailPage() {
   const completedCount = STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
   const totalSteps = STEPS_CONFIG.length
   const canRunAI = (field: string) => AI_STEPS.includes(field)
+  const anyStepProcessing = Object.values(aiProcessing).some(v => v)
 
   return (
     <div className="p-8 max-w-5xl">
@@ -656,7 +657,7 @@ export default function EventDetailPage() {
                 {isAIStep && !isActive && (
                   <button
                     onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
-                    disabled={isProcessing || runningAll}
+                    disabled={isProcessing || runningAll || anyStepProcessing}
                     className="mr-4 p-2 rounded-lg bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 hover:text-purple-300 transition-all disabled:opacity-30"
                     title={`Run AI for ${step.label}`}
                   >
@@ -693,7 +694,7 @@ export default function EventDetailPage() {
                     {isAIStep && (
                       <button
                         onClick={() => runAIStep(step.field)}
-                        disabled={isProcessing || runningAll}
+                        disabled={isProcessing || runningAll || anyStepProcessing}
                         className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-purple-600 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
                       >
                         {isProcessing ? (
