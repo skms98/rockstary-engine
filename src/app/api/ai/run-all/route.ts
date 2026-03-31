@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
     const baseUrl = request.nextUrl.origin
 
     const steps = [
+      'page_qa_comments',       // Step A: Page QA (uses screenshots)
+      'categories',             // Step B: Categories & Tags
       'recommended_versions',
       'fact_check_scores',
       'duplicate_analysis',

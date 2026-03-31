@@ -113,9 +113,22 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `No AI prompt available for step: ${stepField}` }, { status: 400 })
       }
 
+      // Format screenshots as ordered text for prompt context
+      let screenshotsText = ''
+      if (entry.screenshots && Array.isArray(entry.screenshots) && entry.screenshots.length > 0) {
+        screenshotsText = entry.screenshots
+          .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+          .map((s: any) => `Screenshot ${s.order}: [${s.label}] ${s.url}`)
+          .join('\n')
+      } else if (entry.screenshot_url) {
+        screenshotsText = `Screenshot 1: [Full page] ${entry.screenshot_url}`
+      }
+
       const ctx: StepContext = {
         eventTitle: entry.event_title || '',
         eventUrl: entry.event_url || '',
+        screenshots: screenshotsText,
+        pageQaComments: entry.page_qa_comments || '',
         originalDescription: entry.original_description || '',
         recommendedVersions: entry.recommended_versions || '',
         factCheckScores: entry.fact_check_scores || '',
@@ -227,6 +240,13 @@ export async function POST(request: NextRequest) {
     }
     if (stepField === 'resolver_output' && entry.original_description) {
       updateData.prev_original_description = entry.original_description
+    }
+    // Step B (categories) also extracts tags from the combined output
+    if (stepField === 'categories') {
+      const tagsMatch = aiResult.match(/TAGS:\s*\n([^\n]+)/i)
+      if (tagsMatch) {
+        updateData.tags = tagsMatch[1].trim()
+      }
     }
 
     const { error: updateError } = await dbClient

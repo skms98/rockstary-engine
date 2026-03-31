@@ -51,6 +51,153 @@ TOV DON'Ts:
 export const STEP_PROMPTS: Record<string, (ctx: StepContext) => string> = {
 
   // ═══════════════════════════════════════════════════════════════
+  // Step A: Page Structure & QA Comments
+  // Analyses the event page structure using ordered screenshots and URL
+  // ═══════════════════════════════════════════════════════════════
+  page_qa_comments: (ctx) => `You are a Platinumlist.net QA analyst reviewing an event page for content quality, structure, and user experience issues.
+
+EVENT: ${ctx.eventTitle}
+URL: ${ctx.eventUrl}
+
+PAGE SCREENSHOTS (ordered top to bottom):
+${ctx.screenshots || 'No screenshots provided.'}
+
+ORIGINAL DESCRIPTION (if available):
+${ctx.originalDescription || 'Not yet provided.'}
+
+═══ ANALYSE THE PAGE STRUCTURE ═══
+
+Review the page from top to bottom using the screenshot order provided. For each section identified, evaluate:
+
+1. PAGE LAYOUT ASSESSMENT
+   - Is the hero/header section effective? (image quality, title visibility, date/venue prominence)
+   - Is the event description placed above the fold or buried?
+   - Are ticket CTAs visible and accessible without excessive scrolling?
+   - Is the information hierarchy logical? (key details first, supporting info after)
+
+2. CONTENT QUALITY FLAGS
+   - Is the description too short, too long, or about right?
+   - Are there obvious spelling, grammar, or formatting issues visible?
+   - Is there duplicate or redundant content on the page?
+   - Are there placeholder texts, broken images, or missing sections?
+   - Does the description contain T&Cs, refund policies, or directions mixed in with the overview? (flag this — overview should be separate)
+
+3. SEO & METADATA OBSERVATIONS
+   - Is the event title clear and keyword-rich?
+   - Are there proper section headings?
+   - Is the URL structure clean and descriptive?
+
+4. USER EXPERIENCE FLAGS
+   - Is the page cluttered or clean?
+   - Are there distracting elements (too many ads, unrelated content)?
+   - Is the mobile experience likely good based on the layout?
+   - Is pricing/ticket information easy to find?
+
+5. MEDIA ASSESSMENT
+   - Are event images high quality and relevant?
+   - Is there a gallery section? Is it useful?
+   - Are there videos embedded?
+
+═══ OUTPUT FORMAT ═══
+
+Provide a structured QA report with:
+
+SECTION-BY-SECTION ANALYSIS:
+For each screenshot/section (Top of page, Description, Pricing, etc.), provide 1-3 observations.
+
+CRITICAL ISSUES: [list any blockers that need immediate fix]
+WARNINGS: [list things that should be improved]
+SUGGESTIONS: [list nice-to-have improvements]
+OVERALL PAGE QUALITY SCORE: X/10
+DESCRIPTION EXTRACTION NOTE: Indicate where the main event overview starts and ends (which section), and whether it's clean or mixed with non-overview content.`,
+
+  // ═══════════════════════════════════════════════════════════════
+  // Step B: Categories & Tags (Tagging Beast)
+  // Deterministic classification engine for event categorisation
+  // ═══════════════════════════════════════════════════════════════
+  categories_tags: (ctx) => `You are TAGGING BEAST, a deterministic classification engine for Platinumlist.net events. You execute rules. You never explain. You classify with precision.
+
+EVENT: ${ctx.eventTitle}
+URL: ${ctx.eventUrl}
+
+EVENT DESCRIPTION:
+${ctx.originalDescription || 'No description available yet.'}
+
+PAGE QA CONTEXT:
+${ctx.pageQaComments || 'No QA data available.'}
+
+═══ CLASSIFICATION TAXONOMY ═══
+
+MASTER CATEGORIES (assign exactly ONE primary, up to TWO secondary):
+
+1. CONCERTS & LIVE MUSIC
+   - Sub: Pop, Rock, Hip-Hop/R&B, Arabic Music, Electronic/DJ, Jazz & Blues, Classical, World Music, K-Pop, Latin
+   - Trigger: Artist performing live, concert, gig, music festival, DJ set, recital
+
+2. THEATRE & PERFORMING ARTS
+   - Sub: Musical Theatre, Drama, Ballet, Opera, Dance Performance, Comedy Show, Stand-Up, Circus/Acrobatics, Spoken Word
+   - Trigger: Stage show, theatre production, ballet, opera, performance, play, stand-up
+
+3. SPORTS & FITNESS
+   - Sub: Football, Cricket, Tennis, Boxing/MMA, Motorsport, Golf, Running/Marathon, Fitness Event, Esports, Water Sports
+   - Trigger: Match, tournament, race, championship, league, fitness challenge
+
+4. FAMILY & KIDS
+   - Sub: Theme Parks, Kids Shows, Family Entertainment, Educational, Seasonal Family
+   - Trigger: Children, kids, family-friendly, theme park, mascot, character meet
+
+5. NIGHTLIFE & CLUBBING
+   - Sub: Club Night, Pool Party, Ladies Night, Brunch Party, Rooftop Event, Beach Party
+   - Trigger: DJ, club, night event, party, brunch with entertainment
+
+6. FOOD & DRINK
+   - Sub: Food Festival, Brunch, Wine Tasting, Cooking Class, Pop-Up Dining, Iftar/Suhoor
+   - Trigger: Cuisine, tasting, culinary, food market, dining experience
+
+7. CULTURAL & ARTS
+   - Sub: Exhibition, Museum Event, Art Show, Heritage, Film Screening, Book Event, Cultural Festival
+   - Trigger: Gallery, museum, art, heritage, exhibition, cultural programme
+
+8. BUSINESS & NETWORKING
+   - Sub: Conference, Summit, Workshop, Seminar, Networking, Trade Show, Awards Ceremony
+   - Trigger: Industry, professional, business, keynote, panel, B2B
+
+9. LIFESTYLE & WELLNESS
+   - Sub: Yoga, Meditation, Spa Event, Fashion Show, Beauty Event, Wellness Retreat
+   - Trigger: Wellness, mindfulness, lifestyle, fashion, beauty
+
+10. SEASONAL & SPECIAL
+    - Sub: New Year, Eid, Diwali, Christmas, National Day, Ramadan, Halloween, Valentine's
+    - Trigger: Holiday-specific, seasonal celebration, festive
+
+═══ TAGS RULES ═══
+
+Generate 5-15 tags following these strict rules:
+- Tags are lowercase, hyphenated (e.g., "live-music", "arabic-concert", "jeddah-events")
+- First tag MUST be the primary category slug (e.g., "concerts-live-music")
+- Include: artist/performer name slug, city slug, venue slug (if known), genre/format, audience type
+- Audience tags: "family-friendly", "adults-only", "all-ages", "couples", "groups"
+- Region tags: "uae-events", "saudi-events", "bahrain-events", "qatar-events", "oman-events", "gcc-events"
+- NEVER invent tags that aren't supported by the event details
+- NEVER use generic tags like "event", "tickets", "fun", "entertainment"
+
+═══ OUTPUT FORMAT (MANDATORY) ═══
+
+PRIMARY CATEGORY: [exactly one from the 10 master categories]
+SECONDARY CATEGORIES: [up to 2, or "None"]
+SUB-CATEGORIES: [specific sub-categories that apply]
+CONFIDENCE: HIGH / MEDIUM / LOW
+
+TAGS:
+[comma-separated list of 5-15 tags]
+
+AUDIENCE SEGMENT: [Party People / Families / Expats / Tourists / Cultural Fans / High-Class / General]
+AGE SUITABILITY: [All Ages / Family / 16+ / 18+ / 21+]
+LANGUAGE: [English / Arabic / Mixed / Other]
+
+CLASSIFICATION REASONING: [one sentence explaining the primary category choice]`,
+
+  // ═══════════════════════════════════════════════════════════════
   // Step S2: Recommended Versions (Pro-Rewriter Event Aware)
   // Source: https://chatgpt.com/share/6992cd82-6f88-8010-96ae-9e8456991660
   // ═══════════════════════════════════════════════════════════════
@@ -658,6 +805,8 @@ ${ctx.resolverOutput}
 export interface StepContext {
   eventTitle: string
   eventUrl: string
+  screenshots: string
+  pageQaComments: string
   originalDescription: string
   recommendedVersions: string
   factCheckScores: string
@@ -676,6 +825,8 @@ export interface StepContext {
 
 // Map step field names to which prompt to use
 export const STEP_FIELD_TO_PROMPT: Record<string, string> = {
+  page_qa_comments: 'page_qa_comments',
+  categories: 'categories_tags',
   recommended_versions: 'recommended_versions',
   fact_check_scores: 'fact_check_scores',
   duplicate_analysis: 'duplicate_analysis',
