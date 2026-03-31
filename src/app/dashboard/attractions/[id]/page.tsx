@@ -63,14 +63,14 @@ export interface AttractionEntry {
 const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
 
 const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: string; bgColor: string; borderColor: string }> = {
-  intake:            { label: 'Intake',            icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
+  intake:            { label: 'Intake',             icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
   seo_optimization:  { label: 'SEO Optimization',  icon: '\u270D\uFE0F', color: 'text-amber-400',   bgColor: 'bg-amber-500/10',   borderColor: 'border-amber-500/30' },
   tagging:           { label: 'Tagging',           icon: '\uD83C\uDFF7\uFE0F', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
   review:            { label: 'Review',            icon: '\u2705', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
   exported:          { label: 'Exported',          icon: '\uD83D\uDCE4', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -230,7 +230,7 @@ export default function AttractionDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-lg w-fit">
-        {(['overview', 'Overview'], ['seo', 'SEO'], ['factcheck', 'Fact Check'], ['tagging', 'Tagging'], ['review', 'Review'], ['screenshots', 'Screenshots']) as const).map(([tab, label]) => (
+        {([['overview', 'Overview'], ['seo', 'SEO'], ['factcheck', 'Fact Check'], ['tagging', 'Tagging'], ['review', 'Review'], ['screenshots', 'Screenshots']] as const).map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -251,6 +251,7 @@ export default function AttractionDetailPage() {
       {activeTab === 'review' && <ReviewTab entry={entry} save={save} saving={saving} advanceStage={advanceStage} />}
       {activeTab === 'screenshots' && <ScreenshotsTab attractionId={entry.id} attractionTitle={entry.title} />}
     </div>
+  )
   
   }
 }
