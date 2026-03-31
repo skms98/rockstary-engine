@@ -714,7 +714,24 @@ VOICE CHECK — before submitting each variant, re-read every sentence and verif
 2. Does the opener paint a VISUAL or SENSORY moment? ("The stage lights hit different in Jeddah" not "Join us for an evening of...")
 3. Are CTAs warm and casual? ("Grab your spot" / "See you there" not "Secure your seat now" or "Book your tickets today")
 4. Is the energy SPECIFIC to this event? (Reference the actual artist, genre, venue vibe — not generic excitement)
-5. Did you use any BANNED word? Search your output. If yes, rewrite that sentence.`,
+5. Did you use any BANNED word? Search your output. If yes, rewrite that sentence.
+
+═══ TEASERS ═══
+The S2 (Recommended Versions) step already generated teasers. Your job is to CARRY THEM FORWARD and ENHANCE — not replace them.
+
+S2 TEASERS (from Recommended Versions):
+Review the teasers below. Keep the ones that are strong (specific, TOV-compliant, 13 words max, event-specific). Improve any that are weak (generic, banned words, too long, vague). You may add up to 5 new ones if there are gaps in angle coverage.
+
+Output a final list of the BEST 15 teasers, ranked by impact (best first). Each must be max 13 words. Mark which ones are carried from S2 vs enhanced vs new.
+
+TEASER RULES:
+- Max 13 words each (hard limit)
+- Respect the artist/event — never trivialise
+- Convey WHAT the event is and WHAT to expect
+- Soft CTA woven in, not aggressive
+- Follow Platinumlist B2C TOV 2.4
+- Each from a DIFFERENT angle: artist stature, experience, venue, cultural moment, genre, crowd, date urgency, visual/sensory, emotional pull, discovery
+- BANNED in teasers: unforgettable, incredible, amazing, must-see, don't miss, once-in-a-lifetime, promises to be`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S11: SEO Analysis (Resolver S10 vs Original S1)
@@ -827,8 +844,11 @@ ${ctx.seoAnalysis}
 FINAL FACT CHECK (S12 - Resolver vs Original):
 ${ctx.factCheckFinal}
 
-RESOLVED VERSIONS (S10):
+RESOLVED VERSIONS (S10) — includes curated teasers:
 ${ctx.resolverOutput}
+
+RECOMMENDED VERSIONS (S2) — original teasers fallback:
+${ctx.recommendedVersions}
 
 ═══ RANKING CRITERIA (in order of weight) ═══
 1. Factual Accuracy (30%): Highest fact check score from S12
@@ -856,17 +876,14 @@ ${ctx.resolverOutput}
    - Any last micro-edits needed (if none, say "None")
 4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied. This MUST be the full event description body — every sentence, fully written out.
 5. RUNNER-UP: The #2 version as backup. MUST include the COMPLETE FULL TEXT of this version — every sentence, fully written out. Do NOT just label it; reproduce the entire description body.
-6. TEASERS: Generate exactly 10 event teasers following these strict rules:
-   - MAXIMUM 13 words each (hard limit, count carefully)
-   - Must respect the artist/event — never trivialise, mock, or diminish
-   - Must convey WHAT the event is and WHAT to expect (genre, vibe, energy)
-   - Must push the reader to buy/attend (soft CTA woven in, not aggressive)
-   - Must follow Platinumlist B2C TOV 2.4 (warm, rhythmic, joyful, specific)
-   - Each teaser from a DIFFERENT angle: artist stature, experience promise, venue energy, cultural moment, genre feel, crowd vibe, date urgency, visual/sensory, emotional pull, discovery
-   - BANNED in teasers: unforgettable, incredible, amazing, must-see, don't miss, once-in-a-lifetime, promises to be
-   - GOOD teaser examples: "Fahad Bin Fasla. Jeddah. April 10. The stage is yours." / "Traditional rhythms meet raw energy. This is that night."
-   - BAD teaser examples: "Don't miss this amazing concert!" / "An unforgettable night awaits you!"
-   - Rank teasers by impact (best first)`,
+6. TEASERS: The Resolver (S10) already curated and enhanced teasers from S2. DO NOT regenerate teasers from scratch. Instead:
+   - Extract the teasers from the S10 Resolved Versions output
+   - Select the TOP 10 teasers from that list based on: impact, TOV compliance, specificity, and angle diversity
+   - If the S10 output has no teasers (edge case), fall back to S2 teasers from the Recommended Versions
+   - Only as a LAST RESORT (no teasers found in S10 or S2), generate new ones
+   - Final list: exactly 10 teasers, ranked by impact (best first)
+   - Each must be max 13 words, TOV-compliant, event-specific, from different angles
+   - BANNED: unforgettable, incredible, amazing, must-see, don't miss, once-in-a-lifetime, promises to be`,
 }
 
 export interface StepContext {
