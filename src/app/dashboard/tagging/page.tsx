@@ -892,35 +892,7 @@ export default function TaggingPage() {
 
                     return (
                       <>
-                        {/* Standalone Categories */}
-                        {standaloneCats.length > 0 && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Standalone</h3>
-                            <div className="space-y-2">
-                              {standaloneCats.map(cat => (
-                                <div key={cat.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-white">{cat.name}</h4>
-                                    <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
-                                      {cat.domain}
-                                    </span>
-                                  </div>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleDeleteCategory(cat.id)}
-                                      className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
-                                      title="Delete"
-                                    >
-                                      <TrashIcon />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Parent Categories with Subcategories */}
+                        {/* Parent Categories with Subcategories — shown FIRST */}
                         {parentCats.length > 0 && (
                           <div>
                             <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Parent Categories</h3>
@@ -979,6 +951,34 @@ export default function TaggingPage() {
                                       ))}
                                     </div>
                                   )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Standalone Categories — shown after parents */}
+                        {standaloneCats.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Standalone Categories</h3>
+                            <div className="space-y-2">
+                              {standaloneCats.map(cat => (
+                                <div key={cat.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-white">{cat.name}</h4>
+                                    <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
+                                      {cat.domain}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleDeleteCategory(cat.id)}
+                                      className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                      title="Delete"
+                                    >
+                                      <TrashIcon />
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
