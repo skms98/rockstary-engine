@@ -44,6 +44,54 @@ const STAGES: StageConfig[] = [
   { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: '📤' },
 ]
 
+async function downloadTemplate() {
+  const XLSX = await import('xlsx')
+  const wb = XLSX.utils.book_new()
+
+  const sheetData = [
+    ['Title', 'Dubai Aquarium & Underwater Zoo'],
+    ['URL', 'https://www.example.com/dubai-aquarium'],
+    ['Country', 'UAE'],
+    ['City', 'Dubai'],
+    ['Keywords', 'dubai aquarium, underwater zoo, dubai mall aquarium, things to do in dubai'],
+    ['Description', 'Explore one of the largest suspended aquariums in the world, home to hundreds of species of aquatic animals including sharks and rays. Located inside The Dubai Mall.'],
+    [],
+    ['─── Instructions ───', ''],
+    ['• Each sheet = one attraction', ''],
+    ['• Column A = field label, Column B = value', ''],
+    ['• Title is required, other fields are optional', ''],
+    ['• Keywords field is optional (used for SEO)', ''],
+    ['• Duplicate the sheet for multiple attractions', ''],
+    ['• Delete this instructions section before submitting', ''],
+  ]
+
+  const ws = XLSX.utils.aoa_to_sheet(sheetData)
+  ws['!cols'] = [{ wch: 22 }, { wch: 70 }]
+  XLSX.utils.book_append_sheet(wb, ws, 'Attraction Name Here')
+
+  const sheetData2 = [
+    ['Title', 'Burj Khalifa At The Top'],
+    ['URL', 'https://www.example.com/burj-khalifa'],
+    ['Country', 'UAE'],
+    ['City', 'Dubai'],
+    ['Keywords', 'burj khalifa tickets, at the top, tallest building, dubai observation deck'],
+    ['Description', 'Visit the observation deck of the world\'s tallest building for panoramic views of Dubai. Choose from Level 124, 125, or the premium Level 148 experience.'],
+  ]
+
+  const ws2 = XLSX.utils.aoa_to_sheet(sheetData2)
+  ws2['!cols'] = [{ wch: 22 }, { wch: 70 }]
+  XLSX.utils.book_append_sheet(wb, ws2, 'Burj Khalifa')
+
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' })
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'attraction-template.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function AttractionsFunnel() {
   const [entries, setEntries] = useState<AttractionEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +150,9 @@ export default function AttractionsFunnel() {
               List
             </button>
           </div>
+          <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
+            ↓ Template
+          </button>
           <button onClick={() => setShowNewForm(true)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             + Add
           </button>
