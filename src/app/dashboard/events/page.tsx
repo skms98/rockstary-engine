@@ -8,7 +8,7 @@ import type { InputMethod, EventEntry } from '@/types'
 export default function EventsDashboard() {
   const [entries, setEntries] = useState<EventEntry[]>([])
   const [showNewForm, setShowNewForm] = useState(false)
-  const [inputMethod, setInputMethod] = useState<InputMethod>('url_only')
+  const [inputMethod, setInputMethod] = useState<InputMethod>('rawtext_url')
   const [excelFile, setExcelFile] = useState<File | null>(null)
   const [excelPreview, setExcelPreview] = useState<ParsedRow[]>([])
   const [importingExcel, setImportingExcel] = useState(false)
@@ -403,21 +403,31 @@ export default function EventsDashboard() {
                 <label className="block text-sm text-pl-text-dim mb-3">How are you providing the content?</label>
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { value: 'screenshot_url' as InputMethod, icon: '📸', label: 'Screenshot + URL', desc: 'Upload screenshot and provide URL' },
-                    { value: 'rawtext_url' as InputMethod, icon: '📝', label: 'Raw Text + URL', desc: 'Paste description text with URL' },
-                    { value: 'url_only' as InputMethod, icon: '🔗', label: 'URL Only', desc: 'Just provide the event URL' },
-                    { value: 'excel_upload' as InputMethod, icon: '📊', label: 'Excel File', desc: 'Import from reference XLSX' },
+                    { value: 'screenshot_url' as InputMethod, icon: '📸', label: 'Screenshot + URL', desc: 'Upload screenshot and provide URL', badge: 'beta' as const },
+                    { value: 'rawtext_url' as InputMethod, icon: '📝', label: 'Raw Text + URL', desc: 'Paste description text with URL', badge: 'recommended' as const },
+                    { value: 'url_only' as InputMethod, icon: '🔗', label: 'URL Only', desc: 'Just provide the event URL', badge: 'beta' as const },
+                    { value: 'excel_upload' as InputMethod, icon: '📊', label: 'Excel File', desc: 'Import from reference XLSX', badge: 'beta' as const },
                   ].map((method) => (
                     <button
                       key={method.value}
                       type="button"
                       onClick={() => setInputMethod(method.value)}
-                      className={`p-4 rounded-xl border text-left transition-all ${
+                      className={`p-4 rounded-xl border text-left transition-all relative ${
                         inputMethod === method.value
                           ? 'border-pl-gold bg-pl-gold/5'
                           : 'border-pl-border bg-pl-card hover:border-pl-border'
                       }`}
                     >
+                      {method.badge === 'recommended' && (
+                        <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          Recommended
+                        </span>
+                      )}
+                      {method.badge === 'beta' && (
+                        <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400/70 border border-amber-500/20">
+                          Beta
+                        </span>
+                      )}
                       <span className="text-2xl">{method.icon}</span>
                       <p className="font-medium text-sm text-white mt-2">{method.label}</p>
                       <p className="text-xs text-pl-muted mt-1">{method.desc}</p>
