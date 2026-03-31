@@ -114,7 +114,45 @@ export default function AttractionsFunnel() {
     const order: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
     const idx = order.indexOf(currentStage)
     if (idx >= order.length - 1) return
-    const { error } = await plSupabase.from('attractions').update({ stage: order[idx + 1] }).eq('id', id)
+    const nextStage = order[idx + 1]
+
+    // Fetch full entry data for validation
+    const { data: fullEntry } = await plSupabase.from('attractions').select('*').eq('id', id).single()
+    if (!fullEntry) return
+
+    // Gate: Intake -> SEO Optimization
+    if (currentStage === 'intake' && nextStage === 'seo_optimization') {
+      if (!fullEntry.raw_text || fullEntry.raw_text.trim() === '') {
+        window.alert('Cannot advance: Raw Content (Column C) must be populated first.')
+        return
+      }
+    }
+
+    // Gate: SEO Optimization -> Tagging
+    if (currentStage === 'seo_optimization' && nextStage === 'tagging') {
+      if (fullEntry.seo_status !== 'completed') {
+        window.alert('Cannot advance: SEO optimization must be completed first.')
+        return
+      }
+      if (!fullEntry.seo_content || Object.keys(fullEntry.seo_content).length === 0) {
+        window.alert('Cannot advance: SEO content (Column D) must have data.')
+        return
+      }
+    }
+
+    // Gate: Tagging -> Review
+    if (currentStage === 'tagging' && nextStage === 'review') {
+      if (fullEntry.tagging_status !== 'completed') {
+        window.alert('Cannot advance: Tagging must be completed first.')
+        return
+      }
+      if (fullEntry.validation_gates_passed !== 6) {
+        window.alert('Cannot advance: All 6 validation gates must pass first.')
+        return
+      }
+    }
+
+    const { error } = await plSupabase.from('attractions').update({ stage: nextStage }).eq('id', id)
     if (!error) fetchEntries()
   }
 
@@ -189,7 +227,7 @@ export default function AttractionsFunnel() {
           {STAGES.map((stage) => {
             const items = entriesByStage(stage.key)
             return (
-              <div key={stage.key} className={`rounded-xl border ${stage.borderColor} ${stage.bgColor} p-3 min-h-[300px]`}>
+              <div key={stage.key} className={`rounded-xl border ${stage.borderColor} ${stage.bgColor} p-3 min-h[300px]`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span>{stage.icon}</span>
