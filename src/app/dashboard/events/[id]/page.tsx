@@ -519,26 +519,15 @@ export default function EventDetailPage() {
             <option value="review">Review</option>
             <option value="completed">Completed</option>
           </select>
-          {/* Export dropdown group */}
-          <div className="flex items-center rounded-lg border border-pl-border overflow-hidden">
-            <button onClick={exportToExcel} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download as Excel">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              XLSX
-            </button>
-            <div className="w-px h-6 bg-pl-border" />
-            <button onClick={exportToCSV} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Download as CSV">
-              CSV
-            </button>
-            <div className="w-px h-6 bg-pl-border" />
-            <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 bg-pl-card hover:bg-pl-border/30 text-pl-text-dim transition-colors" title="Copy data to clipboard and open a new Google Sheet — just paste">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.5 3h-15A1.5 1.5 0 003 4.5v15A1.5 1.5 0 004.5 21h15a1.5 1.5 0 001.5-1.5v-15A1.5 1.5 0 0019.5 3zM9 17H6v-3h3v3zm0-5H6V9h3v3zm5 5h-4v-3h4v3zm0-5h-4V9h4v3zm4 5h-3v-3h3v3zm0-5h-3V9h3v3z"/>
-              </svg>
-              Sheets
-            </button>
-          </div>
+          {/* Export buttons */}
+          <button onClick={exportToExcel} className="pl-btn-secondary flex items-center gap-1.5 text-xs px-3 py-2" title="Download as Excel">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            XLSX
+          </button>
+          <button onClick={openInGoogleSheets} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-[#0f9d58]/15 hover:bg-[#0f9d58]/25 text-[#34a853] border border-[#0f9d58]/30 transition-colors" title="Open in Google Sheets (copies data, opens new sheet)">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1.5"/><line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" strokeWidth="1.5"/></svg>
+            Google Sheets
+          </button>
           <button
             onClick={deleteEntry}
             disabled={deletingEntry}
