@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { parseExcelFile, type ParsedRow } from '@/lib/excel-parser'
 import type { InputMethod, EventEntry } from '@/types'
@@ -26,8 +26,31 @@ export default function EventsDashboard() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const dropZoneRef = useRef<HTMLDivElement>(null)
+  const dragCounterRef = useRef(0)
+  const previewUrlsRef = useRef<Map<File, string>>(new Map())
 
-  const defaultLabels = ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer']
+  const DEFAULT_LABELS = useMemo(() => ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer'], [])
+
+  // Get or create a stable object URL for a File (avoids re-creating on every render)
+  const getPreviewUrl = useCallback((file: File) => {
+    const existing = previewUrlsRef.current.get(file)
+    if (existing) return existing
+    const url = URL.createObjectURL(file)
+    previewUrlsRef.current.set(file, url)
+    return url
+  }, [])
+
+  // Revoke all object URLs on unmount or when form closes
+  useEffect(() => {
+    if (!showNewForm) {
+      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+      previewUrlsRef.current.clear()
+    }
+    return () => {
+      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+      previewUrlsRef.current.clear()
+    }
+  }, [showNewForm])
 
   // Shared helper: add image files to screenshot_files array
   const addScreenshotFiles = useCallback((files: File[]) => {
@@ -36,11 +59,11 @@ export default function EventsDashboard() {
     setFormData(prev => {
       const newFiles = imageFiles.map((file, i) => ({
         file,
-        label: defaultLabels[prev.screenshot_files.length + i] || 'Full page',
+        label: DEFAULT_LABELS[prev.screenshot_files.length + i] || 'Full page',
       }))
       return { ...prev, screenshot_files: [...prev.screenshot_files, ...newFiles] }
     })
-  }, [])
+  }, [DEFAULT_LABELS])
 
   // Paste handler: listen for Ctrl+V / Cmd+V with images
   useEffect(() => {
@@ -208,6 +231,8 @@ export default function EventsDashboard() {
     const { error } = await supabase.from('content_entries').insert([entry])
     if (!error) {
       setShowNewForm(false)
+      previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+      previewUrlsRef.current.clear()
       setFormData({ event_id: '', event_title: '', event_url: '', raw_text: '', screenshot_file: null, screenshot_files: [] })
       loadEntries()
     }
@@ -528,7 +553,7 @@ export default function EventsDashboard() {
                           {/* Thumbnail preview */}
                           <div className="flex-shrink-0 w-10 h-10 rounded overflow-hidden bg-pl-dark">
                             <img
-                              src={URL.createObjectURL(item.file)}
+                              src={getPreviewUrl(item.file)}
                               alt={`Screenshot ${index + 1}`}
                               className="w-full h-full object-cover"
                             />
@@ -600,6 +625,9 @@ export default function EventsDashboard() {
                           <button
                             type="button"
                             onClick={() => {
+                              const removed = formData.screenshot_files[index]
+                              const url = previewUrlsRef.current.get(removed.file)
+                              if (url) { URL.revokeObjectURL(url); previewUrlsRef.current.delete(removed.file) }
                               setFormData({
                                 ...formData,
                                 screenshot_files: formData.screenshot_files.filter((_, i) => i !== index),
@@ -620,11 +648,11 @@ export default function EventsDashboard() {
                   {/* Add more screenshots — click, drag-and-drop, or paste */}
                   <div
                     ref={dropZoneRef}
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
-                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
-                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) setIsDragging(false) }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); dragCounterRef.current++; if (dragCounterRef.current === 1) setIsDragging(true) }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); dragCounterRef.current--; if (dragCounterRef.current === 0) setIsDragging(false) }}
                     onDrop={(e) => {
-                      e.preventDefault(); e.stopPropagation(); setIsDragging(false)
+                      e.preventDefault(); e.stopPropagation(); dragCounterRef.current = 0; setIsDragging(false)
                       const files = e.dataTransfer?.files
                       if (files && files.length > 0) addScreenshotFiles(Array.from(files))
                     }}
