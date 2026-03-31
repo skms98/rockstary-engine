@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { parseExcelFile, type ParsedRow } from '@/lib/excel-parser'
 import type { InputMethod, EventEntry } from '@/types'
@@ -24,6 +24,45 @@ export default function EventsDashboard() {
   const [submitting, setSubmitting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dropZoneRef = useRef<HTMLDivElement>(null)
+
+  const defaultLabels = ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer']
+
+  // Shared helper: add image files to screenshot_files array
+  const addScreenshotFiles = useCallback((files: File[]) => {
+    const imageFiles = files.filter(f => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) return
+    setFormData(prev => {
+      const newFiles = imageFiles.map((file, i) => ({
+        file,
+        label: defaultLabels[prev.screenshot_files.length + i] || 'Full page',
+      }))
+      return { ...prev, screenshot_files: [...prev.screenshot_files, ...newFiles] }
+    })
+  }, [])
+
+  // Paste handler: listen for Ctrl+V / Cmd+V with images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!showNewForm) return
+      const items = e.clipboardData?.items
+      if (!items) return
+      const imageFiles: File[] = []
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile()
+          if (file) imageFiles.push(file)
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault()
+        addScreenshotFiles(imageFiles)
+      }
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [showNewForm, addScreenshotFiles])
 
   useEffect(() => {
     loadEntries()
@@ -578,8 +617,25 @@ export default function EventsDashboard() {
                     </div>
                   )}
 
-                  {/* Add more screenshots button */}
-                  <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-colors ${formData.screenshot_files.length > 0 ? 'border-pl-border/50 hover:border-pl-gold/20' : 'border-pl-border hover:border-pl-gold/30'}`}>
+                  {/* Add more screenshots — click, drag-and-drop, or paste */}
+                  <div
+                    ref={dropZoneRef}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) setIsDragging(false) }}
+                    onDrop={(e) => {
+                      e.preventDefault(); e.stopPropagation(); setIsDragging(false)
+                      const files = e.dataTransfer?.files
+                      if (files && files.length > 0) addScreenshotFiles(Array.from(files))
+                    }}
+                    className={`border-2 border-dashed rounded-xl p-5 text-center transition-all ${
+                      isDragging
+                        ? 'border-pl-gold bg-pl-gold/10 scale-[1.01]'
+                        : formData.screenshot_files.length > 0
+                          ? 'border-pl-border/50 hover:border-pl-gold/20'
+                          : 'border-pl-border hover:border-pl-gold/30'
+                    }`}
+                  >
                     <input
                       type="file"
                       accept="image/*"
@@ -587,30 +643,34 @@ export default function EventsDashboard() {
                       onChange={(e) => {
                         const files = e.target.files
                         if (!files) return
-                        const defaultLabels = ['Top of page', 'Description', 'Event details', 'Pricing / Tickets', 'Venue / Map', 'T&Cs / Legal', 'Gallery', 'Footer']
-                        const newFiles = Array.from(files).map((file, i) => ({
-                          file,
-                          label: defaultLabels[formData.screenshot_files.length + i] || 'Full page',
-                        }))
-                        setFormData({
-                          ...formData,
-                          screenshot_files: [...formData.screenshot_files, ...newFiles],
-                        })
+                        addScreenshotFiles(Array.from(files))
                         e.target.value = ''
                       }}
                       className="hidden"
                       id="multi-screenshot-upload"
                     />
                     <label htmlFor="multi-screenshot-upload" className="cursor-pointer">
-                      <div className="flex items-center justify-center gap-2">
-                        <svg className="w-5 h-5 text-pl-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        <p className="text-sm text-pl-muted">
-                          {formData.screenshot_files.length > 0
-                            ? `Add more screenshots (${formData.screenshot_files.length} added)`
-                            : 'Click to add page screenshots (select multiple)'}
-                        </p>
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        {isDragging ? (
+                          <>
+                            <svg className="w-8 h-8 text-pl-gold animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                            </svg>
+                            <p className="text-sm text-pl-gold font-medium">Drop screenshots here</p>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 text-pl-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <p className="text-sm text-pl-muted">
+                              {formData.screenshot_files.length > 0
+                                ? `Add more screenshots (${formData.screenshot_files.length} added)`
+                                : 'Click, drag & drop, or paste (Ctrl+V) to add screenshots'}
+                            </p>
+                            <p className="text-xs text-pl-muted/60">Supports multiple files at once</p>
+                          </>
+                        )}
                       </div>
                     </label>
                   </div>
