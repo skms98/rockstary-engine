@@ -670,16 +670,38 @@ ${TOV_CONTEXT}
 
 EVENT: ${ctx.eventTitle}
 
+═══ FULL PIPELINE DATA (S1–S9) ═══
+The resolver must consider ALL of this when producing final versions.
+
 ORIGINAL DESCRIPTION (S1):
 ${ctx.originalDescription}
-
-REVIEWER FEEDBACK (S9):
-${ctx.reviewerOutput}
 
 RECOMMENDED VERSIONS (S2):
 ${ctx.recommendedVersions}
 
+FACT CHECK RESULTS (S3 — flags factual errors in S2 vs S1):
+${ctx.factCheckScores || 'Not available.'}
+
+DUPLICATE/SEO ANALYSIS (S4 — flags SEO duplication risk in S2 vs S1):
+${ctx.duplicateAnalysis || 'Not available.'}
+
+A/B TEST RESULTS (S5 — conversion potential of S2 variants):
+${ctx.abTests || 'Not available.'}
+
+ORGANISER TRIGGER RISK (S6 — flags phrases that may upset organisers):
+${ctx.organiserTriggerRisk || 'Not available.'}
+
+TOV SCORE (S7 — Platinumlist B2C TOV 2.4 compliance of S2):
+${ctx.tovScore || 'Not available.'}
+
+GRAMMAR & STYLE (S8 — grammar, readability, style issues in S2):
+${ctx.grammarStyle || 'Not available.'}
+
+REVIEWER EDITORIAL DIRECTION (S9 — synthesis of S3-S8, recommended edits):
+${ctx.reviewerOutput}
+
 ═══ PRODUCE EXACTLY 4 RESOLVED VARIANTS ═══
+You have the full pipeline above. The reviewer (S9) has already synthesised S3-S8 into editorial direction, but you MUST also cross-check the raw S3-S8 data directly. Do not rely solely on the reviewer summary.
 
 1. BALANCED VERSION (RECOMMENDED): Best overall balance of factual accuracy, organiser safety, TOV compliance, SEO uniqueness, and readability. This is the default pick.
 
@@ -844,7 +866,14 @@ OUTPUT FORMAT (per resolved version):
   // Step S13: Ranked Top Versions
   // Based on S11 (SEO) and S12 (Fact Check) results
   // ═══════════════════════════════════════════════════════════════
-  ranked_versions: (ctx) => `You are the final ranking judge for the Platinumlist content pipeline. Your job is to select the BEST version for publication based on ALL accumulated analysis.
+  ranked_versions: (ctx) => `You are the final ranking judge for the Platinumlist content pipeline. Your ONLY job is to RANK and SELECT from the resolver's versions (S10). You do NOT write new descriptions.
+
+═══ CRITICAL RULE ═══
+DO NOT generate, rewrite, or create any new description text. You ONLY:
+1. Rank the S10 resolved versions using S11 and S12 scores
+2. Select the best one as the winner
+3. Apply MICRO-EDITS ONLY if needed (fix a typo, swap a banned word — never rewrite sentences or restructure paragraphs)
+4. Reproduce the selected versions EXACTLY as they appear in S10
 
 When evaluating TOV compliance, use the full Platinumlist B2C TOV 2.4 standard:
 ${TOV_CONTEXT}
@@ -852,45 +881,45 @@ ${TOV_CONTEXT}
 ORIGINAL DESCRIPTION (S1 — source of truth for length and content):
 ${ctx.originalDescription}
 
-SEO ANALYSIS (S11 - Resolver vs Original):
+SEO ANALYSIS (S11 — compares S10 resolved versions vs S1 original for duplication risk):
 ${ctx.seoAnalysis}
 
-FINAL FACT CHECK (S12 - Resolver vs Original):
+FINAL FACT CHECK (S12 — compares S10 resolved versions vs S1 original for factual accuracy):
 ${ctx.factCheckFinal}
 
-RESOLVED VERSIONS (S10) — includes curated teasers:
+RESOLVED VERSIONS (S10 — these are the ONLY candidates, includes curated teasers):
 ${ctx.resolverOutput}
 
-RECOMMENDED VERSIONS (S2) — original teasers fallback:
+RECOMMENDED VERSIONS (S2 — teasers fallback only, NOT for description ranking):
 ${ctx.recommendedVersions}
 
 ═══ RANKING CRITERIA (in order of weight) ═══
 1. Factual Accuracy (30%): Highest fact check score from S12
-2. Organiser Safety (25%): Lowest organiser trigger risk
+2. Organiser Safety (25%): Lowest organiser trigger risk (from S10 self-scores)
 3. SEO Performance (20%): Lowest duplicate risk score from S11 (most original)
-4. TOV Compliance (15%): Highest B2C TOV 2.4 score
+4. TOV Compliance (15%): Highest B2C TOV 2.4 score (from S10 self-scores)
 5. Grammar & Readability (10%): Cleanest, most polished copy
 
 ═══ DISCARD RULES ═══
-- Any version with Fact Check < 70: DISCARD (too risky for publication)
+- Any version with Fact Check < 70 in S12: DISCARD (too risky for publication)
 - Any version with Organiser Risk HIGH: DISCARD (will cause pushback)
-- Any version with Duplicate Risk > 60: DISCARD (SEO penalty risk)
-- Any version shorter than 80% of the original description word count: FLAG as "too short" — the resolver should not have condensed the content. Note this in the ranking.
+- Any version with Duplicate Risk > 60 in S11: DISCARD (SEO penalty risk)
+- Any version shorter than 80% of the original description word count: FLAG as "too short"
 
 ═══ OUTPUT FORMAT ═══
 
-1. RANKED LIST: All resolved versions ranked best to worst. For EACH version include:
-   - Version label (e.g. "Balanced Version", "SEO-Optimised Version", etc.)
-   - Composite score breakdown (Fact Check, Organiser Safety, SEO, TOV, Grammar)
+1. RANKED LIST: All S10 resolved versions ranked best to worst. For EACH version include:
+   - Version label (e.g. "Balanced Version", "Best TOV Version", etc.)
+   - Composite score breakdown (Fact Check from S12, Organiser Safety from S10, SEO from S11, TOV from S10, Grammar from S10)
    - Final composite score
-   - THE COMPLETE FULL TEXT of that version (reproduce the entire description body — do NOT summarise or abbreviate)
+   - THE COMPLETE FULL TEXT of that version copied verbatim from S10 (do NOT rewrite, summarise, or abbreviate)
 2. DISCARDED VERSIONS: Any versions that hit discard rules, with the full text body and explanation of why discarded
 3. WINNER SUMMARY:
    - Which version won and why
    - Final composite score
-   - Any last micro-edits needed (if none, say "None")
-4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied. This MUST be the full event description body — every sentence, fully written out.
-5. RUNNER-UP: The #2 version as backup. MUST include the COMPLETE FULL TEXT of this version — every sentence, fully written out. Do NOT just label it; reproduce the entire description body.
+   - Any micro-edits needed (typo fixes, banned word swaps ONLY — if none, say "None")
+4. PUBLICATION-READY VERSION: Copy the #1 ranked version VERBATIM from S10. If micro-edits were noted in step 3, apply ONLY those (single word swaps, typo fixes). Do NOT restructure, rewrite, or condense. This must be the full description body, every sentence, matching S10.
+5. RUNNER-UP: Copy the #2 ranked version VERBATIM from S10. Full text, every sentence. Do NOT rewrite or summarise.
 6. TEASERS: The Resolver (S10) already curated and enhanced teasers from S2. DO NOT regenerate teasers from scratch. Instead:
    - Extract the teasers from the S10 Resolved Versions output
    - Select the TOP 10 teasers from that list based on: impact, TOV compliance, specificity, and angle diversity
