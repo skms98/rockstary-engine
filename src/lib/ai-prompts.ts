@@ -293,7 +293,8 @@ ${ctx.originalDescription}
 ${TOV_CONTEXT}
 
 ADDITIONAL HARD RULES:
-- 50% maximum structural variation to avoid organiser concern.
+- 50% maximum structural variation (this means sentence order and paragraph structure — NOT length. Do NOT cut content by 50%).
+- LENGTH PRESERVATION: Each variant MUST be within 80-120% of the original description's word count. Count the words in the original, then ensure your rewrite matches that range. If the original is 150 words, each variant must be 120-180 words. Never produce a version that is significantly shorter than the original.
 
 ═══ MANDATORY VOICE ENFORCEMENT (apply to EVERY sentence you write) ═══
 BANNED WORDS/PHRASES — if ANY of these appear in your output, your version FAILS:
@@ -645,8 +646,9 @@ ${ctx.grammarStyle}
 4. EDITORIAL DIRECTION: For the top-ranked version(s), provide:
    - Specific line edits to fix remaining issues
    - Phrases to keep (from any version)
-   - Phrases to cut
+   - Phrases to replace (swap weak phrases for stronger TOV-compliant ones — do NOT simply cut content)
    - Missing elements to add back from the original
+   - LENGTH CHECK: Compare each version's word count to the original. If any version is shorter than 80% of the original, flag it as "too short — resolver must expand, not condense"
 
 5. DISCARD RECOMMENDATION: Flag any versions that should be completely discarded (Fact Check < 70, Organiser Risk HIGH, TOV < 30) with explanation.
 
@@ -704,6 +706,15 @@ HARD RULES:
 - Active voice preferred
 - Lead with experience, not logistics
 - Write like a knowledgeable friend, not a brochure
+
+═══ CRITICAL: LENGTH PRESERVATION ═══
+Each resolved variant MUST match the ORIGINAL description's word count within 80-120%. The resolver IMPROVES quality — it does NOT condense or summarise.
+- Count the words in the ORIGINAL DESCRIPTION (S1)
+- Each resolved variant must be within 80-120% of that count
+- If the original is 200 words, each variant must be 160-240 words
+- If your version is shorter, ADD more detail: expand on the experience, add sensory language, elaborate on what attendees can expect, include venue atmosphere
+- NEVER sacrifice content depth for brevity. Shorter is NOT better. Match the original's richness.
+- At the end of each variant, state: "Word count: X (original: Y, ratio: Z%)"
 
 ═══ MANDATORY VOICE ENFORCEMENT (apply to EVERY sentence you write) ═══
 BANNED WORDS/PHRASES — if ANY of these appear in your output, the version FAILS:
@@ -838,6 +849,9 @@ OUTPUT FORMAT (per resolved version):
 When evaluating TOV compliance, use the full Platinumlist B2C TOV 2.4 standard:
 ${TOV_CONTEXT}
 
+ORIGINAL DESCRIPTION (S1 — source of truth for length and content):
+${ctx.originalDescription}
+
 SEO ANALYSIS (S11 - Resolver vs Original):
 ${ctx.seoAnalysis}
 
@@ -861,6 +875,7 @@ ${ctx.recommendedVersions}
 - Any version with Fact Check < 70: DISCARD (too risky for publication)
 - Any version with Organiser Risk HIGH: DISCARD (will cause pushback)
 - Any version with Duplicate Risk > 60: DISCARD (SEO penalty risk)
+- Any version shorter than 80% of the original description word count: FLAG as "too short" — the resolver should not have condensed the content. Note this in the ranking.
 
 ═══ OUTPUT FORMAT ═══
 
