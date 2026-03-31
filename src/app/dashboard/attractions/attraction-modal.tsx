@@ -34,7 +34,8 @@ export function AttractionModal({ show, onClose, onSuccess }: AttractionModalPro
   const handleExcelUpload = async (file: File) => {
     setExcelFile(file)
     try {
-      const rows = await parseExcelFile(file)
+      const buffer = await file.arrayBuffer()
+      const rows = await parseExcelFile(buffer)
       setExcelPreview(rows)
     } catch {
       setExcelPreview([])
