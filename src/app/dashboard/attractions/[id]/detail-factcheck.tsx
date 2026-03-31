@@ -188,13 +188,13 @@ export function FactCheckTab({ entry, save, saving }: { entry: AttractionEntry; 
 
       <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-5">
         <h3 className="text-white font-semibold mb-3">Non-Negotiable Rules Checklist</h3>
-        <div class="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[{id:'no_em_dash',label:'No em dashes used',desc:'Replaced with colon, comma, or period'},{id:'no_invented',label:'No invented facts',desc:'No achievements, awards, or details not in source'},{id:'no_song_imply',label:'No song performance implied',desc:'Uses "known for" not "will perform"'},{id:'facts_preserved',label:'100% facts preserved',desc:'All dates, venues, prices, names intact'},{id:'seo_anchors',label:'SEO anchors maintained',desc:'Artist + City + Venue + Date proximity'},{id:'commercial_intent',label:'Commercial intent clear',desc:'Ticket-selling page, not editorial'},{id:'organiser_safe',label:'Organiser approval safe',desc:'No altered credits, disclaimers, or legal text'},{id:'no_upgrade',label:'No fact upgrading',desc:'No exaggeration of literal statements'}].map(rule => {
             const checked = (results as Record<string,boolean>)[rule.id] || false
             return (
-              <div key={rule.id} onClick={()=>setResults({...results,[rule.id]:!checked})} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${checked?'border-emerald-500/30 bg-emerald-500/5':'border-gray-700/40 bg-gray-900/30 hover:border-gray-600"}`}>
-                <div class={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${checked?'border-emerald-500 bg-emerald-500 text-white':'border-gray-600'}`}>{checked && <span class="text-xs">&#10003;</span>}</div>
-                <div><p class={`text-sm font-medium ${checked?'text-emerald-400':'text-gray-300'}`}>{rule.label}</p><p class="text-[10px] text-gray-500 mt-0.5">{rule.desc}</p></div>
+              <div key={rule.id} onClick={()=>setResults({...results,[rule.id]:!checked})} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${checked?'border-emerald-500/30 bg-emerald-500/5':'border-gray-700/40 bg-gray-900/30 hover:border-gray-600'}`}>
+                <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors ${checked?'border-emerald-500 bg-emerald-500 text-white':'border-gray-600'}`}>{checked && <span className="text-xs">&#10003;</span>}</div>
+                <div><p className={`text-sm font-medium ${checked?'text-emerald-400':'text-gray-300'}`}>{rule.label}</p><p className="text-[10px] text-gray-500 mt-0.5">{rule.desc}</p></div>
               </div>
             )
           })}
@@ -217,12 +217,12 @@ export function FactCheckTab({ entry, save, saving }: { entry: AttractionEntry; 
               </div>
             ))}
           </div>
-        ) : <p class="text-gray-500 text-sm italic">No flags raised</p>}
+        ) : <p className="text-gray-500 text-sm italic">No flags raised</p>}
       </div>
 
       {!hasBothContents && (
-        <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center">
-          <p class="text-amber-400 text-sm">Both Column C (Original) and Column D (SEO) content are required. Complete SEo optimization first.</p>
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center">
+          <p className="text-amber-400 text-sm">Both Column C (Original) and Column D (SEO) content are required. Complete SEO optimization first.</p>
         </div>
       )}
     </div>
