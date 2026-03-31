@@ -641,7 +641,18 @@ ${ctx.resolverOutput}
    - Final composite score
    - Any last micro-edits needed
 4. PUBLICATION-READY VERSION: The complete, final, publish-ready text with any last tweaks applied
-5. RUNNER-UP: The #2 version as backup, in case the organiser requests changes`,
+5. RUNNER-UP: The #2 version as backup, in case the organiser requests changes
+6. TEASERS: Generate exactly 10 event teasers following these strict rules:
+   - MAXIMUM 13 words each (hard limit, count carefully)
+   - Must respect the artist/event — never trivialise, mock, or diminish
+   - Must convey WHAT the event is and WHAT to expect (genre, vibe, energy)
+   - Must push the reader to buy/attend (soft CTA woven in, not aggressive)
+   - Must follow Platinumlist B2C TOV 2.4 (warm, rhythmic, joyful, specific)
+   - Each teaser from a DIFFERENT angle: artist stature, experience promise, venue energy, cultural moment, genre feel, crowd vibe, date urgency, visual/sensory, emotional pull, discovery
+   - BANNED in teasers: unforgettable, incredible, amazing, must-see, don't miss, once-in-a-lifetime, promises to be
+   - GOOD teaser examples: "Fahad Bin Fasla. Jeddah. April 10. The stage is yours." / "Traditional rhythms meet raw energy. This is that night."
+   - BAD teaser examples: "Don't miss this amazing concert!" / "An unforgettable night awaits you!"
+   - Rank teasers by impact (best first)`,
 }
 
 export interface StepContext {
