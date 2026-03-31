@@ -182,6 +182,10 @@ export async function POST(request: NextRequest) {
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
+        // Heavy steps (reviewer, resolver, ranked) need more tokens
+        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
+        const maxTokens = heavySteps.includes(stepField) ? 8192 : 4096
+
         const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -190,7 +194,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             model: 'gpt-4o',
-            max_tokens: 4096,
+            max_tokens: maxTokens,
             messages: [
               { role: 'system', content: systemMessage },
               { role: 'user', content: prompt },
@@ -204,6 +208,9 @@ export async function POST(request: NextRequest) {
         const aiData = await aiResponse.json()
         aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
       } else if (anthropicKey) {
+        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
+        const maxTokens = heavySteps.includes(stepField) ? 8192 : 4096
+
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -213,7 +220,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
+            max_tokens: maxTokens,
             messages: [{ role: 'user', content: prompt }],
             system: systemMessage,
           }),

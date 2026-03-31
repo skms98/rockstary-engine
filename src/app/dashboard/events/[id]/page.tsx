@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { STEPS_CONFIG, type EventEntry } from '@/types'
 
-// AI-processable step fields (Steps S2-S13)
+// AI-processable step fields (Steps A, B, S2-S13)
 const AI_STEPS = [
+  'page_qa_comments', 'categories',
   'recommended_versions', 'fact_check_scores', 'duplicate_analysis',
   'ab_tests', 'organiser_trigger_risk', 'tov_score', 'grammar_style',
   'reviewer_output', 'resolver_output', 'seo_analysis', 'fact_check_final',
