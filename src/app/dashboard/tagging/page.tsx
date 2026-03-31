@@ -64,6 +64,8 @@ export default function TaggingPage() {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDomain, setNewCategoryDomain] = useState<'event' | 'attraction' | 'both'>('both');
+  const [newCategoryType, setNewCategoryType] = useState<'standalone' | 'parent' | 'subcategory'>('standalone');
+  const [newCategoryParent, setNewCategoryParent] = useState('');
 
   const [showAddTag, setShowAddTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -258,14 +260,35 @@ export default function TaggingPage() {
       return;
     }
 
+    if (newCategoryType === 'subcategory' && !newCategoryParent.trim()) {
+      setError('Parent category required for subcategories');
+      return;
+    }
+
     try {
+      let isSelectableValue = true;
+      let parentGroupValue = '';
+
+      if (newCategoryType === 'parent') {
+        isSelectableValue = false;
+        parentGroupValue = '';
+      } else if (newCategoryType === 'subcategory') {
+        isSelectableValue = true;
+        parentGroupValue = newCategoryParent;
+      } else {
+        // standalone
+        isSelectableValue = true;
+        parentGroupValue = '';
+      }
+
       const { data, error: insertError } = await supabase
         .from('tagging_taxonomy')
         .insert({
           type: 'category',
           name: newCategoryName,
           domain: newCategoryDomain,
-          is_selectable: true,
+          is_selectable: isSelectableValue,
+          parent_group: parentGroupValue,
           sort_order: (categories.length + 1) * 10,
         })
         .select()
@@ -275,6 +298,8 @@ export default function TaggingPage() {
 
       setCategories([...categories, data]);
       setNewCategoryName('');
+      setNewCategoryType('standalone');
+      setNewCategoryParent('');
       setShowAddCategory(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add category');
@@ -282,9 +307,24 @@ export default function TaggingPage() {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Delete this category?')) return;
+    const categoryToDelete = categories.find(c => c.id === categoryId);
+    const isParent = categoryToDelete && !categoryToDelete.is_selectable && !categoryToDelete.parent_group;
+    const confirmMessage = isParent ? 'Delete this parent and all its subcategories?' : 'Delete this category?';
+
+    if (!confirm(confirmMessage)) return;
 
     try {
+      // If deleting a parent, also delete all its subcategories
+      if (isParent && categoryToDelete) {
+        const subcategoriesToDelete = categories.filter(c => c.parent_group === categoryToDelete.name);
+        for (const sub of subcategoriesToDelete) {
+          await supabase
+            .from('tagging_taxonomy')
+            .delete()
+            .eq('id', sub.id);
+        }
+      }
+
       const { error: deleteError } = await supabase
         .from('tagging_taxonomy')
         .delete()
@@ -292,7 +332,7 @@ export default function TaggingPage() {
 
       if (deleteError) throw deleteError;
 
-      setCategories(categories.filter(c => c.id !== categoryId));
+      setCategories(categories.filter(c => c.id !== categoryId && !(isParent && categoryToDelete && c.parent_group === categoryToDelete.name)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete category');
     }
@@ -410,6 +450,20 @@ export default function TaggingPage() {
       default:
         return 'bg-pl-dark/50 text-pl-muted border border-pl-border/50';
     }
+  };
+
+  const getGroupedCategories = () => {
+    const parentCats = categories.filter(c => !c.is_selectable && !c.parent_group);
+    const standaloneCats = categories.filter(c => c.is_selectable && !c.parent_group);
+    const childCatsMap = new Map<string, TaxonomyItem[]>();
+
+    categories.filter(c => c.is_selectable && c.parent_group).forEach(c => {
+      const existing = childCatsMap.get(c.parent_group!) || [];
+      existing.push(c);
+      childCatsMap.set(c.parent_group!, existing);
+    });
+
+    return { parentCats, standaloneCats, childCatsMap };
   };
 
   const SpinnerIcon = () => (
@@ -642,6 +696,61 @@ export default function TaggingPage() {
 
                 {showAddCategory && (
                   <div className="pl-card p-4 mb-4 border border-pl-border space-y-3">
+                    <div>
+                      <label className="block text-sm font-semibold text-pl-gold mb-2">Category Type</label>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-white cursor-pointer">
+                          <input
+                            type="radio"
+                            name="categoryType"
+                            value="standalone"
+                            checked={newCategoryType === 'standalone'}
+                            onChange={(e) => setNewCategoryType(e.target.value as 'standalone' | 'parent' | 'subcategory')}
+                            className="w-4 h-4"
+                          />
+                          Standalone
+                        </label>
+                        <label className="flex items-center gap-2 text-white cursor-pointer">
+                          <input
+                            type="radio"
+                            name="categoryType"
+                            value="parent"
+                            checked={newCategoryType === 'parent'}
+                            onChange={(e) => setNewCategoryType(e.target.value as 'standalone' | 'parent' | 'subcategory')}
+                            className="w-4 h-4"
+                          />
+                          Parent (Non-selectable)
+                        </label>
+                        <label className="flex items-center gap-2 text-white cursor-pointer">
+                          <input
+                            type="radio"
+                            name="categoryType"
+                            value="subcategory"
+                            checked={newCategoryType === 'subcategory'}
+                            onChange={(e) => setNewCategoryType(e.target.value as 'standalone' | 'parent' | 'subcategory')}
+                            className="w-4 h-4"
+                          />
+                          Subcategory
+                        </label>
+                      </div>
+                    </div>
+
+                    {newCategoryType === 'subcategory' && (
+                      <div>
+                        <label className="block text-sm font-semibold text-pl-gold mb-2">Parent Category</label>
+                        <select
+                          value={newCategoryParent}
+                          onChange={(e) => setNewCategoryParent(e.target.value)}
+                          className="pl-input w-full"
+                        >
+                          <option value="">Select parent category</option>
+                          {categories.filter(c => !c.is_selectable && !c.parent_group).map(parent => (
+                            <option key={parent.id} value={parent.name}>{parent.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <input
                       type="text"
                       placeholder="Category name"
@@ -660,31 +769,122 @@ export default function TaggingPage() {
                     </select>
                     <div className="flex gap-2">
                       <button onClick={handleAddCategory} className="pl-btn-primary flex-1">Save</button>
-                      <button onClick={() => setShowAddCategory(false)} className="pl-btn-secondary flex-1">Cancel</button>
+                      <button onClick={() => {
+                        setShowAddCategory(false);
+                        setNewCategoryType('standalone');
+                        setNewCategoryParent('');
+                      }} className="pl-btn-secondary flex-1">Cancel</button>
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  {categories.map(cat => (
-                    <div key={cat.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-white">{cat.name}</h4>
-                        <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
-                          {cat.domain}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDeleteCategory(cat.id)}
-                          className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
-                          title="Delete"
-                        >
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-4">
+                  {(() => {
+                    const { standaloneCats, parentCats, childCatsMap } = getGroupedCategories();
+
+                    return (
+                      <>
+                        {/* Standalone Categories */}
+                        {standaloneCats.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Standalone</h3>
+                            <div className="space-y-2">
+                              {standaloneCats.map(cat => (
+                                <div key={cat.id} className="pl-card p-4 border border-pl-border flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-white">{cat.name}</h4>
+                                    <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
+                                      {cat.domain}
+                                    </span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleDeleteCategory(cat.id)}
+                                      className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                      title="Delete"
+                                    >
+                                      <TrashIcon />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Parent Categories with Subcategories */}
+                        {parentCats.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-semibold text-pl-muted mb-3 uppercase tracking-wider">Parent Categories</h3>
+                            <div className="space-y-4">
+                              {parentCats.map(parent => (
+                                <div key={parent.id}>
+                                  <div className="pl-card p-4 border border-pl-border flex items-start justify-between bg-pl-navy/50">
+                                    <div className="flex-1 flex items-center gap-3">
+                                      <svg className="w-5 h-5 text-pl-gold flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                      </svg>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <h4 className="text-lg font-bold text-pl-gold">{parent.name}</h4>
+                                          <span className="text-xs px-2 py-1 bg-pl-dark text-pl-muted rounded border border-pl-gold/30 font-semibold">
+                                            [PARENT]
+                                          </span>
+                                        </div>
+                                        <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-2 inline-block border border-pl-accent/30">
+                                          {parent.domain}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => handleDeleteCategory(parent.id)}
+                                        className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                        title="Delete parent and subcategories"
+                                      >
+                                        <TrashIcon />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Subcategories */}
+                                  {childCatsMap.has(parent.name) && (
+                                    <div className="space-y-2 mt-2 ml-6 pl-4 border-l-2 border-pl-dark">
+                                      {childCatsMap.get(parent.name)!.map(child => (
+                                        <div key={child.id} className="pl-card p-3 border border-pl-border/50 flex items-center justify-between bg-pl-dark/30">
+                                          <div className="flex-1">
+                                            <h5 className="font-semibold text-white text-sm">{child.name}</h5>
+                                            <span className="text-xs px-2 py-1 bg-pl-accent/20 text-pl-accent-light rounded mt-1 inline-block border border-pl-accent/30">
+                                              {child.domain}
+                                            </span>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => handleDeleteCategory(child.id)}
+                                              className="p-2 text-pl-warning hover:bg-pl-warning/10 rounded transition"
+                                              title="Delete"
+                                            >
+                                              <TrashIcon />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {categories.length === 0 && (
+                          <div className="text-center py-8 text-pl-muted">
+                            No categories yet. Add one to get started!
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
