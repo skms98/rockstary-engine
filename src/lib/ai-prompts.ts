@@ -126,70 +126,133 @@ ${ctx.originalDescription || 'No description available yet.'}
 PAGE QA CONTEXT:
 ${ctx.pageQaComments || 'No QA data available.'}
 
-═══ CLASSIFICATION TAXONOMY ═══
+SCREENSHOTS:
+${ctx.screenshots || 'No screenshots provided.'}
+
+═══ PLATINUMLIST LIVE TAXONOMY ═══
+You MUST ONLY recommend categories and tags from the lists below.
+These are the ACTUAL categories and tags used on platinumlist.net.
+DO NOT invent categories or tags that are not in this taxonomy.
 
 MASTER CATEGORIES (assign exactly ONE primary, up to TWO secondary):
 
-1. CONCERTS & LIVE MUSIC
-   - Sub: Pop, Rock, Hip-Hop/R&B, Arabic Music, Electronic/DJ, Jazz & Blues, Classical, World Music, K-Pop, Latin
-   - Trigger: Artist performing live, concert, gig, music festival, DJ set, recital
+1. CONCERTS (slug: concert)
+   - Artist genres: Arabic, Classical, Pop, Rock, Electronic, K-Pop, Jazz, Hip-Hop/R&B, Latin, World Music
+   - Trigger: Artist performing live, concert, gig, recital, live music performance
 
-2. THEATRE & PERFORMING ARTS
-   - Sub: Musical Theatre, Drama, Ballet, Opera, Dance Performance, Comedy Show, Stand-Up, Circus/Acrobatics, Spoken Word
-   - Trigger: Stage show, theatre production, ballet, opera, performance, play, stand-up
+2. COMEDY (slug: comedy)
+   - Sub: Stand-Up, Improv, Comedy Show, Sketch
+   - Trigger: Comedian, stand-up, comedy night, comic, laughs
 
-3. SPORTS & FITNESS
-   - Sub: Football, Cricket, Tennis, Boxing/MMA, Motorsport, Golf, Running/Marathon, Fitness Event, Esports, Water Sports
+3. SHOWS (slug: shows)
+   - Sub: Musical Theatre, Drama, Ballet, Opera, Dance, Circus, Acrobatics, Magic, Spoken Word, Theatrical Play
+   - Trigger: Stage show, theatre production, ballet, opera, performance, play, spectacle
+
+4. NIGHTLIFE (slug: nightlife)
+   - Sub: Club Night, Pool Party, Ladies Night, Brunch Party, Rooftop Event, Beach Party, Underground
+   - Trigger: DJ, club, night event, party, brunch with entertainment, nightlife
+
+5. SPORTS (slug: sport)
+   - Sub: Football (sport-football), Cricket (sports-cricket), Basketball (basketball), Tennis (sports-tennis), Golf (golf), Boxing/MMA, Motorsport, Running/Marathon, Fitness, Esports
    - Trigger: Match, tournament, race, championship, league, fitness challenge
 
-4. FAMILY & KIDS
+6. KIDS (slug: kids)
    - Sub: Theme Parks, Kids Shows, Family Entertainment, Educational, Seasonal Family
    - Trigger: Children, kids, family-friendly, theme park, mascot, character meet
 
-5. NIGHTLIFE & CLUBBING
-   - Sub: Club Night, Pool Party, Ladies Night, Brunch Party, Rooftop Event, Beach Party
-   - Trigger: DJ, club, night event, party, brunch with entertainment
+7. FESTIVALS (slug: festival)
+   - Sub: Music Festival, Cultural Festival, Food Festival, Seasonal Festival
+   - Trigger: Festival, multi-day, multi-stage, fest, carnival
 
-6. FOOD & DRINK
-   - Sub: Food Festival, Brunch, Wine Tasting, Cooking Class, Pop-Up Dining, Iftar/Suhoor
-   - Trigger: Cuisine, tasting, culinary, food market, dining experience
+8. FOOD & DRINK (slug: culinary)
+   - Sub: Brunch, Dining Experience, Wine Tasting, Cooking Class, Pop-Up Dining, Iftar/Suhoor
+   - Trigger: Cuisine, tasting, culinary, food market, dining, brunch (without DJ/party)
 
-7. CULTURAL & ARTS
-   - Sub: Exhibition, Museum Event, Art Show, Heritage, Film Screening, Book Event, Cultural Festival
-   - Trigger: Gallery, museum, art, heritage, exhibition, cultural programme
+9. EXPERIENCES (slug: experiences)
+   - Sub: Boat Tours (boat-tours), Desert Safaris (desertsafaris), Staycations (staycations), Sightseeing, Tours
+   - Trigger: Tour, experience, activity, adventure, sightseeing, cruise, safari
 
-8. BUSINESS & NETWORKING
-   - Sub: Conference, Summit, Workshop, Seminar, Networking, Trade Show, Awards Ceremony
-   - Trigger: Industry, professional, business, keynote, panel, B2B
+10. ATTRACTIONS (slug: attraction)
+    - Sub: Theme Parks (themeparks), Indoor Attractions, Water Parks, Museums, Observation Decks
+    - Trigger: Theme park, attraction, park, museum, aquarium, observatory
 
-9. LIFESTYLE & WELLNESS
-   - Sub: Yoga, Meditation, Spa Event, Fashion Show, Beauty Event, Wellness Retreat
-   - Trigger: Wellness, mindfulness, lifestyle, fashion, beauty
+11. WATER SPORTS (slug: water-sports)
+    - Sub: Jet Ski, Diving, Wakeboarding, Kayaking, Flyboarding, Yacht
+    - Trigger: Water sport, marine, aquatic activity, diving, jet ski
 
-10. SEASONAL & SPECIAL
-    - Sub: New Year, Eid, Diwali, Christmas, National Day, Ramadan, Halloween, Valentine's
-    - Trigger: Holiday-specific, seasonal celebration, festive
+12. BUSINESS EVENTS (slug: business-events)
+    - Sub: Conference, Summit, Workshop, Seminar, Networking, Trade Show, Awards Ceremony
+    - Trigger: Industry, professional, business, keynote, panel, B2B, conference
+
+13. EXHIBITIONS (slug: exhibitions)
+    - Sub: Art Exhibition, Museum Event, Gallery, Heritage, Cultural
+    - Trigger: Exhibition, gallery, art show, display, museum exhibit
+
+14. HEALTH & WELLNESS (slug: health-and-wellness)
+    - Sub: Yoga, Meditation, Spa Event, Fitness Class, Wellness Retreat
+    - Trigger: Wellness, mindfulness, yoga, fitness, spa, retreat
+
+15. FASHION (slug: fashion)
+    - Sub: Fashion Show, Beauty Event, Runway
+    - Trigger: Fashion, runway, beauty, style, designer
+
+16. GAMING & ESPORTS (slug: gaming)
+    - Sub: Gaming Convention, Esports Tournament, LAN Party
+    - Trigger: Gaming, esports, video game, tournament, LAN
+
+SEASONAL OVERLAYS (add as secondary category when applicable):
+- Ramadan (slug: ramadan) — Iftar, Suhoor, Ramadan events
+- New Year's Eve (slug: new-years-eve) — NYE events
+- Christmas (slug: christmas-events) — Christmas events
+- Eid — Eid celebrations
+- Diwali, National Day, Halloween, Valentine's
 
 ═══ TAGS RULES ═══
 
-Generate 5-15 tags following these strict rules:
-- Tags are lowercase, hyphenated (e.g., "live-music", "arabic-concert", "jeddah-events")
-- First tag MUST be the primary category slug (e.g., "concerts-live-music")
-- Include: artist/performer name slug, city slug, venue slug (if known), genre/format, audience type
-- Audience tags: "family-friendly", "adults-only", "all-ages", "couples", "groups"
-- Region tags: "uae-events", "saudi-events", "bahrain-events", "qatar-events", "oman-events", "gcc-events"
-- NEVER invent tags that aren't supported by the event details
-- NEVER use generic tags like "event", "tickets", "fun", "entertainment"
+Generate 5-15 tags from these APPROVED tag families ONLY:
+
+CATEGORY SLUG TAGS (first tag MUST be the primary category slug):
+concert, comedy, shows, nightlife, sport, kids, festival, culinary, experiences, attraction, water-sports, business-events, exhibitions, health-and-wellness, fashion, gaming
+
+GENRE/FORMAT TAGS:
+arabic-music, pop-concert, rock-concert, electronic-music, classical-music, k-pop, jazz, hip-hop, latin-music, stand-up-comedy, musical-theatre, ballet, opera, dj-night, pool-party, ladies-night, brunch-party, live-performance, acoustic, orchestra
+
+SPORT-SPECIFIC TAGS:
+sport-football, sports-cricket, basketball, sports-tennis, golf, boxing, mma, motorsport, marathon, running, fitness-event, esports
+
+EXPERIENCE TAGS:
+boat-tours, desertsafaris, staycations, sightseeing, city-tour, yacht-cruise, helicopter-tour, themeparks, indoor-attraction, water-park
+
+CITY TAGS (use the city from the URL or description):
+dubai-events, abu-dhabi-events, riyadh-events, jeddah-events, manama-events, doha-events, muscat-events, kuwait-events, istanbul-events
+
+REGION TAGS:
+uae-events, saudi-events, bahrain-events, qatar-events, oman-events, gcc-events
+
+AUDIENCE TAGS:
+family-friendly, adults-only, all-ages, couples, groups, kids-activities
+
+SEASONAL TAGS:
+ramadan, new-years-eve, christmas-events, eid, diwali, national-day, halloween, valentines
+
+ADDITIONAL ALLOWED TAGS:
+- Artist/performer name as slug (e.g., "andre-rieu", "amr-diab")
+- Venue name as slug (e.g., "coca-cola-arena", "etihad-arena")
+- Specific format tags: "outdoor", "indoor", "rooftop", "beach", "theatre"
+
+BANNED TAGS (never use):
+event, tickets, fun, entertainment, amazing, best, top, great, must-see, ticket, booking
 
 ═══ OUTPUT FORMAT (MANDATORY) ═══
 
-PRIMARY CATEGORY: [exactly one from the 10 master categories]
-SECONDARY CATEGORIES: [up to 2, or "None"]
+PRIMARY CATEGORY: [exactly one from the 16 master categories above, with slug]
+SECONDARY CATEGORIES: [up to 2 from the taxonomy, or "None"]
 SUB-CATEGORIES: [specific sub-categories that apply]
+SEASONAL OVERLAY: [if applicable, e.g., "Ramadan", "NYE", or "None"]
 CONFIDENCE: HIGH / MEDIUM / LOW
 
 TAGS:
-[comma-separated list of 5-15 tags]
+[comma-separated list of 5-15 tags, ALL from approved tag families above]
 
 AUDIENCE SEGMENT: [Party People / Families / Expats / Tourists / Cultural Fans / High-Class / General]
 AGE SUITABILITY: [All Ages / Family / 16+ / 18+ / 21+]
