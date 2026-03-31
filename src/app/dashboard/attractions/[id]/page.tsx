@@ -62,7 +62,7 @@ const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: 
   exported:          { label: 'Exported',         icon: '📤', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
 }
 
-// ── Main Component ───────────────────────────────────────────
+// ── Main Component ────────────────────────────────────────────
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -97,7 +97,42 @@ export default function AttractionDetailPage() {
     if (!entry) return
     const idx = STAGE_ORDER.indexOf(entry.stage)
     if (idx >= STAGE_ORDER.length - 1) return
-    await save({ stage: STAGE_ORDER[idx + 1] } as Partial<AttractionEntry>)
+    const currentStage = STAGE_ORDER[idx]
+    const nextStage = STAGE_ORDER[idx + 1]
+
+    // Gate: Intake -> SEO Optimization
+    if (currentStage === 'intake' && nextStage === 'seo_optimization') {
+      if (!entry.raw_text || entry.raw_text.trim() === '') {
+        window.alert('Cannot advance: Raw Content (Column C) must be populated first.')
+        return
+      }
+    }
+
+    // Gate: SEO Optimization -> Tagging
+    if (currentStage === 'seo_optimization' && nextStage === 'tagging') {
+      if (entry.seo_status !== 'completed') {
+        window.alert('Cannot advance: SEO optimization must be completed first.')
+        return
+      }
+      if (!entry.seo_content || Object.keys(entry.seo_content).length === 0) {
+        window.alert('Cannot advance: SEO content (Column D) must have data.')
+        return
+      }
+    }
+
+    // Gate: Tagging -> Review
+    if (currentStage === 'tagging' && nextStage === 'review') {
+      if (entry.tagging_status !== 'completed') {
+        window.alert('Cannot advance: Tagging must be completed first.')
+        return
+      }
+      if (entry.validation_gates_passed !== 6) {
+        window.alert('Cannot advance: All 6 validation gates must pass first.')
+        return
+      }
+    }
+
+    await save({ stage: nextStage } as Partial<AttractionEntry>)
   }
 
   const revertStage = async () => {
