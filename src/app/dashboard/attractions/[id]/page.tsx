@@ -6,6 +6,7 @@ import { plSupabase } from '@/lib/pl-supabase'
 import Link from 'next/link'
 import { OverviewTab } from './detail-overview'
 import { SeoTab, TaggingTab, ReviewTab } from './detail-tabs'
+import { ScreenshotsTab } from './detail-tabs-screenshots'
 
 // ── Types (inline to keep this page self-contained) ──────────
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
@@ -70,7 +71,7 @@ export default function AttractionDetailPage() {
   const [entry, setEntry] = useState<AttractionEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'tagging' | 'review'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'tagging' | 'review' | 'screenshots'>('overview')
 
   const fetchEntry = useCallback(async () => {
     setLoading(true)
@@ -186,7 +187,7 @@ export default function AttractionDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-lg w-fit">
-        {(['overview', 'seo', 'tagging', 'review'] as const).map((tab) => (
+        {(['overview', 'seo', 'tagging', 'review', 'screenshots'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -194,7 +195,7 @@ export default function AttractionDetailPage() {
               activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            {tab === 'seo' ? 'SEO' : tab}
+            {tab === 'seo' ? 'SEO' : tab === 'screenshots' ? 'Screenshots' : tab}
           </button>
         ))}
       </div>
@@ -204,6 +205,7 @@ export default function AttractionDetailPage() {
       {activeTab === 'seo' && <SeoTab entry={entry} />}
       {activeTab === 'tagging' && <TaggingTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'review' && <ReviewTab entry={entry} save={save} saving={saving} advanceStage={advanceStage} />}
+      {activeTab === 'screenshots' && <ScreenshotsTab attractionId={entry.id} attractionTitle={entry.title} />}
     </div>
   )
 }
