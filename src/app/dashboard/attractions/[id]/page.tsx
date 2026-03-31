@@ -63,14 +63,14 @@ export interface AttractionEntry {
 const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
 
 const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: string; bgColor: string; borderColor: string }> = {
-  intake:            { label: 'Intake',             icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
+  intake:            { label: 'Intake',            icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
   seo_optimization:  { label: 'SEO Optimization',  icon: '\u270D\uFE0F', color: 'text-amber-400',   bgColor: 'bg-amber-500/10',   borderColor: 'border-amber-500/30' },
-  tagging:           { label: 'Tagging',           icon: '\uD83C\uDFF7\uFE0F', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
+  tagging:           { label: 'Tagging',           icon: '\uD83C\uDFF7\uFE06', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
   review:            { label: 'Review',            icon: '\u2705', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
-  exported:          { label: 'Exported',          icon: '\uD83D\uDCE4', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
+  exported:          { label: 'Exported',         icon: '\uD83D\uDCE4', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -214,7 +214,7 @@ export default function AttractionDetailPage() {
         {STAGE_ORDER.map((stage, i) => (
           <div key={stage} className="flex-1 flex items-center">
             <div className={`flex-1 h-2 rounded-full transition-all ${
-              i < currentStageIdx ? 'bg-emerald-500' : stage === entry.stage ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'
+              i < currentStageIdx? 'bg-emerald-500' : stage === entry.stage ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'
             }`} />
             {i < STAGE_ORDER.length - 1 && <div className="w-1" />}
           </div>
@@ -252,5 +252,4 @@ export default function AttractionDetailPage() {
       {activeTab === 'screenshots' && <ScreenshotsTab attractionId={entry.id} attractionTitle={entry.title} />}
     </div>
   )
-  
 }
