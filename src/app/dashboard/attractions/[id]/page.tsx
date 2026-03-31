@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { plSupabase } from '@/lib/pl-supabase'
+import { plSupabase } from 'A/lib/pl-supabase'
 import Link from 'next/link'
 import { OverviewTab } from './detail-overview'
-import { SeoTab, TaggingTab, ReviewTab } from './detail-tabs'
+import { SeoTab, FactCheckTab, TaggingTab, ReviewTab } from './detail-tabs'
 import { ScreenshotsTab } from './detail-tabs-screenshots'
 
 // ── Types (inline to keep this page self-contained) ──────────
@@ -50,19 +50,26 @@ export interface AttractionEntry {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Fact check fields
+  fact_check_score: number | null
+  fact_check_tov_score: number | null
+  fact_check_variation: number | null
+  fact_check_status: string | null
+  fact_check_results: Record<string, unknown>
+  fact_check_flags: unknown[]
 }
 
 const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
 
 const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: string; bgColor: string; borderColor: string }> = {
-  intake:            { label: 'Intake',           icon: '📥', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
-  seo_optimization:  { label: 'SEO Optimization', icon: '✍️', color: 'text-amber-400',   bgColor: 'bg-amber-500/10',   borderColor: 'border-amber-500/30' },
-  tagging:           { label: 'Tagging',          icon: '🏷️', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
-  review:            { label: 'Review',           icon: '✅', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
-  exported:          { label: 'Exported',         icon: '📤', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
+  intake:            { label: 'Intake',            icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
+  seo_optimization:  { label: 'SEO Optimization',  icon: '\u270D\uFE0F', color: 'text-amber-400',   bgColor: 'bg-amber-500/10',   borderColor: 'border-amber-500/30' },
+  tagging:           { label: 'Tagging',           icon: '\uD83C\uDFF7\uFE0F', color: 'text-purple-400',  bgColor: 'bg-purple-500/10',  borderColor: 'border-purple-500/30' },
+  review:            { label: 'Review',            icon: '\u2705', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30' },
+  exported:          { label: 'Exported',          icon: '\uD83D\uDCE4', color: 'text-gray-400',    bgColor: 'bg-gray-500/10',    borderColor: 'border-gray-500/30' },
 }
 
-// ── Main Component ────────────────────────────────────────────
+// ── Main Component ──────────────────────────────────────────
 export default function AttractionDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -71,7 +78,7 @@ export default function AttractionDetailPage() {
   const [entry, setEntry] = useState<AttractionEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'tagging' | 'review' | 'screenshots'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'factcheck' | 'tagging' | 'review' | 'screenshots'>('overview')
 
   const fetchEntry = useCallback(async () => {
     setLoading(true)
@@ -190,12 +197,12 @@ export default function AttractionDetailPage() {
         <div className="flex items-center gap-2">
           {currentStageIdx > 0 && (
             <button onClick={revertStage} className="px-3 py-2 bg-gray-700 text-gray-300 text-sm rounded-lg hover:bg-gray-600 transition-colors">
-              ← Back
+              &#8592; Back
             </button>
           )}
           {currentStageIdx < STAGE_ORDER.length - 1 && (
             <button onClick={advanceStage} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
-              Advance to {STAGE_META[STAGE_ORDER[currentStageIdx + 1]].label} →
+              Advance to {STAGE_META[STAGE_ORDER[currentStageIdx + 1]].label} &#8594;
             </button>
           )}
         </div>
@@ -208,7 +215,7 @@ export default function AttractionDetailPage() {
             <div className={`flex-1 h-2 rounded-full transition-all ${
               i < currentStageIdx ? 'bg-emerald-500' : stage === entry.stage ? 'bg-blue-500 animate-pulse' : 'bg-gray-700'
             }`} />
-            {i < STAGE_ORDER.length - 1 && <div className="w-1" />}
+            #�b <div className="w-1" />}
           </div>
         ))}
       </div>
@@ -222,15 +229,15 @@ export default function AttractionDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-lg w-fit">
-        {(['overview', 'seo', 'tagging', 'review', 'screenshots'] as const).map((tab) => (
+        {(['overview', 'Overview'], ['seo', 'SEO'], ['factcheck', 'Fact Check'], ['tagging', 'Tagging'], ['review', 'Review'], ['screenshots', 'Screenshots']] as const).map(([tab, label]) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            {tab === 'seo' ? 'SEO' : tab === 'screenshots' ? 'Screenshots' : tab}
+            {label}
           </button>
         ))}
       </div>
@@ -238,9 +245,11 @@ export default function AttractionDetailPage() {
       {/* Tab Content */}
       {activeTab === 'overview' && <OverviewTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'seo' && <SeoTab entry={entry} />}
+      {activeTab === 'factcheck' && <FactCheckTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'tagging' && <TaggingTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'review' && <ReviewTab entry={entry} save={save} saving={saving} advanceStage={advanceStage} />}
       {activeTab === 'screenshots' && <ScreenshotsTab attractionId={entry.id} attractionTitle={entry.title} />}
     </div>
-  )
+  
+  }
 }
