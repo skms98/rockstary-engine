@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { AttractionEntry } from './page'
 
-// ── SEO Tab ───────────────────────────────────────────────────
+// ── SEO Tab ────────────────────────────────────────────────────
 export function SeoTab({ entry }: { entry: AttractionEntry }) {
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-6">
@@ -34,10 +34,23 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
       {entry.keywords_list && (
         <div className="mt-4 pt-4 border-t border-gray-700/50">
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Keywords ({entry.keywords_used}/{entry.keywords_total} used)</h4>
-          <div className="flex flex-wrap gap-1">
-            {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => (
-              <span key={i} className="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/20">{kw.trim()}</span>
-            ))}
+          <div className="bg-gray-900/50 rounded-lg overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-700/50">
+                  <th className="text-left px-3 py-2 text-gray-500 font-medium w-16">#</th>
+                  <th className="text-left px-3 py-2 text-gray-500 font-medium">Keyword</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => (
+                  <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                    <td className="px-3 py-1.5 text-blue-400 font-mono font-medium">{i + 1}</td>
+                    <td className="px-3 py-1.5 text-blue-300">{i + 1} ({kw.trim()})</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -165,7 +178,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ────────────────────────────────────────────────
+// ── Review Tab ─────────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
