@@ -395,33 +395,6 @@ export default function EventDetailPage() {
     URL.revokeObjectURL(url)
   }
 
-  const [sheetsExporting, setSheetsExporting] = useState(false)
-
-  async function openInGoogleSheets() {
-    if (!entry) return
-    const authToken = await getAuthToken()
-    if (!authToken) return
-
-    setSheetsExporting(true)
-    try {
-      const res = await fetch('/api/export/google-sheets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entryId: params.id, authToken }),
-      })
-      const data = await res.json()
-      if (res.ok && data.url) {
-        window.open(data.url, '_blank')
-      } else {
-        alert(`Google Sheets export failed: ${data.error}`)
-      }
-    } catch (err: any) {
-      alert(`Export error: ${err.message}`)
-    } finally {
-      setSheetsExporting(false)
-    }
-  }
-
   async function exportToExcel() {
     const data = getExportData()
     if (!data || !entry) return
@@ -518,14 +491,6 @@ export default function EventDetailPage() {
           <button onClick={exportToExcel} className="pl-btn-secondary flex items-center gap-1.5 text-xs px-3 py-2" title="Download as Excel">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             XLSX
-          </button>
-          <button onClick={openInGoogleSheets} disabled={sheetsExporting} className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${sheetsExporting ? 'opacity-60 cursor-wait bg-[#0f9d58]/10 text-[#34a853]/60 border-[#0f9d58]/20' : 'bg-[#0f9d58]/15 hover:bg-[#0f9d58]/25 text-[#34a853] border-[#0f9d58]/30'}`} title="Export to Google Sheets">
-            {sheetsExporting ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-            ) : (
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" strokeWidth="1.5"/><line x1="3" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5"/><line x1="9" y1="3" x2="9" y2="21" stroke="currentColor" strokeWidth="1.5"/><line x1="15" y1="3" x2="15" y2="21" stroke="currentColor" strokeWidth="1.5"/></svg>
-            )}
-            {sheetsExporting ? 'Exporting…' : 'Google Sheets'}
           </button>
           <button
             onClick={deleteEntry}
