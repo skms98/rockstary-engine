@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createPLClient } from '@/lib/pl-supabase'
 
 export async function POST(req: NextRequest) {
   try {
@@ -6,12 +7,6 @@ export async function POST(req: NextRequest) {
 
     if (!systemPrompt || (!userMessage && (!images || images.length === 0))) {
       return NextResponse.json({ error: 'Missing systemPrompt or userMessage' }, { status: 400 })
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 })
     }
 
     // Build user message content - supports text-only or text+images
@@ -41,30 +36,58 @@ export async function POST(req: NextRequest) {
       userContent = contentParts
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      }),
-    })
+    // Primary: Use PL Supabase edge function (same as event pipeline)
+    // This avoids needing OPENAI_API_KEY as a Vercel env var
+    let result: string
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
+    try {
+      const plClient = createPLClient()
+      const { data, error } = await plClient.functions.invoke('ai-process', {
+        body: {
+          prompt: typeof userContent === 'string'
+            ? `${systemPrompt}\n\n${userContent}`
+            : `${systemPrompt}\n\n${userMessage || 'Analyze the provided images.'}`,
+          stepField: 'mini_tools_query',
+          eventTitle: 'Mini Tools'
+        }
+      })
+      if (error) throw error
+      result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
+    } catch (plError: any) {
+      // Fallback: direct OpenAI call if edge function fails and key is available
+      const apiKey = process.env.OPENAI_API_KEY
+
+      if (!apiKey) {
+        return NextResponse.json({
+          error: `PL AI edge function error: ${plError?.message || 'Unknown error'}. No fallback OPENAI_API_KEY configured.`
+        }, { status: 500 })
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
+      }
+
+      const data = await response.json()
+      result = data.choices?.[0]?.message?.content || 'No response generated.'
     }
-
-    const data = await response.json()
-    const result = data.choices?.[0]?.message?.content || 'No response generated.'
 
     return NextResponse.json({ result })
   } catch (error: any) {
