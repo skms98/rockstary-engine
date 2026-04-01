@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       matchCount: workflows.length,
       workflows,
       hint: workflows.length === 0
-        ? 'No matching workflow found. Try rephrasing your question or check available categories: events-pipeline, attractions-pipeline, setup, navigation, troubleshooting, categories-tags, general.'
+        ? 'No matching workflow found. Try rephrasing your question or check available categories: events-pipeline, attractions-pipeline, mini-tools, b2b-tov, b2c-tov, tov-guidelines, setup, navigation, troubleshooting, categories-tags, column-map, ai-runner, general.'
         : undefined
     })
   } catch (error: any) {
