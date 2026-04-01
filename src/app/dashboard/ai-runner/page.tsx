@@ -93,9 +93,9 @@ export default function AIRunnerPage() {
       attractions: ['Attractions Pipeline', 'Attractions Filters', 'Attractions Tags', 'Block Tagger'],
       mini: ['Mini Tools'],
       admin: ['Categories & Tags Management', 'Setup', 'Troubleshooting']
-   }
-  
-   bÌ !ÔepÍde in widgetsMap) {
+    }
+
+    if (newMode in widgetsMap) {
       setSelectedWidgets(widgetsMap[newMode])
     } else {
       setSelectedWidgets([])
@@ -118,12 +118,48 @@ export default function AIRunnerPage() {
     setMessages(prev => [...prev, newMessage])
     setInput('')
   }
-  
-  Xeturn (
-    <div className="jobku"} border border-gray-300 split split-cols-a h-full rounded-lg">
+
+  return (
+    <div className="flex border border-gray-300 h-full rounded-lg">
       <div className="flex flex-col p-6 space-y-4 hover:bg-gray-50">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">AI Runner</h1>
           <select
             value={mode}
-            onChange={(e) => h
+            onChange={(e) => handleModeChange(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1 text-sm"
+          >
+            <option value="general">General</option>
+            <option value="events">Events</option>
+            <option value="attractions">Attractions</option>
+            <option value="mini">Mini Tools</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-4">
+          {messages.map((msg, i) => (
+            <div key={i} className={`p-3 rounded-lg ${msg.role === 'assistant' ? 'bg-gray-100' : 'bg-blue-50'}`}>
+              <p className="text-sm font-semibold mb-1">{msg.role === 'assistant' ? 'AI Runner' : 'You'}</p>
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+            </div>
+          ))}
+          {loading && <p className="text-sm text-gray-400">Loading...</p>}
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask about a workflow..."
+            className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+          />
+          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+            Send
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
