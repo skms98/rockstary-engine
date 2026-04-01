@@ -330,7 +330,7 @@ export default function AIRunnerPage() {
                       {msg.workflows?.map((w: any) =>
                         w.screenshots?.map((s: Screenshot) => (
                           <div key={`${w.topic}-${s.number}`} className="mt-2">
-                            <p className="text-xs text-pl-muted mb-1">Screenshot #{.number}{s.caption ? `: ${s.caption}` : ''}</p>
+                            <p className="text-xs text-pl-muted mb-1">Screenshot #{s.number}{s.caption ? `: ${s.caption}` : ''}</p>
                             <img src={s.url} alt={s.caption || `Step ${s.number}`} className="rounded-lg border border-pl-border max-h-64 object-contain" />
                           </div>
                         ))
@@ -556,7 +556,7 @@ export default function AIRunnerPage() {
                     {editingWorkflow.screenshots.map((ss, idx) => (
                       <div key={idx} className="bg-pl-card border border-pl-border rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-purple-300">Screenshot #{.number}</span>
+                          <span className="text-xs font-medium text-purple-300">Screenshot #{ss.number}</span>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => moveScreenshot(idx, 'up')}
