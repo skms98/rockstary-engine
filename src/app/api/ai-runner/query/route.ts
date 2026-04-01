@@ -6,6 +6,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+// Known category names for category-first filtering
+const KNOWN_CATEGORIES = [
+  'ai-runner', 'attractions-pipeline', 'b2b-tov', 'b2c-tov',
+  'categories-tags', 'claude-runner', 'column-map', 'events-pipeline',
+  'mini-tools', 'navigation', 'setup', 'tov-guidelines', 'troubleshooting'
+]
+
 export async function POST(request: NextRequest) {
   try {
     const { question, mode } = await request.json()
@@ -14,30 +21,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 })
     }
 
-    // Search workflows using full-text search
-    const searchTerms = question
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .split(/\s+/)
-      .filter((w: string) => w.length > 2)
-      .join(' | ')
-
     let results: any[] = []
 
-    // Try full-text search first
-    if (searchTerms) {
-      const { data: ftsResults } = await supabase
+    // --- STEP 1: Check if the query targets a specific category ---
+    const lowerQuestion = question.toLowerCase()
+    const matchedCategory = KNOWN_CATEGORIES.find(cat =>
+      lowerQuestion.includes(cat) ||
+      lowerQuestion.includes(cat.replace('-', ' '))
+    )
+
+    if (matchedCategory) {
+      // Direct category match — return all entries for that category
+      const { data: categoryResults } = await supabase
         .from('ai_runner_workflows')
         .select('*')
-        .textSearch('topic', searchTerms, { type: 'plain', config: 'english' })
-        .limit(5)
+        .eq('category', matchedCategory)
+        .limit(10)
 
-      if (ftsResults && ftsResults.length > 0) {
-        results = ftsResults
+      if (categoryResults && categoryResults.length > 0) {
+        results = categoryResults
       }
     }
 
-    // Fallback: ILIKE search on topic, category, and workflow_steps
+    // --- STEP 2: Search question_patterns array for matches ---
+    if (results.length === 0) {
+      const { data: patternResults } = await supabase
+        .from('ai_runner_workflows')
+        .select('*')
+        .contains('question_patterns', [lowerQuestion])
+        .limit(5)
+
+      if (patternResults && patternResults.length > 0) {
+        results = patternResults
+      }
+    }
+
+    // --- STEP 3: Full-text search on topic ---
+    if (results.length === 0) {
+      const searchTerms = question
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter((w: string) => w.length > 2)
+        .join(' | ')
+
+      if (searchTerms) {
+        const { data: ftsResults } = await supabase
+          .from('ai_runner_workflows')
+          .select('*')
+          .textSearch('topic', searchTerms, { type: 'plain', config: 'english' })
+          .limit(5)
+
+        if (ftsResults && ftsResults.length > 0) {
+          results = ftsResults
+        }
+      }
+    }
+
+    // --- STEP 4: Fallback ILIKE search on topic, category, and workflow_steps ---
     if (results.length === 0) {
       const keywords = question
         .toLowerCase()
@@ -95,7 +136,7 @@ export async function POST(request: NextRequest) {
       matchCount: workflows.length,
       workflows,
       hint: workflows.length === 0
-        ? 'No matching workflow found. Try rephrasing your question or check available categories: events-pipeline, attractions-pipeline, mini-tools, b2b-tov, b2c-tov, tov-guidelines, setup, navigation, troubleshooting, categories-tags, column-map, ai-runner, general.'
+        ? 'No matching workflow found. Try rephrasing your question or check available categories: events-pipeline, attractions-pipeline, claude-runner, mini-tools, b2b-tov, b2c-tov, tov-guidelines, setup, navigation, troubleshooting, categories-tags, column-map, ai-runner.'
         : undefined
     })
   } catch (error: any) {
