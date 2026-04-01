@@ -26,7 +26,7 @@ const TABS: Tab[] = [
   { id: 'factchecker', label: 'Fact Checker', icon: 'CHK', description: 'Check and fix text for factual accuracy' },
   { id: 'offers', label: 'New Offers', icon: 'NEW', description: 'Generate fresh promotional offers' },
   { id: 'reformatter', label: 'Bulk Reformatter', icon: 'FMT', description: 'Reformat multiple text blocks at once' },
-  { id: 'transcriber', label: 'Table Transcriber', icon: 'TBL', description: 'Convert messy data into clean tables' },
+  { id: 'transcriber', label: 'Table Transcriber', icon: 'TBL', description: 'Convert messy data into clean tables -- supports screenshot upload' },
   { id: 'tagger', label: 'Block Tagger', icon: 'TAG', description: 'Tag content blocks with metadata labels -- supports screenshot upload' },
 ]
 
@@ -146,6 +146,73 @@ export default function MiniToolsPage() {
     setScreenshots(numbered)
   }
 
+  // Table Transcriber screenshot state
+  const [transcriberScreenshots, setTranscriberScreenshots] = useState<ScreenshotItem[]>([])
+  const [transcriberDragOver, setTranscriberDragOver] = useState(false)
+  const transcriberFileRef = useRef<HTMLInputElement>(null)
+
+  const handleTranscriberUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files)
+    const newItems: ScreenshotItem[] = []
+    for (const file of fileArray) {
+      if (!file.type.startsWith('image/')) continue
+      const base64 = await fileToBase64(file)
+      newItems.push({
+        id: generateId(),
+        file,
+        preview: URL.createObjectURL(file),
+        base64,
+        label: String(transcriberScreenshots.length + newItems.length + 1),
+      })
+    }
+    setTranscriberScreenshots(prev => [...prev, ...newItems])
+  }
+
+  const handleTranscriberDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setTranscriberDragOver(false)
+    if (e.dataTransfer.files.length > 0) {
+      handleTranscriberUpload(e.dataTransfer.files)
+    }
+  }
+
+  const removeTranscriberScreenshot = (id: string) => {
+    setTranscriberScreenshots(prev => {
+      const updated = prev.filter(s => s.id !== id)
+      return updated.map((s, i) => ({ ...s, label: String(i + 1) }))
+    })
+  }
+
+  const handleTabChange = (tab: ToolTab) => {
+    setActiveTab(tab)
+    setInput('')
+    setOldVersion('')
+    setOutput('')
+    setCopied(false)
+    if (tab !== 'tagger') {
+      setScreenshots([])
+      setNumberingMode('section')
+      setSectionBase('1')
+    }
+    if (tab !== 'transcriber') {
+      setTranscriberScreenshots([])
+    }
+  }
+
+  const canRun = () => {
+    if (loading) return false
+    if (activeTab === 'tagger') {
+      return screenshots.length > 0 || input.trim().length > 0
+    }
+    if (activeTab === 'transcriber') {
+      return transcriberScreenshots.length > 0 || input.trim().length > 0
+    }
+    if (activeTab === 'factchecker') {
+      return input.trim().length > 0 || oldVersion.trim().length > 0
+    }
+    return input.trim().length > 0
+  }
+
   const handleRun = async () => {
     // Block Tagger with screenshots
     if (activeTab === 'tagger' && screenshots.length > 0) {
@@ -167,6 +234,45 @@ export default function MiniToolsPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             systemPrompt: SYSTEM_PROMPTS.tagger,
+            userMessage: textContext,
+            images: imageData,
+          }),
+        })
+
+        const data = await res.json()
+        if (data.error) {
+          setOutput(`Error: ${data.error}`)
+        } else {
+          setOutput(data.result)
+        }
+      } catch (err: any) {
+        setOutput(`Error: ${err.message}`)
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    // Table Transcriber with screenshots
+    if (activeTab === 'transcriber' && transcriberScreenshots.length > 0) {
+      setLoading(true)
+      setOutput('')
+
+      try {
+        const imageData = transcriberScreenshots.map(s => ({
+          data: s.base64,
+          label: s.label,
+        }))
+
+        const textContext = input.trim()
+          ? `Additional context: ${input}\n\nPlease extract and transcribe the table data from the following ${transcriberScreenshots.length} screenshot(s) into a clean markdown table:`
+          : `Please extract and transcribe the table data from the following ${transcriberScreenshots.length} screenshot(s) into a clean markdown table:`
+
+        const res = await fetch('/api/mini-tools/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemPrompt: SYSTEM_PROMPTS.transcriber,
             userMessage: textContext,
             images: imageData,
           }),
@@ -225,30 +331,6 @@ export default function MiniToolsPage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
-  }
-
-  const handleTabChange = (tab: ToolTab) => {
-    setActiveTab(tab)
-    setInput('')
-    setOldVersion('')
-    setOutput('')
-    setCopied(false)
-    if (tab !== 'tagger') {
-      setScreenshots([])
-      setNumberingMode('section')
-      setSectionBase('1')
-    }
-  }
-
-  const canRun = () => {
-    if (loading) return false
-    if (activeTab === 'tagger') {
-      return screenshots.length > 0 || input.trim().length > 0
-    }
-    if (activeTab === 'factchecker') {
-      return input.trim().length > 0 || oldVersion.trim().length > 0
-    }
-    return input.trim().length > 0
   }
 
   // Render Block Tagger input panel
@@ -394,6 +476,92 @@ export default function MiniToolsPage() {
     </div>
   )
 
+  // Render Table Transcriber input panel (text + screenshots)
+  const renderTranscriberInput = () => (
+    <div className="space-y-4">
+      {/* Drop Zone */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Screenshots ({transcriberScreenshots.length} uploaded)
+        </label>
+        <div
+          onDragOver={(e) => { e.preventDefault(); setTranscriberDragOver(true) }}
+          onDragLeave={() => setTranscriberDragOver(false)}
+          onDrop={handleTranscriberDrop}
+          onClick={() => transcriberFileRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl px-4 py-6 text-center cursor-pointer transition-all ${
+            transcriberDragOver
+              ? 'border-amber-400 bg-amber-500/10'
+              : 'border-white/10 bg-gray-800/30 hover:border-white/20 hover:bg-gray-800/50'
+          }`}
+        >
+          <div className="text-gray-400 text-sm">
+            <span className="font-medium text-gray-300">Click to upload</span> or drag & drop table screenshots
+          </div>
+          <div className="text-gray-500 text-xs mt-1">PNG, JPG, WebP -- upload screenshots of tables to transcribe</div>
+          <input
+            ref={transcriberFileRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleTranscriberUpload(e.target.files)
+                e.target.value = ''
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Screenshot List */}
+      {transcriberScreenshots.length > 0 && (
+        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+          {transcriberScreenshots.map((shot) => (
+            <div key={shot.id} className="flex items-center gap-3 bg-gray-800/40 border border-white/5 rounded-lg p-2">
+              <img
+                src={shot.preview}
+                alt={`Table screenshot ${shot.label}`}
+                className="w-16 h-12 object-cover rounded border border-white/10 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-amber-400 text-xs font-mono">Screenshot {shot.label}</div>
+                <div className="text-gray-500 text-xs mt-0.5 truncate">{shot.file.name}</div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); removeTranscriberScreenshot(shot.id) }}
+                className="text-gray-500 hover:text-red-400 transition-colors p-1 flex-shrink-0"
+                title="Remove screenshot"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Text input for pasted data or context */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          {transcriberScreenshots.length > 0 ? 'Additional Text / Context (optional)' : 'Paste Table Data'}
+        </label>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={transcriberScreenshots.length > 0
+            ? 'Add any extra instructions or context for transcription...'
+            : 'Paste messy table data here, or upload a screenshot above...'
+          }
+          className={`w-full ${transcriberScreenshots.length > 0 ? 'h-20' : 'h-64'} bg-gray-800/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none`}
+        />
+      </div>
+    </div>
+  )
+
   // Render standard text input panel (all other tools)
   const renderStandardInput = () => (
     <div className="space-y-4">
@@ -434,10 +602,15 @@ export default function MiniToolsPage() {
       {/* Header */}
       <div className="border-b border-white/10 bg-black/30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-            Mini Tools
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">Quick AI-powered text utilities for the Platinumlist team</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+              Mini Tools
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/25">
+              Testing Mode
+            </span>
+          </div>
+          <p className="text-sm text-gray-400 mt-1">Quick AI-powered text utilities for the Platinumlist team -- features are still being tested</p>
         </div>
       </div>
 
@@ -472,7 +645,7 @@ export default function MiniToolsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Input Panel */}
           <div className="space-y-4">
-            {activeTab === 'tagger' ? renderTaggerInput() : renderStandardInput()}
+            {activeTab === 'tagger' ? renderTaggerInput() : activeTab === 'transcriber' ? renderTranscriberInput() : renderStandardInput()}
 
             <button
               onClick={handleRun}
