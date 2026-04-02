@@ -33,19 +33,25 @@ export async function GET(req: NextRequest) {
     const typeFilter = sp.get('type') || ''  // 'event' | 'attraction' | ''
 
     // ── Countries dropdown ───────────────────────────────────────
+    // PostgREST caps at 1000 rows per request, so paginate to get all distinct countries
     if (sp.get('countries') === '1') {
-      const { data, error } = await pl
-        .from('hourly_sql_export')
-        .select('country')
-        .not('country', 'is', null)
-        .order('country')
-        .limit(50000)
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      const unique = [
-        ...new Set(
-          (data ?? []).map((r: { country: string }) => r.country).filter(Boolean)
-        ),
-      ]
+      const allCountries = new Set<string>()
+      const batchSize = 1000
+      let from = 0
+      while (true) {
+        const { data, error } = await pl
+          .from('hourly_sql_export')
+          .select('country')
+          .not('country', 'is', null)
+          .order('country')
+          .range(from, from + batchSize - 1)
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        if (!data || data.length === 0) break
+        ;(data as { country: string }[]).forEach(r => { if (r.country) allCountries.add(r.country) })
+        if (data.length < batchSize) break
+        from += batchSize
+      }
+      const unique = [...allCountries].sort()
       return NextResponse.json({ countries: unique })
     }
 
