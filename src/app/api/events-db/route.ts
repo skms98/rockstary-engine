@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
         .select('country')
         .not('country', 'is', null)
         .order('country')
+        .limit(50000)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       const unique = [
         ...new Set(
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
     else if (typeFilter === 'event') query = query.eq('is_attraction', false)
 
     query = query
-      .order('event_start_datetime', { ascending: false })
+      .order('added_datetime', { ascending: false })
       .range(offset, offset + limit - 1)
 
     const { data: events, count, error } = await query
