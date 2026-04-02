@@ -64,6 +64,10 @@ export default function TaggingPage() {
   const [newEntryScreenshots, setNewEntryScreenshots] = useState<File[]>([]);
   const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [uploadingScreenshots, setUploadingScreenshots] = useState(false);
+  // DB import state for tagging
+  const [tagDbSearch, setTagDbSearch] = useState('');
+  const [tagDbResults, setTagDbResults] = useState<{event_id:string;event_name_en:string;url:string;city:string}[]>([]);
+  const [tagDbSearching, setTagDbSearching] = useState(false);
 
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [processingEntryId, setProcessingEntryId] = useState<string | null>(null);
@@ -1468,6 +1472,39 @@ export default function TaggingPage() {
                 className="pl-input w-full"
                 autoFocus
               />
+            </div>
+
+            {/* DB Search */}
+            <div>
+              <label className="block text-pl-gold font-semibold mb-2">🗄️ Search from Database</label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={tagDbSearch}
+                  onChange={e => setTagDbSearch(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (!tagDbSearch.trim()) return; setTagDbSearching(true); fetch(`/api/events-db?search=${encodeURIComponent(tagDbSearch)}&page=1`).then(r=>r.json()).then(d=>{ setTagDbResults(d.events||[]); setTagDbSearching(false); }).catch(()=>setTagDbSearching(false)); } }}
+                  placeholder="Search event or attraction name…"
+                  className="pl-input flex-1"
+                />
+                <button type="button" disabled={tagDbSearching}
+                  onClick={() => { if (!tagDbSearch.trim()) return; setTagDbSearching(true); fetch(`/api/events-db?search=${encodeURIComponent(tagDbSearch)}&page=1`).then(r=>r.json()).then(d=>{ setTagDbResults(d.events||[]); setTagDbSearching(false); }).catch(()=>setTagDbSearching(false)); }}
+                  className="px-4 py-2 bg-pl-gold text-black text-sm font-semibold rounded-lg hover:bg-pl-gold/80 disabled:opacity-50 transition-colors">
+                  {tagDbSearching ? '…' : 'Search'}
+                </button>
+              </div>
+              {tagDbResults.length > 0 && (
+                <div className="max-h-48 overflow-y-auto space-y-1 border border-pl-border rounded-xl p-2 bg-black/20">
+                  {tagDbResults.map(r => (
+                    <button key={r.event_id} type="button"
+                      onClick={() => { setNewEntryUrl(r.url || ''); setNewEntryTitle(r.event_name_en || ''); setTagDbResults([]); setTagDbSearch(''); }}
+                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-pl-gold/10 text-left transition-colors">
+                      <span className="text-pl-gold font-mono text-xs px-1.5 py-0.5 bg-pl-gold/10 rounded shrink-0">#{r.event_id}</span>
+                      <span className="text-sm text-white flex-1 truncate">{r.event_name_en}</span>
+                      <span className="text-xs text-pl-muted shrink-0">{r.city}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
