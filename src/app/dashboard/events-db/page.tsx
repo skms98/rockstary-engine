@@ -1,6 +1,6 @@
 'use client'
 // @ts-nocheck
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Fragment } from 'react'
 
 type R = Record<string, unknown>
 
@@ -50,7 +50,7 @@ function Fld({ label, value }) {
 
 function TB({ label, en, ar }) {
   if (!en&&!ar) return null
-  const box = (v,dir?) => v && <div className="bg-[#071429] border border-[#1e3a5f]/60 rounded-lg p-3" dir={dir}><div className="text-[10px] text-zinc-600 mb-1">{dir?'AR':'EN'}</div><p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">{v}</p></div>
+  const box = (v,dir?) => v && <div className={`bg-[#071429] border border-[#1e3a5f]/60 rounded-lg p-3`} dir={dir}><div className="text-[10px] text-zinc-600 mb-1">{dir?'AR':'EN'}</div><p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap">{v}</p></div>
   return <div className="space-y-2"><div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">{label}</div>{box(en)}{box(ar,'rtl')}</div>
 }
 
@@ -95,22 +95,26 @@ function ExpandedRow({ row: r }) {
           {bbs([['Is Attraction',r.is_attraction],['Exclusive',r.is_exclusive],['Super Event',r.is_super_event],['Video Teaser',r.has_video_teaser],['Schedule Block',r.has_schedule_block],['No Index',r.is_no_index],['Hidden in Guide',r.is_hidden_in_event_guide],['Hidden in Calendar',r.is_hidden_in_calendar]])}
           {r.marketing_tags&&<div><div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Marketing Tags</div><div className="flex flex-wrap gap-1.5">{(Array.isArray(r.marketing_tags)?r.marketing_tags:String(r.marketing_tags).split(',').map(t=>t.trim())).filter(Boolean).map(tag=><span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-[#1e3a5f] text-gray-400 border border-[#2a4d7a] capitalize">{tag}</span>)}</div></div>}
         </div>}
+
         {tab==='Content' && <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3"><Fld label="Short Name EN" value={r.event_short_name_en}/><Fld label="Short Name AR" value={r.event_short_name_ar}/><Fld label="Long Name EN" value={r.event_long_name_en}/><Fld label="Long Name AR" value={r.event_long_name_ar}/></div>
           <TB label="Description" en={r.description_en} ar={r.description_ar}/>
           <TB label="Overview Description" en={r.overview_description_en} ar={r.overview_description_ar}/>
           <TB label="Text Teaser" en={r.text_teaser_en} ar={r.text_teaser_ar}/>
         </div>}
+
         {tab==='Venue' && <div className="space-y-4">
           <div className={g4}><Fld label="Venue EN" value={r.venue}/><Fld label="Venue AR" value={r.venue_ar}/><Fld label="City" value={r.city}/><Fld label="Country" value={r.country}/></div>
           <TB label="Venue Info" en={r.venue_info_en} ar={r.venue_info_ar}/>
         </div>}
+
         {tab==='Tickets' && <div className="space-y-4">
           <div className={g4}><Fld label="Overall Capacity" value={r.overall_capacity}/><Fld label="Tickets Sold" value={r.ticket_sold_count}/><Fld label="Available on Site" value={r.public_tickets_available_on_site}/><Fld label="On Sale Since" value={fmtFull(r.timestamp_on_sale)}/></div>
           {bbs([['General Admission',r.is_general_admission_flag],['Mobile Tickets',r.has_mobile_tickets],['Has Resale',r.has_resale],['Dynamic Pricing',r.has_dynamic_tickets],['Resale Tooltip',r.show_tooltip_about_resale],['Mobile Tooltip',r.show_mobile_ticket_tooltip]])}
           {r.resale_time_restriction&&<Fld label="Resale Time Restriction" value={String(r.resale_time_restriction)}/>}
           <TB label="Mobile Tooltip Description" en={r.mobile_tooltip_description_en} ar={r.mobile_tooltip_description_ar}/>
         </div>}
+
         {tab==='Marketing' && <div className="space-y-4">
           <div className={g3}><Fld label="Artwork Label" value={r.artwork_label}/><Fld label="Promo Campaign Text" value={r.promo_campaign_text}/><Fld label="All Categories" value={r.all_categories}/></div>
           {bbs([['Banner Active',r.is_banner_active],['Super Event',r.is_super_event],['Exclusive',r.is_exclusive]])}
@@ -120,13 +124,15 @@ function ExpandedRow({ row: r }) {
             <div className="mt-3 space-y-1">{['img_orig','img_full','img_middle','img_feature_mobile','img_featured_mobile_thumb'].filter(k=>r[k]).map(k=><div key={k} className="text-[10px] text-zinc-500 font-mono truncate"><span className="text-zinc-600">{k}: </span>{r[k]}</div>)}</div>
           </div>}
         </div>}
+
         {tab==='SEO & Meta' && <div className="space-y-4">
           <TB label="Meta Title" en={r.meta_title_en} ar={r.meta_title_ar}/>
           <TB label="Meta Description" en={r.meta_description_en} ar={r.meta_description_ar}/>
           <TB label="Meta Keywords" en={r.meta_keywords_en} ar={r.meta_keywords_ar}/>
           <TB label="SEO Block Text" en={r.seo_block_text_en} ar={r.seo_block_text_ar}/>
-          {r.seo_qa_block&&<div><div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">SEO Q&amp;A Block</div><div className="bg-[#071429] border border-[#1e3a5f]/60 rounded-lg p-3 text-xs text-zinc-300 whitespace-pre-wrap max-h-64 overflow-y-auto">{r.seo_qa_block}</div></div>}
+          {r.seo_qa_block&&<div><div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">SEO Q&amp;A Block</div><div className="bg-[#071429] border border-[#1e3a5f]/60 rounded-lg p-3 text-xs text-zinc-300 whitespace-pre-wrap max-h-64 overflow-y-auto">{typeof r.seo_qa_block==='string'?r.seo_qa_block:JSON.stringify(r.seo_qa_block,null,2)}</div></div>}
         </div>}
+
         {tab==='CMS Blocks' && <div>
           {ac.length===0?<p className="text-zinc-600 text-sm py-6 text-center">No CMS content blocks set for this event.</p>:<div className="grid grid-cols-1 gap-3">{ac.map(k=><CmsB key={k} bk={k} val={r[k]}/>)}</div>}
         </div>}
@@ -174,6 +180,7 @@ export default function EventsDBPage() {
         <h1 className="text-2xl font-bold text-white">Events DB</h1>
         <p className="text-sm text-gray-400 mt-1">{total.toLocaleString()} records · sourced from <span className="text-zinc-300 font-mono text-xs">hourly_sql_export</span></p>
       </div>
+
       <div className="pl-card pl-border rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <input className={`${INP} col-span-2 md:col-span-1`} placeholder="Search event name…" value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -187,7 +194,9 @@ export default function EventsDBPage() {
           <button onClick={clear} className="text-xs px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-gray-300 hover:text-white hover:bg-[#2a4d7a] transition">Clear filters</button>
         </div>
       </div>
+
       {error&&<div className="text-red-400 text-sm bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-2">{error}</div>}
+
       <div className="pl-card pl-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -205,8 +214,8 @@ export default function EventsDBPage() {
                 const isOpen = expanded===row.event_id
                 const attr = row.is_attraction===true
                 const pc = row.primary_category||(row.categories?String(row.categories):null)||catFromAll(row.all_categories)
-                return <>
-                  <tr key={row.event_id} onClick={()=>setExpanded(isOpen?null:row.event_id)} className={`border-b border-[#0f1a2e] cursor-pointer transition-colors ${isOpen?'bg-[#0d2040]':'hover:bg-[#0d1f3a]'}`}>
+                return <Fragment key={String(row.event_id)}>
+                  <tr onClick={()=>setExpanded(isOpen?null:row.event_id)} className={`border-b border-[#0f1a2e] cursor-pointer transition-colors ${isOpen?'bg-[#0d2040]':'hover:bg-[#0d1f3a]'}`}>
                     <td className="px-3 py-3 text-zinc-600 text-xs">{isOpen?'▲':'▶'}</td>
                     <td className="px-4 py-3 whitespace-nowrap"><span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${attr?'bg-teal-900/60 text-teal-300 border-teal-700/40':'bg-violet-900/60 text-violet-300 border-violet-700/40'}`}>{attr?'🏛 Attraction':'🎭 Event'}</span></td>
                     <td className="px-4 py-3"><div className="text-white font-medium leading-snug">{row.event_name_en}</div>{row.event_name_ar&&<div className="text-gray-500 text-xs mt-0.5 truncate max-w-[220px]" dir="rtl">{row.event_name_ar}</div>}</td>
@@ -219,13 +228,14 @@ export default function EventsDBPage() {
                     <td className="px-4 py-3 text-gray-400 text-xs max-w-[140px] truncate">{row.event_organiser||'—'}</td>
                     <td className="px-4 py-3" onClick={e=>e.stopPropagation()}>{row.url?<a href={row.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#c9a84c] hover:text-yellow-300 underline underline-offset-2 whitespace-nowrap">View ↗</a>:<span className="text-gray-600 text-xs">—</span>}</td>
                   </tr>
-                  {isOpen&&<tr key={`${row.event_id}-d`}><td colSpan={11} className="p-0"><ExpandedRow row={row}/></td></tr>}
-                </>
+                  {isOpen&&<tr><td colSpan={11} className="p-0"><ExpandedRow row={row}/></td></tr>}
+                </Fragment>
               })}
             </tbody>
           </table>
         </div>
       </div>
+
       {totalPages>1&&<div className="flex items-center justify-center gap-2">
         <button disabled={page<=1} onClick={()=>go(page-1)} className="px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-gray-300 text-sm disabled:opacity-40 hover:bg-[#2a4d7a] transition">← Prev</button>
         <span className="text-sm text-gray-400">Page {page} / {totalPages}</span>
