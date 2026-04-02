@@ -25,6 +25,43 @@ export function AttractionModal({ show, onClose, onSuccess }: AttractionModalPro
     city: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  // DB import state
+  const [dbSearch, setDbSearch] = useState('')
+  const [dbResults, setDbResults] = useState<{event_id:string;event_name_en:string;url:string;country:string;city:string}[]>([])
+  const [dbSelected, setDbSelected] = useState<Set<string>>(new Set())
+  const [dbSearching, setDbSearching] = useState(false)
+  const [dbImporting, setDbImporting] = useState(false)
+
+  const searchDb = async (q: string) => {
+    if (!q.trim()) { setDbResults([]); return }
+    setDbSearching(true)
+    try {
+      const res = await fetch(`/api/events-db?search=${encodeURIComponent(q)}&type=attraction&page=1`)
+      const data = await res.json()
+      setDbResults(data.events || [])
+    } catch { setDbResults([]) }
+    setDbSearching(false)
+  }
+
+  const handleDbImport = async () => {
+    if (dbSelected.size === 0) return
+    setDbImporting(true)
+    const toImport = dbResults.filter(r => dbSelected.has(String(r.event_id)))
+    const inserts = toImport.map(r => ({
+      title: r.event_name_en || '',
+      url: r.url || null,
+      country: r.country || null,
+      city: r.city || null,
+      attraction_id: String(r.event_id),
+      stage: 'intake' as AttractionStage,
+    }))
+    const { error } = await plSupabase.from('attractions').insert(inserts)
+    if (!error) {
+      setDbSearch(''); setDbResults([]); setDbSelected(new Set())
+      onSuccess(); onClose()
+    }
+    setDbImporting(false)
+  }
 
   const handleExcelUpload = async (file: File) => {
     setExcelFile(file)
@@ -100,6 +137,51 @@ export function AttractionModal({ show, onClose, onSuccess }: AttractionModalPro
         </div>
 
         <div className="p-6 space-y-6">
+          {/* DB Import */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">🗄️ Search from Platinumlist Database</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={dbSearch}
+                onChange={e => setDbSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && searchDb(dbSearch)}
+                placeholder="Search attraction name…"
+                className="flex-1 px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button type="button" onClick={() => searchDb(dbSearch)} disabled={dbSearching}
+                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {dbSearching ? '…' : 'Search'}
+              </button>
+            </div>
+            {dbResults.length > 0 && (
+              <div className="max-h-52 overflow-y-auto space-y-1 border border-gray-600 rounded-xl p-2 bg-gray-900/40">
+                {dbResults.map(r => (
+                  <label key={r.event_id} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${dbSelected.has(String(r.event_id)) ? 'bg-blue-600/20 border border-blue-500/40' : 'hover:bg-gray-700/40'}`}>
+                    <input type="checkbox" checked={dbSelected.has(String(r.event_id))}
+                      onChange={e => { const s = new Set(dbSelected); e.target.checked ? s.add(String(r.event_id)) : s.delete(String(r.event_id)); setDbSelected(s) }}
+                      className="accent-blue-500" />
+                    <span className="text-blue-400 font-mono text-xs px-1.5 py-0.5 bg-blue-900/30 rounded shrink-0">#{r.event_id}</span>
+                    <span className="text-sm text-white flex-1 truncate">{r.event_name_en}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{r.city}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {dbSelected.size > 0 && (
+              <button type="button" onClick={handleDbImport} disabled={dbImporting}
+                className="w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {dbImporting ? 'Importing…' : `Import ${dbSelected.size} Attraction${dbSelected.size > 1 ? 's' : ''} from DB`}
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-gray-700"></div>
+            <span className="text-gray-500 text-xs">OR UPLOAD EXCEL</span>
+            <div className="flex-1 border-t border-gray-700"></div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">Excel Upload (one sheet per attraction)</label>
             <div className="border-2 border-dashed border-gray-600 rounded-xl p-6 text-center hover:border-blue-500/50 transition-colors">
