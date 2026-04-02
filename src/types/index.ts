@@ -1,6 +1,6 @@
 export type ContentMode = 'events' | 'attractions'
 
-export type InputMethod = 'screenshot_url' | 'rawtext_url' | 'url_only' | 'excel_upload'
+export type InputMethod = 'screenshot_url' | 'rawtext_url' | 'url_only' | 'excel_upload' | 'db_import'
 
 // Column mapping for Excel import (0-indexed column numbers)
 // VERIFIED from actual sheet headers (Blueprint v2 audit)
