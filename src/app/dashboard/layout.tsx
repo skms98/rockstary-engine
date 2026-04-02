@@ -11,7 +11,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
-  const isEvents = pathname.startsWith('/dashboard/events')
+  const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
+  const isEventsDB = pathname.startsWith('/dashboard/events-db')
   const isAttractions = pathname.startsWith('/dashboard/attractions')
   const isAIRunner = pathname.startsWith('/dashboard/ai-runner')
   const isTagging = pathname.startsWith('/dashboard/tagging')
@@ -84,6 +85,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             {sidebarOpen && <span className="font-medium">Events</span>}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard/events-db')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isEventsDB
+                ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">Events DB</span>}
           </button>
 
           <button
