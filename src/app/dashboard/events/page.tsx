@@ -23,6 +23,12 @@ export default function EventsDashboard() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // DB import state
+  const [dbSearch, setDbSearch] = useState('')
+  const [dbResults, setDbResults] = useState<{event_id:string;event_name_en:string;url:string;status:string;city:string;country:string}[]>([])
+  const [dbSelected, setDbSelected] = useState<Set<string>>(new Set())
+  const [dbSearching, setDbSearching] = useState(false)
+  const [dbImporting, setDbImporting] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const dropZoneRef = useRef<HTMLDivElement>(null)
@@ -101,6 +107,46 @@ export default function EventsDashboard() {
       .order('created_at', { ascending: false })
     setEntries((data as EventEntry[]) || [])
     setLoading(false)
+  }
+
+  async function searchDb(q: string) {
+    if (!q.trim()) { setDbResults([]); return }
+    setDbSearching(true)
+    try {
+      const res = await fetch(`/api/events-db?search=${encodeURIComponent(q)}&page=1`)
+      const data = await res.json()
+      setDbResults(data.events || [])
+    } catch { setDbResults([]) }
+    setDbSearching(false)
+  }
+
+  async function handleDbImport() {
+    if (dbSelected.size === 0) return
+    setDbImporting(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const toImport = dbResults.filter(r => dbSelected.has(String(r.event_id)))
+    const inserts = toImport.map(r => ({
+      user_id: user.id,
+      mode: 'events' as const,
+      event_id: String(r.event_id),
+      event_title: r.event_name_en || '',
+      event_url: r.url || '',
+      input_method: 'db_import' as const,
+      screenshot_url: '',
+      original_description: '', recommended_versions: '', fact_check_scores: '',
+      duplicate_analysis: '', ab_tests: '', organiser_trigger_risk: '', tov_score: '',
+      grammar_style: '', reviewer_output: '', resolver_output: '',
+      prev_original_description: '', seo_analysis: '', fact_check_final: '', ranked_versions: '',
+      categories: '', tags: '', page_qa_comments: '', status: 'draft',
+    }))
+    const { error } = await supabase.from('content_entries').insert(inserts)
+    if (!error) {
+      setShowNewForm(false)
+      setDbSearch(''); setDbResults([]); setDbSelected(new Set())
+      loadEntries()
+    }
+    setDbImporting(false)
   }
 
   async function handleExcelFile(file: File) {
@@ -401,12 +447,13 @@ export default function EventsDashboard() {
               {/* Input Method Selection */}
               <div>
                 <label className="block text-sm text-pl-text-dim mb-3">How are you providing the content?</label>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-5 gap-3">
                   {[
                     { value: 'screenshot_url' as InputMethod, icon: '📸', label: 'Screenshot + URL', desc: 'Upload screenshot and provide URL', badge: 'beta' as const },
                     { value: 'rawtext_url' as InputMethod, icon: '📝', label: 'Raw Text + URL', desc: 'Paste description text with URL', badge: 'recommended' as const },
                     { value: 'url_only' as InputMethod, icon: '🔗', label: 'URL Only', desc: 'Just provide the event URL', badge: 'beta' as const },
                     { value: 'excel_upload' as InputMethod, icon: '📊', label: 'Excel File', desc: 'Import from reference XLSX', badge: 'beta' as const },
+                    { value: 'db_import' as InputMethod, icon: '🗄️', label: 'From Database', desc: 'Search and import from live PL DB', badge: 'beta' as const },
                   ].map((method) => (
                     <button
                       key={method.value}
@@ -484,8 +531,48 @@ export default function EventsDashboard() {
                 </div>
               )}
 
-              {/* Common Fields (hidden for Excel upload) */}
-              {inputMethod !== 'excel_upload' && (
+              {/* DB Import Mode */}
+              {inputMethod === 'db_import' && (
+                <div>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={dbSearch}
+                      onChange={e => setDbSearch(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && searchDb(dbSearch)}
+                      placeholder="Search event name in Platinumlist DB…"
+                      className="pl-input flex-1"
+                    />
+                    <button type="button" onClick={() => searchDb(dbSearch)} disabled={dbSearching}
+                      className="px-4 py-2 bg-pl-gold text-black text-sm font-semibold rounded-lg hover:bg-pl-gold/80 disabled:opacity-50 transition-colors">
+                      {dbSearching ? '…' : 'Search'}
+                    </button>
+                  </div>
+                  {dbResults.length > 0 && (
+                    <div className="max-h-64 overflow-y-auto space-y-1 border border-pl-border rounded-xl p-2">
+                      {dbResults.map(r => (
+                        <label key={r.event_id} className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${dbSelected.has(String(r.event_id)) ? 'bg-pl-gold/10 border border-pl-gold/30' : 'hover:bg-pl-card'}`}>
+                          <input type="checkbox" checked={dbSelected.has(String(r.event_id))}
+                            onChange={e => { const s = new Set(dbSelected); e.target.checked ? s.add(String(r.event_id)) : s.delete(String(r.event_id)); setDbSelected(s) }}
+                            className="accent-pl-gold" />
+                          <span className="bg-pl-gold/10 text-pl-gold font-mono text-xs px-2 py-0.5 rounded shrink-0">#{r.event_id}</span>
+                          <span className="text-sm text-white flex-1 truncate">{r.event_name_en}</span>
+                          <span className="text-xs text-pl-muted shrink-0">{r.city}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {dbSelected.size > 0 && (
+                    <button type="button" onClick={handleDbImport} disabled={dbImporting}
+                      className="w-full mt-3 px-4 py-2.5 bg-pl-gold text-black text-sm font-bold rounded-lg hover:bg-pl-gold/80 disabled:opacity-50 transition-colors">
+                      {dbImporting ? 'Importing…' : `Import ${dbSelected.size} Event${dbSelected.size > 1 ? 's' : ''} from DB`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Common Fields (hidden for Excel upload and db_import) */}
+              {inputMethod !== 'excel_upload' && inputMethod !== 'db_import' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -541,7 +628,7 @@ export default function EventsDashboard() {
               )}
 
               {/* Multi-Screenshot Upload — required for screenshot_url, optional for others */}
-              {inputMethod !== 'excel_upload' && (
+              {inputMethod !== 'excel_upload' && inputMethod !== 'db_import' && (
                 <div>
                   <label className="block text-sm text-pl-text-dim mb-2">
                     Page Screenshots
