@@ -12,51 +12,62 @@ export async function GET(req: NextRequest) {
   try {
     const pl = createPLClient()
     const url = req.nextUrl.searchParams
-
     const page = parseInt(url.get('page') || '1', 10)
     const limit = 50
     const offset = (page - 1) * limit
+    const search     = url.get('search') || ''
+    const country    = url.get('country') || ''
+    const city       = url.get('city') || ''
+    const active     = url.get('active')
+    const typeFilter = url.get('type') || ''  // 'event' | 'attraction' | ''
 
-    const search = url.get('search') || ''
-    const country = url.get('country') || ''
-    const city = url.get('city') || ''
-    const active = url.get('active') // 'true' | 'false' | null
-
-    // ---------- countries list (for dropdown) ----------
+    // countries dropdown
     if (url.get('countries') === '1') {
       const { data, error } = await pl
         .from('event_relational_db')
         .select('country')
         .not('country', 'is', null)
         .order('country')
-
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
       const unique = [...new Set((data || []).map((r: { country: string }) => r.country).filter(Boolean))]
       return NextResponse.json({ countries: unique })
     }
 
-    // ---------- events list ----------
-    let query = pl
-      .from('event_relational_db')
-      .select(
-        'event_id, event_name_en, event_start_datetime, country, city, venue, min_price, currency, status, is_active, url, event_organiser',
-        { count: 'exact' }
-      )
+    // taxonomy – returns primary parent_groups and secondary entries for tag classification
+    if (url.get('taxonomy') === '1') {
+      const { data, error } = await pl
+        .from('tagging_taxonomy')
+        .select('name, parent_group, is_selectable, domain')
+        .order('sort_order')
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ taxonomy: data })
+    }
 
-    if (search) query = query.ilike('event_name_en', `%${search}%`)
+    let query = pl.from('event_relational_db').select(
+      `event_id, event_name_en, event_name_ar,
+       event_start_datetime, event_end_datetime,
+       description_en, description_ar,
+       country, city, venue,
+       min_price, currency, status, is_active,
+       url, event_organiser, event_manager,
+       marketing_tags, updated_at`,
+      { count: 'exact' }
+    )
+
+    if (search)  query = query.ilike('event_name_en', `%${search}%`)
     if (country) query = query.eq('country', country)
-    if (city) query = query.ilike('city', `%${city}%`)
-    if (active === 'true') query = query.eq('is_active', true)
+    if (city)    query = query.ilike('city', `%${city}%`)
+    if (active === 'true')  query = query.eq('is_active', true)
     if (active === 'false') query = query.eq('is_active', false)
+    if (typeFilter === 'attraction') query = query.contains('marketing_tags', ['attractions'])
+    else if (typeFilter === 'event') query = query.not('marketing_tags', 'cs', '{"attractions"}')
 
-    query = query.order('event_start_datetime', { ascending: false })
-    query = query.range(offset, offset + limit - 1)
+    query = query
+      .order('event_start_datetime', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     const { data, count, error } = await query
-
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
     return NextResponse.json({ events: data, total: count })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
