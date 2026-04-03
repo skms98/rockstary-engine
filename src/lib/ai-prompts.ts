@@ -180,6 +180,17 @@ STRUCTURAL REWRITE RULES:
 5. Credit hierarchy: Preserve all named credits in same prominence order. Integrate narratively.
 6. Strategic variation: Maximum 50% structural variation — NOT content reduction. Never cut factual richness.
 
+ORIGINALITY RULE (ANTI-PLAGIARISM — NON-NEGOTIABLE):
+No phrase of 5 or more consecutive words from the original may appear verbatim in any rewrite.
+You are rewriting the MEANING, not editing the TEXT. Every sentence must be constructed from scratch using new phrasing.
+ONLY these elements may be preserved verbatim: proper nouns (venue names, artist names, brand names, event titles), specific quantities (12 worlds, 80 costumes, 3 stages), and legal disclaimer text.
+Examples of what is NOT allowed — these are all plagiarism:
+- Original: "leave the ordinary behind and step into" → copying this phrase even partially is forbidden
+- Original: "cosmic gardens that bloom before your eyes" → must be rephrased entirely (e.g. "gardens where light shifts around you" or "botanical scenes built from projection and colour")
+- Original: "waterfalls that flow upside down" → must be rephrased (e.g. "inverted cascades that defy gravity" or "water that rises instead of falls")
+- Original: "a universe of light, sound, and emotion" → must be rephrased (e.g. "an environment shaped by light, audio, and sensory design")
+SELF-CHECK: After writing each rewrite, go sentence by sentence and confirm no 5-word run from the original is present. If found, rephrase it before submitting.
+
 LENGTH PRESERVATION (NON-NEGOTIABLE HARD RULE):
 - Count the words in the ORIGINAL DESCRIPTION before writing a single word
 - COUNT EVERY WORD IN THE FULL TEXT — including all paragraphs, legal disclaimers, credit lines, and any appended notes. Do NOT count only the opening paragraph. The baseline is the TOTAL word count of everything in the original description field.
@@ -785,6 +796,13 @@ HARD RULES (APPLY TO ALL 4 VARIANTS):
 - Write like a knowledgeable friend, not a brochure
 - Every variant MUST be within 80-120% of original word count — no more than 20% shorter, ever
 - If shorter than 80% of original = FAILURE. Do not output as-is — ENHANCE. Add sensory detail, venue atmosphere, production elements, audience experience, emotional specificity until length reaches 80% minimum. Enhance, do not truncate.
+
+ORIGINALITY RULE (ANTI-PLAGIARISM — APPLIES TO ALL 4 VARIANTS):
+No phrase of 5 or more consecutive words from the original description (S1) may appear verbatim in any resolved variant.
+You are producing original writing from factual source material — not editing the original text.
+ONLY these elements may be preserved verbatim: proper nouns (venue names, artist names, brand names, event titles), specific quantities (12 worlds, 80 costumes), and legal disclaimer paragraphs.
+Everything else — descriptive phrases, experiential language, emotional framing, sensory imagery — must be written from scratch using new vocabulary and sentence structures.
+SELF-CHECK: Before outputting each variant, scan for any 5-word sequence copied from S1. If found, rephrase before submitting.
 
 BANNED WORD ZERO-TOLERANCE SCAN (MANDATORY BEFORE OUTPUTTING ANY VARIANT):
 Read every sentence of every variant. Search for each word/phrase below — including partial matches (e.g. "unforgettable" inside "unforgettable adventure" or "unforgettable experience").
