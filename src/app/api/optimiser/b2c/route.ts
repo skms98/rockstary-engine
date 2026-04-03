@@ -4,7 +4,7 @@ import { createPLClient } from '@/lib/pl-supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { rawText, keywords, additionalContext, constraints, audience, contentType } = await request.json()
+    const { rawText, keywords, additionalContext, constraints, audience, audiences, contentType } = await request.json()
 
     if (!rawText || rawText.trim() === '') {
       return NextResponse.json({ error: 'Raw text is required' }, { status: 400 })
@@ -41,7 +41,21 @@ export async function POST(request: NextRequest) {
       'cultural-highclass': 'Skew the tone toward Cultural Enthusiasts / High-Class Audiences: elegant, nostalgic, emotionally rich. Use words like legacy, timeless, journey, sentiment, depth. Sample: "Where memory meets melody."',
     }
 
-    const audienceInstruction = audienceModifiers[audience || 'default'] || audienceModifiers.default
+    // Support both legacy `audience` string and new `audiences` array
+    const selectedAudiences: string[] = Array.isArray(audiences)
+      ? audiences
+      : [audience || 'default']
+
+    let audienceInstruction: string
+    const nonDefault = selectedAudiences.filter(a => a !== 'default')
+    if (nonDefault.length === 0) {
+      audienceInstruction = audienceModifiers.default
+    } else if (nonDefault.length === 1) {
+      audienceInstruction = audienceModifiers[nonDefault[0]] || audienceModifiers.default
+    } else {
+      const blended = nonDefault.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
+      audienceInstruction = `Blend the following audience tones into one cohesive voice - do not write separate sections, just naturally weave these qualities together:\n\n${blended}`
+    }
 
     const systemMessage = `You are a professional content optimiser for Platinumlist.net, the GCC's go-to platform for tickets to concerts, attractions, sports, and cultural events.
 
