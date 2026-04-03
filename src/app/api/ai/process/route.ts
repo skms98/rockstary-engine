@@ -215,7 +215,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 
       if (openaiKey) {
         // Heavy steps (reviewer, resolver, ranked) need more tokens — 16384 for full 4-variant output
-        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
+        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
         const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
         const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -240,7 +240,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
         const aiData = await aiResponse.json()
         aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
       } else if (anthropicKey) {
-        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
+        const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
         const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
