@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const keywordsTotal = keywordsList.length
 
-    // Build numbered keyword reference for the prompt: [1] keyword, [2] keyword, etc.
+    // Build numbered keyword reference: [1] keyword, [2] keyword, etc.
     const numberedKeywords = keywordsList
       .map((kw: string, i: number) => `[${i + 1}] ${kw}`)
       .join('\n')
@@ -50,17 +50,46 @@ export async function POST(request: NextRequest) {
 
 ATTRACTION: ${title}
 
-KEYWORDS — each has an identifier number. You MUST integrate them into the text using the exact annotation format (keyword) [N]:
+KEYWORDS — each has an identifier number. You MUST integrate them into the text using the annotation format described below:
 ${numberedKeywords}
 
-KEYWORD ANNOTATION FORMAT:
-When using a keyword in the text, write it as: (keyword phrase) [N]
-Examples:
-- "Book your (burj khalifa tickets) [1] online and skip the queue."
-- "The (observation deck) [3] offers stunning views of the city."
-- "Visitors can enjoy a premium (dubai sky experience) [5] at 555 meters."
+═══ KEYWORD ANNOTATION FORMAT ═══
 
-Each keyword MUST appear at least 2 times across ALL sections combined. Spread them naturally — do NOT cluster all keywords in one section.
+1. STANDARD USE — when a keyword fits naturally:
+   Write it as: (keyword phrase) [N]
+   Example: "Book your (burj khalifa tickets) [1] online and skip the queue."
+
+2. MERGED KEYWORDS — when two or more keywords overlap or are very similar, MERGE them into one phrase to avoid spam:
+   Write it as: (merged phrase) [N1, N2]
+   Example: If [1] = "dubai aquarium tickets" and [4] = "dubai aquarium and underwater zoo tickets", merge:
+   "Get your (dubai aquarium and underwater zoo tickets) [1, 4] for the ultimate experience."
+   This counts BOTH [1] and [4] as used.
+
+3. SYNONYM REPLACEMENT — when repeating a keyword would be too spammy or unnatural, replace it with a natural synonym:
+   Write it as: (synonym phrase) [N*]
+   The asterisk * signals this is a synonym, not the original keyword.
+   Example: If [3] = "observation deck" and you already used it twice, write:
+   "The (viewing platform) [3*] provides a 360-degree panorama."
+
+═══ KEYWORD MAPPING (CRITICAL) ═══
+
+After the main JSON content, include a "_keywords_mapping" key in the JSON response. This tracks every keyword's fate:
+
+"_keywords_mapping": [
+  { "id": 1, "original": "burj khalifa tickets", "action": "used", "as_written": "burj khalifa tickets", "times": 3 },
+  { "id": 2, "original": "at the top dubai", "action": "merged_with_5", "as_written": "at the top dubai observation deck", "merged_ids": [2, 5], "times": 2 },
+  { "id": 3, "original": "observation deck", "action": "synonym", "as_written": "viewing platform", "synonym_of": "observation deck", "times": 1 },
+  { "id": 4, "original": "dubai entry price", "action": "used", "as_written": "dubai entry price", "times": 2 }
+]
+
+═══ RULES ═══
+
+- Each keyword MUST appear at least 2 times across ALL sections (directly, merged, or as synonym)
+- Spread keywords naturally — do NOT cluster them all in one section
+- When 2+ keywords share the same core phrase, MERGE them (e.g., "burj khalifa" + "burj khalifa observation deck" → merge)
+- Use synonyms sparingly — only when the exact keyword would feel repetitive or spammy
+- No keyword stuffing (max 1 keyword annotation per 20 words)
+- The _keywords_mapping MUST account for ALL ${keywordsTotal} keywords
 
 ORIGINAL CONTENT (Column C):
 ${rawText}
@@ -70,23 +99,22 @@ RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. D
 {
   "h1": "SEO-optimized H1 headline (include primary keyword with annotation)",
   "teaser": "1-2 sentence hook, 15-30 words, include primary keyword with annotation",
-  "what_to_expect": "3-4 sentences, 60-100 words describing activities/experiences/duration, use 2-3 keywords with annotations",
-  "highlights": "3-5 bullet points separated by newlines, 8-15 words each, concrete visual language, use 1-2 keywords with annotations",
+  "what_to_expect": "3-4 sentences, 60-100 words, use 2-3 keywords with annotations",
+  "highlights": "3-5 bullet points separated by newlines, 8-15 words each, use 1-2 keywords",
   "inclusions": "Bulleted list of what's included, copy from original if available",
   "exclusions": "Bulleted list of what's NOT included, copy from original if available",
-  "ticket_info": "Ticket types, pricing tiers if mentioned, booking details, use 1-2 keywords with annotations",
+  "ticket_info": "Ticket types, pricing tiers, booking details, use 1-2 keywords",
   "important_info": "3-5 bullet points: safety, age restrictions, accessibility, visitor tips",
   "cancellation": "2-3 sentences on refund terms, modification windows",
   "by_car": "Directions by car if available from original, or general guidance",
   "by_public_transport": "Public transport options if available",
-  "by_taxi": "Taxi/rideshare guidance if available"
+  "by_taxi": "Taxi/rideshare guidance if available",
+  "_keywords_mapping": "Array of keyword mapping objects as described above"
 }
 
-Rules:
+Additional Rules:
 - Maintain factual accuracy from original content
 - Professional & Informative tone
-- No keyword stuffing (max 1 keyword per 20 words)
-- CRITICAL: Every keyword from the list above MUST appear in the output at least 2 times using the (keyword) [N] annotation format
 - If original content doesn't mention a section, write reasonable content or put "Information not available"
 `
 
@@ -151,17 +179,14 @@ Rules:
       let toParse: string = typeof aiResult === 'string' ? aiResult : JSON.stringify(aiResult)
       // Strip markdown code blocks if present
       toParse = toParse.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-      // Handle {"result": "..."} wrapper — edge function may return content inside a result key,
-      // possibly with unescaped inner quotes that make the outer JSON invalid.
+      // Handle {"result": "..."} wrapper
       if (toParse.startsWith('{"result":') || toParse.startsWith('{ "result":')) {
         try {
-          // Try clean JSON parse of the wrapper first (valid JSON case)
           const wrapper = JSON.parse(toParse)
           if (wrapper?.result) {
             toParse = typeof wrapper.result === 'string' ? wrapper.result : JSON.stringify(wrapper.result)
           }
         } catch {
-          // Outer JSON invalid (unescaped inner quotes) — use brace counting to extract inner SEO JSON.
           const resultKeyEnd = toParse.indexOf('"result"') + 8
           const innerStart = toParse.indexOf('{', resultKeyEnd)
           if (innerStart !== -1) {
@@ -186,23 +211,40 @@ Rules:
       return NextResponse.json({ error: 'AI returned invalid JSON. Raw: ' + raw.slice(0, 200) }, { status: 500 })
     }
 
-    // ── Count keyword usage by looking for (keyword) [N] annotations ──────────
+    // ── Extract keywords_mapping from AI response ─────────────────────────────
+    let keywordsMapping: unknown[] = []
+    if (seoContent._keywords_mapping) {
+      keywordsMapping = Array.isArray(seoContent._keywords_mapping)
+        ? seoContent._keywords_mapping
+        : (typeof seoContent._keywords_mapping === 'string'
+          ? (() => { try { return JSON.parse(seoContent._keywords_mapping as string) } catch { return [] } })()
+          : [])
+      // Remove _keywords_mapping from seo_content so it's stored separately
+      delete seoContent._keywords_mapping
+    }
+
+    // ── Count keyword usage from annotations ──────────────────────────────────
     const allSeoText = Object.values(seoContent)
       .map((v) => String(v || ''))
       .join(' ')
 
-    // Count how many distinct keyword identifiers [N] appear in annotation format
-    let keywordsUsed = 0
-    for (let i = 0; i < keywordsList.length; i++) {
-      const id = i + 1
-      // Match pattern: (anything) [N] where N is the keyword identifier
-      const pattern = new RegExp(`\\([^)]+\\)\\s*\\[${id}\\]`)
-      if (pattern.test(allSeoText)) {
-        keywordsUsed++
-      }
+    // Track which keyword IDs appear in any annotation pattern:
+    // Standard: (text) [N]  |  Merged: (text) [N1, N2]  |  Synonym: (text) [N*]
+    const usedIds = new Set<number>()
+
+    // Match all annotation patterns: (anything) [numbers with optional commas and asterisks]
+    const annotationRegex = /\([^)]+\)\s*\[([^\]]+)\]/g
+    let match: RegExpExecArray | null
+    while ((match = annotationRegex.exec(allSeoText)) !== null) {
+      const idsStr = match[1] // e.g. "1", "1, 2", "3*"
+      // Extract all numeric IDs (strip asterisks, split by comma)
+      const ids = idsStr.split(',').map(s => parseInt(s.replace('*', '').trim(), 10)).filter(n => !isNaN(n))
+      ids.forEach(id => usedIds.add(id))
     }
 
-    // Save to Supabase — includes keyword tracking
+    const keywordsUsed = Math.min(usedIds.size, keywordsTotal)
+
+    // Save to Supabase — includes keyword tracking + mapping
     const { error: updateError } = await plClient
       .from('attractions')
       .update({
@@ -210,6 +252,7 @@ Rules:
         seo_status: 'completed',
         keywords_used: keywordsUsed,
         keywords_total: keywordsTotal,
+        keywords_mapping: keywordsMapping.length > 0 ? keywordsMapping : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', attractionId)
@@ -218,7 +261,7 @@ Rules:
       return NextResponse.json({ error: 'Failed to save SEO content: ' + updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, seoContent, keywordsUsed, keywordsTotal })
+    return NextResponse.json({ success: true, seoContent, keywordsUsed, keywordsTotal, keywordsMapping })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
