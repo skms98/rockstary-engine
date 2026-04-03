@@ -52,7 +52,6 @@ const CONTENT_TYPES = [
 function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
   const isB2C = type === 'b2c'
   const audiences = isB2C ? B2C_AUDIENCES : B2B_AUDIENCES
-  const accentColor = isB2C ? 'pink' : 'blue'
   const tovLabel = isB2C ? 'B2C TOV 2.4' : 'B2B TOV 2.2'
 
   const [rawText, setRawText] = useState('')
@@ -151,7 +150,9 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
         const ids = annotationMatch[2]
         const isSynonym = ids.includes('*')
         const isMerged = ids.includes(',')
-        let bgClass = `bg-${accentColor}-500/20 text-${accentColor}-300 border-${accentColor}-500/40`
+        let bgClass = isB2C
+          ? 'bg-pl-gold/20 text-pl-gold border-pl-gold/40'
+          : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
         if (isSynonym) bgClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40'
         if (isMerged) bgClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
 
@@ -166,11 +167,14 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
     })
   }
 
-  const accentBg = isB2C ? 'bg-pink-500' : 'bg-blue-500'
-  const accentBgLight = isB2C ? 'bg-pink-500/10' : 'bg-blue-500/10'
-  const accentBorder = isB2C ? 'border-pink-500/30' : 'border-blue-500/30'
-  const accentText = isB2C ? 'text-pink-400' : 'text-blue-400'
-  const accentRing = isB2C ? 'focus:ring-pink-500/40' : 'focus:ring-blue-500/40'
+  const accentBg = isB2C ? 'bg-pl-gold' : 'bg-blue-500'
+  const accentBgLight = isB2C ? 'bg-pl-gold/10' : 'bg-blue-500/10'
+  const accentBorder = isB2C ? 'border-pl-gold/30' : 'border-blue-500/30'
+  const accentText = isB2C ? 'text-pl-gold' : 'text-blue-400'
+  const accentRing = isB2C ? 'focus:ring-pl-gold/40' : 'focus:ring-blue-500/40'
+  const accentLegendClass = isB2C
+    ? 'bg-pl-gold/20 text-pl-gold border-pl-gold/40'
+    : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
 
   return (
     <div className="space-y-6">
@@ -297,10 +301,10 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
       <button
         onClick={handleOptimise}
         disabled={loading || !rawText.trim()}
-        className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${
+        className={`w-full py-3 rounded-xl font-semibold transition-all ${
           loading || !rawText.trim()
             ? 'bg-pl-border cursor-not-allowed text-pl-muted'
-            : `${accentBg} hover:opacity-90 active:scale-[0.99]`
+            : `${accentBg} ${isB2C ? 'text-pl-dark' : 'text-white'} hover:opacity-90 active:scale-[0.99]`
         }`}
       >
         {loading ? (
@@ -378,7 +382,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
             <div className="bg-pl-card border border-pl-border rounded-xl p-4">
               <h3 className="text-sm font-semibold text-pl-text mb-3">Keyword Legend</h3>
               <div className="flex gap-4 mb-3 text-[11px]">
-                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border bg-${accentColor}-500/20 text-${accentColor}-300 border-${accentColor}-500/40`}>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border ${accentLegendClass}`}>
                   <span className="w-2 h-2 rounded-full bg-current" /> Standard
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded border bg-emerald-500/20 text-emerald-300 border-emerald-500/40">
@@ -399,7 +403,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
                         km.action === 'synonym' ? 'bg-amber-500/20 text-amber-400' :
                         'bg-pl-border text-pl-muted'
                       }`}>
-                        {km.id}
+                        {’m.id}
                       </span>
                       <span className="text-pl-muted">{km.original}</span>
                       <span className="text-pl-muted/50 mx-1">-</span>
@@ -442,7 +446,7 @@ export default function OptimiserPage() {
             onClick={() => setActiveTab('b2c')}
             className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
               activeTab === 'b2c'
-                ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/25'
+                ? 'bg-pl-gold text-pl-dark shadow-lg shadow-pl-gold/25'
                 : 'text-pl-text-dim hover:text-pl-text'
             }`}
           >
