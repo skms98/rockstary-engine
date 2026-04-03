@@ -31,13 +31,36 @@ export async function POST(request: NextRequest) {
     const title = attraction.title || ''
     const rawText = attraction.raw_text
 
+    // Parse keywords into a numbered list for the prompt
+    const keywordsList = keywords
+      .split('\n')
+      .map((k: string) => k.trim())
+      .filter((k: string) => k.length > 0)
+
+    const keywordsTotal = keywordsList.length
+
+    // Build numbered keyword reference for the prompt: [1] keyword, [2] keyword, etc.
+    const numberedKeywords = keywordsList
+      .map((kw: string, i: number) => `[${i + 1}] ${kw}`)
+      .join('\n')
+
     const systemMessage = 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
 
     const prompt = `Generate SEO-optimized structured content for this attraction listing.
 
 ATTRACTION: ${title}
-KEYWORDS (integrate naturally, 2-4 appearances each):
-${keywords}
+
+KEYWORDS — each has an identifier number. You MUST integrate them into the text using the exact annotation format (keyword) [N]:
+${numberedKeywords}
+
+KEYWORD ANNOTATION FORMAT:
+When using a keyword in the text, write it as: (keyword phrase) [N]
+Examples:
+- "Book your (burj khalifa tickets) [1] online and skip the queue."
+- "The (observation deck) [3] offers stunning views of the city."
+- "Visitors can enjoy a premium (dubai sky experience) [5] at 555 meters."
+
+Each keyword MUST appear at least 2 times across ALL sections combined. Spread them naturally — do NOT cluster all keywords in one section.
 
 ORIGINAL CONTENT (Column C):
 ${rawText}
@@ -45,13 +68,13 @@ ${rawText}
 RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. Do NOT wrap in markdown code blocks.
 
 {
-  "h1": "SEO-optimized H1 headline (include primary keyword)",
-  "teaser": "1-2 sentence hook, 15-30 words, include primary keyword",
-  "what_to_expect": "3-4 sentences, 60-100 words describing activities/experiences/duration",
-  "highlights": "3-5 bullet points separated by newlines, 8-15 words each, concrete visual language",
+  "h1": "SEO-optimized H1 headline (include primary keyword with annotation)",
+  "teaser": "1-2 sentence hook, 15-30 words, include primary keyword with annotation",
+  "what_to_expect": "3-4 sentences, 60-100 words describing activities/experiences/duration, use 2-3 keywords with annotations",
+  "highlights": "3-5 bullet points separated by newlines, 8-15 words each, concrete visual language, use 1-2 keywords with annotations",
   "inclusions": "Bulleted list of what's included, copy from original if available",
   "exclusions": "Bulleted list of what's NOT included, copy from original if available",
-  "ticket_info": "Ticket types, pricing tiers if mentioned, booking details",
+  "ticket_info": "Ticket types, pricing tiers if mentioned, booking details, use 1-2 keywords with annotations",
   "important_info": "3-5 bullet points: safety, age restrictions, accessibility, visitor tips",
   "cancellation": "2-3 sentences on refund terms, modification windows",
   "by_car": "Directions by car if available from original, or general guidance",
@@ -63,9 +86,8 @@ Rules:
 - Maintain factual accuracy from original content
 - Professional & Informative tone
 - No keyword stuffing (max 1 keyword per 20 words)
-- Include section titles as part of the JSON keys above
+- CRITICAL: Every keyword from the list above MUST appear in the output at least 2 times using the (keyword) [N] annotation format
 - If original content doesn't mention a section, write reasonable content or put "Information not available"
-- IMPORTANT: You MUST integrate the provided keywords naturally into the content. Each keyword should appear at least 2 times across the sections.
 `
 
     let aiResult: string
@@ -140,7 +162,6 @@ Rules:
           }
         } catch {
           // Outer JSON invalid (unescaped inner quotes) — use brace counting to extract inner SEO JSON.
-          // Find the { that starts the inner JSON object (after "result": ")
           const resultKeyEnd = toParse.indexOf('"result"') + 8
           const innerStart = toParse.indexOf('{', resultKeyEnd)
           if (innerStart !== -1) {
@@ -165,29 +186,23 @@ Rules:
       return NextResponse.json({ error: 'AI returned invalid JSON. Raw: ' + raw.slice(0, 200) }, { status: 500 })
     }
 
-    // ── Count keyword usage in generated SEO content ──────────────────────────
-    const keywordsList = keywords
-      .split('\n')
-      .map((k: string) => k.trim())
-      .filter((k: string) => k.length > 0)
-
-    const keywordsTotal = keywordsList.length
-
-    // Combine all SEO content values into one string for keyword matching
+    // ── Count keyword usage by looking for (keyword) [N] annotations ──────────
     const allSeoText = Object.values(seoContent)
       .map((v) => String(v || ''))
       .join(' ')
-      .toLowerCase()
 
-    // Count how many distinct keywords appear at least once in the generated content
+    // Count how many distinct keyword identifiers [N] appear in annotation format
     let keywordsUsed = 0
-    for (const kw of keywordsList) {
-      if (allSeoText.includes(kw.toLowerCase())) {
+    for (let i = 0; i < keywordsList.length; i++) {
+      const id = i + 1
+      // Match pattern: (anything) [N] where N is the keyword identifier
+      const pattern = new RegExp(`\\([^)]+\\)\\s*\\[${id}\\]`)
+      if (pattern.test(allSeoText)) {
         keywordsUsed++
       }
     }
 
-    // Save to Supabase — now includes keyword tracking
+    // Save to Supabase — includes keyword tracking
     const { error: updateError } = await plClient
       .from('attractions')
       .update({
