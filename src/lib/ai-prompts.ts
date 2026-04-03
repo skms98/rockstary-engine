@@ -234,6 +234,13 @@ TOV Score: X/10
 Strategic Variation Estimate: ~X%
 Word count: X (original: Y, ratio: Z%)
 
+REWRITE 1 QUALITY GATE (complete before writing Rewrite 2):
+- Banned word scan: [list any found and fixed, or "CLEAR"]
+- Verbatim check: [confirm no 5+ word phrase from original, or list what was fixed]
+- Word count check: [confirm within 80-120% of original, or state "ENHANCING" and add words]
+
+---
+
 REWRITE 2 — STRUCTURAL EMPHASIS VARIANT (different architecture, different paragraph logic, different CTA)
 [Full rewritten description]
 Angle: [label]
@@ -243,6 +250,13 @@ TOV Score: X/10
 Strategic Variation Estimate: ~X%
 Word count: X (original: Y, ratio: Z%)
 
+REWRITE 2 QUALITY GATE (complete before writing Rewrite 3):
+- Banned word scan: [list any found and fixed, or "CLEAR"]
+- Verbatim check: [confirm no 5+ word phrase from original, or list what was fixed]
+- Word count check: [confirm within 80-120% of original, or state "ENHANCING" and add words]
+
+---
+
 REWRITE 3 — AUDIENCE-LED VARIANT (opens from audience framing, experience-first, different CTA function)
 [Full rewritten description]
 Angle: [label]
@@ -251,6 +265,11 @@ Fact Preservation Score: X/10
 TOV Score: X/10
 Strategic Variation Estimate: ~X%
 Word count: X (original: Y, ratio: Z%)
+
+REWRITE 3 QUALITY GATE:
+- Banned word scan: [list any found and fixed, or "CLEAR"]
+- Verbatim check: [confirm no 5+ word phrase from original, or list what was fixed]
+- Word count check: [confirm within 80-120% of original, or state "ENHANCING" and add words]
 
 TEASERS (20 exactly — 13 words each — hard limit):
 Rules for teasers:
