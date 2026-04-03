@@ -503,7 +503,7 @@ export default function OptimiserPage() {
         </div>
 
         {/* Active Panel */}
-        {activeTab === 'b2c' ? <OptimiserPanel type="b2c" /> : <OptimiserPanel type="b2b" />}
+        {activeTab === 'b2c' ? <OptimiserPanel key="b2c" type="b2c" /> : <OptimiserPanel key="b2b" type="b2b" />}
       </div>
     </div>
   )
