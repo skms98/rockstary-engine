@@ -33,27 +33,6 @@ const B2B_AUDIENCES = [
   { value: 'government-tourism', label: 'Government & Tourism', desc: 'Strategic, regionally proud' },
 ]
 
-// ─── B2C Voices (TOV 2.4 Pillars) ────────────────────────────────────────────
-const B2C_VOICES = [
-  { value: 'default', label: 'Default', desc: 'Full B2C TOV 2.4 - balanced across all pillars' },
-  { value: 'energetic-playful', label: 'Energetic & Playful', desc: 'High energy, rhythmic, social' },
-  { value: 'inviting-human', label: 'Inviting & Human', desc: 'Warm, conversational, friendly' },
-  { value: 'reassuring-kind', label: 'Reassuring & Kind', desc: 'Empathetic, calm, supportive' },
-  { value: 'joyful-actionable', label: 'Joyful & Actionable', desc: 'CTA-driven, upbeat, clear' },
-  { value: 'inclusive-local', label: 'Inclusive & Local', desc: 'GCC-aware, diverse, regional' },
-]
-
-// ─── B2B Voices (TOV 2.2 Pillars) ────────────────────────────────────────────
-const B2B_VOICES = [
-  { value: 'default', label: 'Default', desc: 'Full B2B TOV 2.2 - balanced across all pillars' },
-  { value: 'confident-results', label: 'Confident & Results-Oriented', desc: 'Bold, assertive, outcome-first' },
-  { value: 'exciting-energetic', label: 'Exciting & Energetic', desc: 'Dynamic, momentum-building' },
-  { value: 'calming-reassuring', label: 'Calming & Reassuring', desc: 'Ease friction, peace of mind' },
-  { value: 'empowering-warm', label: 'Empowering & Warm', desc: 'Human, local pride, partner-like' },
-  { value: 'professional-friendly', label: 'Professional Yet Friendly', desc: 'Sharp but never robotic' },
-  { value: 'gcc-proud', label: 'GCC-Proud & Fluent', desc: 'Regional, culturally grounded' },
-]
-
 // ─── Content Types ───────────────────────────────────────────────────────────
 const CONTENT_TYPES = [
   'General',
@@ -73,7 +52,6 @@ const CONTENT_TYPES = [
 function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
   const isB2C = type === 'b2c'
   const audiences = isB2C ? B2C_AUDIENCES : B2B_AUDIENCES
-  const voices = isB2C ? B2C_VOICES : B2B_VOICES
   const tovLabel = isB2C ? 'B2C TOV 2.4' : 'B2B TOV 2.2'
 
   const [rawText, setRawText] = useState('')
@@ -81,7 +59,6 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
   const [additionalContext, setAdditionalContext] = useState('')
   const [contentType, setContentType] = useState('General')
   const [selectedAudiences, setSelectedAudiences] = useState<string[]>(['default'])
-  const [selectedVoices, setSelectedVoices] = useState<string[]>(['default'])
   const [constraints, setConstraints] = useState<Record<ConstraintKey, string>>({ minChars: '', maxChars: '', minWords: '', maxWords: '' })
 
   const toggleAudience = (value: string) => {
@@ -92,22 +69,6 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
         const withoutDefault = prev.filter(a => a !== 'default')
         if (withoutDefault.includes(value)) {
           const next = withoutDefault.filter(a => a !== value)
-          return next.length === 0 ? ['default'] : next
-        } else {
-          return [...withoutDefault, value]
-        }
-      })
-    }
-  }
-
-  const toggleVoice = (value: string) => {
-    if (value === 'default') {
-      setSelectedVoices(['default'])
-    } else {
-      setSelectedVoices(prev => {
-        const withoutDefault = prev.filter(v => v !== 'default')
-        if (withoutDefault.includes(value)) {
-          const next = withoutDefault.filter(v => v !== value)
           return next.length === 0 ? ['default'] : next
         } else {
           return [...withoutDefault, value]
@@ -154,7 +115,6 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
           additionalContext: additionalContext.trim() || undefined,
           contentType,
           audiences: selectedAudiences,
-          voices: selectedVoices,
           constraints: Object.keys(constraintPayload).length > 0 ? constraintPayload : undefined,
         }),
       })
@@ -291,7 +251,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
           </div>
         </div>
 
-        {/* Right: Keywords + Voice + Audience + Constraints */}
+        {/* Right: Keywords + Audience + Constraints */}
         <div className="space-y-4">
           {/* Keywords */}
           <div>
@@ -304,49 +264,6 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
               className={`w-full bg-pl-card border border-pl-border rounded-lg px-3 py-2.5 text-sm text-pl-text placeholder-pl-muted/50 focus:outline-none focus:ring-2 ${accentRing} resize-y font-mono`}
             />
             <p className="text-[10px] text-pl-muted mt-1">{keywords.split('\n').filter(k => k.trim()).length} keywords</p>
-          </div>
-
-          {/* Voice */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs text-pl-muted uppercase tracking-wider">Voice</label>
-              {selectedVoices.length > 1 && (
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${accentLegendClass}`}>
-                  {selectedVoices.length} pillars blended
-                </span>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              {voices.map(v => {
-                const isSelected = selectedVoices.includes(v.value)
-                return (
-                  <button
-                    key={v.value}
-                    onClick={() => toggleVoice(v.value)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-sm flex items-center justify-between gap-2 ${
-                      isSelected
-                        ? `${accentBgLight} ${accentBorder} ${accentText}`
-                        : 'border-pl-border text-pl-text-dim hover:border-pl-border/60 hover:bg-pl-card'
-                    }`}
-                  >
-                    <span>
-                      <span className="font-medium">{v.label}</span>
-                      <span className="text-[10px] text-pl-muted ml-2">{v.desc}</span>
-                    </span>
-                    <span className={`w-4 h-4 flex-shrink-0 rounded border transition-all flex items-center justify-center ${
-                      isSelected ? `${accentBg} border-transparent` : 'border-pl-border'
-                    }`}>
-                      {isSelected && (
-                        <svg className={`w-2.5 h-2.5 ${isB2C ? 'text-pl-dark' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-[10px] text-pl-muted mt-1.5">Select multiple to blend voice pillars. Default uses full {tovLabel}.</p>
           </div>
 
           {/* Audience */}
