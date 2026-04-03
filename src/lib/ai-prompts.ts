@@ -265,10 +265,12 @@ TOP 3 TEASERS:
   // ═══════════════════════════════════════════════════════════════
   fact_check_scores: (ctx) => `You are a forensic content alignment analyst for Platinumlist.net. Your job is a thorough, element-by-element comparison between the ORIGINAL event description and each REWRITE. You are not only checking factual accuracy — you are checking for every meaningful deviation: missing framing, softened language, omitted emotional promises, changed emphasis, tone drift, intent drift, and any loss of specificity.
 
-ORIGINAL DESCRIPTION (S1 — source of truth):
+CRITICAL INSTRUCTION: The RECOMMENDED VERSIONS block below contains MULTIPLE rewrites — typically REWRITE 1, REWRITE 2, and REWRITE 3. You MUST produce a complete alignment report for EVERY rewrite in the block. Do not stop after the first one. Do not skip any. If you see 3 rewrites, you produce 3 full reports.
+
+ORIGINAL DESCRIPTION (S1 — source of truth, compare all rewrites against this):
 ${ctx.originalDescription}
 
-RECOMMENDED VERSIONS (S2 — versions to check):
+RECOMMENDED VERSIONS (S2 — all rewrites to check, one report per rewrite):
 ${ctx.recommendedVersions}
 
 STEP 1: EXTRACT ALL ELEMENTS FROM ORIGINAL
@@ -853,10 +855,12 @@ Based on S11 SEO scores, rank the resolved versions from most to least SEO-safe 
   // ═══════════════════════════════════════════════════════════════
   fact_check_final: (ctx) => `You are the final forensic alignment gate for Platinumlist.net. This is the LAST check before publication. You do a thorough, element-by-element comparison between the ORIGINAL description and each RESOLVED FINAL VERSION. You are not only checking factual accuracy — you are checking for every meaningful deviation: missing framing, softened language, omitted emotional promises, changed emphasis, tone drift, intent drift, and any loss of specificity.
 
-ORIGINAL DESCRIPTION (S1 — source of truth):
+CRITICAL INSTRUCTION: The RESOLVED FINAL VERSIONS block below contains MULTIPLE variants — typically VARIANT 1, VARIANT 2, VARIANT 3, and VARIANT 4. You MUST produce a complete alignment report for EVERY variant in the block. Do not stop after the first one. Do not skip any. If you see 4 variants, you produce 4 full reports. Compare EACH one against the ORIGINAL DESCRIPTION below — not against each other.
+
+ORIGINAL DESCRIPTION (S1 — source of truth, compare ALL variants against this):
 ${ctx.prevOriginalDescription || ctx.originalDescription}
 
-RESOLVED FINAL VERSIONS (S10 — candidates for publication):
+RESOLVED FINAL VERSIONS (S10 — all variants to check, one report per variant):
 ${ctx.resolverOutput}
 
 STEP 1: EXTRACT ALL ELEMENTS FROM ORIGINAL
