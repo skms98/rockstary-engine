@@ -4,48 +4,59 @@ import { useState } from 'react'
 
 const B2B_SYSTEM_PROMPT = `You are a senior brand copywriter and strategist for Platinumlist — the region's leading event technology platform, trusted by organizers, governments, and venue operators across the GCC.
 
-OBJECTIVE: Rewrite or create content that applies the Platinumlist B2B TOV 2.2 across all formats: homepage copy, sales decks, emails, UX, campaigns, and support.
+PLATINUMLIST B2B TOV 2.2 — FULL GUIDE
 
-TONE OF VOICE PILLARS TO APPLY:
-1. Confident & Results-Oriented — outcome-first, no fluff. "Plan fast. Sell smarter. Grow big."
-2. Exciting & Energetic — fast-paced, ambitious, action-driven. "Your next sold-out show starts here."
-3. Calming & Reassuring — reduce stress, offer control. "We handle the complexity. You enjoy the success."
-4. Empowering, Human & Warm — speak with empathy and clarity. "Built for people who build experiences."
-5. Tech-Forward & AI-Smart — modern, intelligent, progressive. "AI-powered. Human-approved."
-6. Locally Rooted, Globally Credible — GCC-native, world-class. "Born in the Gulf. Trusted everywhere."
+CORE IDENTITY:
+You write like a sharp, confident partner who understands the business of live events. Your voice is bold, results-oriented, warm, and regionally rooted — never generic or cold. Platinumlist is the infrastructure behind the GCC's live entertainment ecosystem. Make clients feel like they've found a strategic partner, not just a vendor.
 
-WRITING RULES:
+TOV PILLARS — APPLY ALL IN EVERY PIECE:
+1. Confident & Results-Oriented — Lead with clarity and purpose. Be assertive, not arrogant. "Plan fast. Sell smarter. Grow big." / "We don't just sell tickets — we sell out shows."
+2. Exciting & Energetic — Bring momentum and drive, make clients feel the opportunity. "Your next sold-out show starts here." / "The region's hottest events are powered by us."
+3. Calming & Reassuring — Offer peace of mind, ease friction and decision anxiety. "You focus on the magic — we'll handle the rest." / "We've got your back — from sign-up to scale-up."
+4. Empowering, Human & Warm — Relatable and grounded. Speak like someone who's been in the crowd. "We're with you — from planning to sold out." / "Your vision. Our engine."
+5. Bold Yet Professional — Sharp and modern, never robotic or cold. "No fluff. No jargon. Just results that speak for themselves."
+6. AI-Driven & Helpful — Showcase AI as a supportive, user-friendly strength. "Smart tools, real-time insights, and the data to back every decision."
+7. GCC-Proud & Regionally Fluent — Embed local pride and cultural understanding. "Born in Dubai. Built for the Gulf. Ready for the world." / "We're in it with you — from Riyadh to Jeddah."
+
+HOW TO WRITE:
+Step 1 — Understand the Business Moment: Growth, confidence, partnership, innovation, or trust?
+Step 2 — Lead with Value: Benefits before features. What does the client gain?
+Step 3 — Confident, Direct Phrasing: Trusted advisor energy. Bold but not arrogant. Active voice, strong verbs, short punchy lines.
+Step 4 — Back Claims with Substance: Use data and scale. "15+ years", "10,000+ events", "6 GCC markets".
+Step 5 — Close with Partnership Energy: Forward-looking CTA. Collaborative, not salesy.
+
+WRITING RULES — DO:
 - Lead with benefits, not features
-- Use strong verbs: Launch, Scale, Automate, Unlock, Drive
+- Use strong verbs: Launch, Scale, Automate, Unlock, Drive, Sell, Grow
 - Keep sentences punchy (under 20 words where possible)
 - Write in active voice
 - Use "you/your" to speak directly to the reader
-- Avoid jargon unless industry-specific and helpful
-- Never use "we are the best" or similar arrogant claims
+- Reflect regional context where relevant (GCC, Dubai, Gulf, KSA)
 - Show don't tell — use specifics and numbers where possible
-- Every paragraph should have a clear purpose
 - End sections with forward momentum
 
-CONTENT MENU — Choose a format or request your own:
-1. Homepage Hero
-2. Product Feature Description
-3. AI Tool Overview
-4. B2B Sales Deck Slide
-5. Landing Page Section
-6. Email (outreach / follow-up / support)
-7. Case Study Summary
-8. Social Media Post (LinkedIn)
-9. UX Microcopy
-10. Custom (describe your need)
+WRITING RULES — DON'T:
+- Sound generic ("We offer best-in-class solutions")
+- Use empty buzzwords ("synergy", "leverage", "paradigm", "cutting-edge")
+- Be passive or tentative ("We might be able to help")
+- Oversell without backing ("The world's greatest platform")
+- Use consumer-facing casual tone (this is B2B, not B2C)
+- Use em dashes — use regular dashes instead
+- Sound cold or corporate ("Please find attached our proposal")
+
+CHECKLIST — before finalising copy:
+- Does it lead with a business result?
+- Is the voice confident but not arrogant?
+- Are all verbs active?
+- Is the tone human and friendly?
+- Is it free from buzzwords and vague claims?
+- Does it reflect local understanding or nuance?
+- Would a decision-maker trust and relate to it?
 
 PROCESS:
-1. Ask what format is needed (or accept user's choice)
-2. Ask for raw input / context
-3. Apply TOV 2.2 pillars
-4. Deliver polished copy
-5. Offer variations if needed
-
-Always present OLD version (user input) and NEW version (TOV-applied) side by side for comparison.`
+1. Apply B2B TOV 2.2 pillars to the content
+2. Deliver polished copy
+3. Show OLD (original) vs NEW (TOV-applied) comparison`
 
 const CONTENT_TYPES = [
   'Homepage Hero',
@@ -60,19 +71,86 @@ const CONTENT_TYPES = [
   'Custom',
 ]
 
+const AUDIENCES = [
+  { value: 'default', label: 'Default', desc: 'Full B2B audience — all segments' },
+  { value: 'organisers-promoters', label: 'Organisers & Promoters', desc: 'Results-driven, empowering' },
+  { value: 'corporate-enterprise', label: 'Corporate & Enterprise', desc: 'Professional, data-backed' },
+  { value: 'venues-destinations', label: 'Venues & Destinations', desc: 'Experiential, footfall-driven' },
+  { value: 'government-tourism', label: 'Government & Tourism', desc: 'Strategic, regionally proud' },
+]
+
+const AUDIENCE_MODIFIERS: Record<string, string> = {
+  default: 'Write for the full Platinumlist B2B audience: event organisers, venue managers, promoters, corporate clients, tourism boards, and entertainment executives across the GCC.',
+  'organisers-promoters': 'Skew toward Event Organisers & Promoters: results-driven, empowering, partnership-focused. Words like scale, reach, sell-out, partnership, audience, momentum. Sample: "Your next sell-out starts here."',
+  'corporate-enterprise': 'Skew toward Corporate & Enterprise Clients: professional, data-backed, reliable. Words like ROI, insights, seamless, enterprise-grade, scalable. Sample: "Ticketing infrastructure that scales with your ambition."',
+  'venues-destinations': 'Skew toward Venues & Destinations: experiential, footfall-driven, partnership-oriented. Words like footfall, activation, destination, experience, attract. Sample: "Turn your venue into the destination everyone talks about."',
+  'government-tourism': 'Skew toward Government & Tourism Boards: strategic, regionally proud, vision-aligned. Words like vision, strategy, cultural impact, tourism growth, national agenda. Sample: "Powering the events ecosystem behind the region\'s boldest visions."',
+}
+
+type ConstraintKey = 'minChars' | 'maxChars' | 'minWords' | 'maxWords'
+
 export default function B2BTOVPage() {
   const [contentType, setContentType] = useState('Homepage Hero')
   const [input, setInput] = useState('')
+  const [additionalReference, setAdditionalReference] = useState('')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [selectedAudiences, setSelectedAudiences] = useState<string[]>(['default'])
+  const [constraints, setConstraints] = useState<Record<ConstraintKey, string>>({ minChars: '', maxChars: '', minWords: '', maxWords: '' })
+
+  const toggleAudience = (value: string) => {
+    if (value === 'default') {
+      setSelectedAudiences(['default'])
+    } else {
+      setSelectedAudiences(prev => {
+        const withoutDefault = prev.filter(a => a !== 'default')
+        if (withoutDefault.includes(value)) {
+          const next = withoutDefault.filter(a => a !== value)
+          return next.length === 0 ? ['default'] : next
+        } else {
+          return [...withoutDefault, value]
+        }
+      })
+    }
+  }
 
   const handleRun = async () => {
     setLoading(true)
     setOutput('')
     setCopied(false)
     try {
-      const userMessage = `Content type: ${contentType}\n\nOriginal text / context:\n${input}\n\nPlease apply B2B TOV 2.2 and provide the rewritten version. Show OLD vs NEW comparison.`
+      // Build audience instruction
+      const nonDefault = selectedAudiences.filter(a => a !== 'default')
+      let audienceInstruction: string
+      if (nonDefault.length === 0) {
+        audienceInstruction = AUDIENCE_MODIFIERS.default
+      } else if (nonDefault.length === 1) {
+        audienceInstruction = AUDIENCE_MODIFIERS[nonDefault[0]]
+      } else {
+        audienceInstruction = `Blend these audience tones into one cohesive voice:\n${nonDefault.map((a, i) => `${i + 1}. ${AUDIENCE_MODIFIERS[a]}`).join('\n')}`
+      }
+
+      // Build constraints block
+      const constraintLines: string[] = []
+      if (constraints.minChars) constraintLines.push(`Minimum ${constraints.minChars} characters`)
+      if (constraints.maxChars) constraintLines.push(`Maximum ${constraints.maxChars} characters`)
+      if (constraints.minWords) constraintLines.push(`Minimum ${constraints.minWords} words`)
+      if (constraints.maxWords) constraintLines.push(`Maximum ${constraints.maxWords} words`)
+      const constraintBlock = constraintLines.length > 0
+        ? `\n\nTEXT CONSTRAINTS (MUST respect):\n${constraintLines.map(l => `- ${l}`).join('\n')}`
+        : ''
+
+      const userMessage = `Content type: ${contentType}
+
+TARGET AUDIENCE: ${audienceInstruction}
+${constraintBlock}
+${additionalReference.trim() ? `\nADDITIONAL REFERENCE / CONTEXT:\n${additionalReference}` : ''}
+
+Original text:\n${input}
+
+Please apply B2B TOV 2.2 and provide the rewritten version. Show OLD vs NEW comparison.`
+
       const res = await fetch('/api/mini-tools/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +187,7 @@ export default function B2BTOVPage() {
       </div>
 
       {/* Content Type Selector */}
-      <div className="mb-6">
+      <div className="mb-5">
         <label className="text-pl-muted text-xs uppercase tracking-wider mb-2 block">Content Format</label>
         <div className="flex flex-wrap gap-2">
           {CONTENT_TYPES.map(ct => (
@@ -128,18 +206,98 @@ export default function B2BTOVPage() {
         </div>
       </div>
 
+      {/* Settings Row: Audience + Constraints */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+        {/* Audience */}
+        <div className="bg-pl-card border border-pl-border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-xs text-pl-muted uppercase tracking-wider">Target Audience</label>
+            {selectedAudiences.length > 1 && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full border bg-blue-500/15 text-blue-400 border-blue-500/30">
+                {selectedAudiences.length} blended
+              </span>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {AUDIENCES.map(a => {
+              const isSelected = selectedAudiences.includes(a.value)
+              return (
+                <button
+                  key={a.value}
+                  onClick={() => toggleAudience(a.value)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-sm flex items-center justify-between gap-2 ${
+                    isSelected
+                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                      : 'border-pl-border text-pl-text-dim hover:border-pl-border/60 hover:bg-pl-dark'
+                  }`}
+                >
+                  <span>
+                    <span className="font-medium">{a.label}</span>
+                    <span className="text-[10px] text-pl-muted ml-2">{a.desc}</span>
+                  </span>
+                  <span className={`w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-all ${
+                    isSelected ? 'bg-blue-500 border-transparent' : 'border-pl-border'
+                  }`}>
+                    {isSelected && (
+                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-pl-muted mt-2">Select multiple to blend. Default uses the full B2B voice.</p>
+        </div>
+
+        {/* Constraints */}
+        <div className="bg-pl-card border border-pl-border rounded-xl p-4">
+          <label className="text-xs text-pl-muted uppercase tracking-wider mb-3 block">Text Constraints</label>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: 'minChars' as ConstraintKey, label: 'Min Chars' },
+              { key: 'maxChars' as ConstraintKey, label: 'Max Chars' },
+              { key: 'minWords' as ConstraintKey, label: 'Min Words' },
+              { key: 'maxWords' as ConstraintKey, label: 'Max Words' },
+            ]).map(c => (
+              <div key={c.key}>
+                <label className="text-[10px] text-pl-muted mb-1 block">{c.label}</label>
+                <input
+                  type="number"
+                  value={constraints[c.key]}
+                  onChange={e => setConstraints(prev => ({ ...prev, [c.key]: e.target.value }))}
+                  placeholder="-"
+                  className="w-full bg-pl-dark border border-pl-border rounded-lg px-3 py-2 text-sm text-pl-text placeholder-pl-muted/50 focus:outline-none focus:border-blue-500/40"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-pl-muted mt-3">Leave blank for no constraint.</p>
+        </div>
+      </div>
+
       {/* Main Area */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input */}
         <div className="bg-pl-card border border-pl-border rounded-xl p-5">
           <h2 className="text-white font-semibold mb-3 text-sm uppercase tracking-wider">
-            Original Text / Context
+            Original Text
           </h2>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             placeholder="Paste your original copy, brief, or raw content here..."
-            className="w-full h-80 bg-pl-dark border border-pl-border rounded-lg p-3 text-pl-text text-sm resize-none focus:outline-none focus:border-blue-500/50 transition-colors"
+            className="w-full h-48 bg-pl-dark border border-pl-border rounded-lg p-3 text-pl-text text-sm resize-none focus:outline-none focus:border-blue-500/50 transition-colors"
+          />
+          <h2 className="text-white font-semibold mt-4 mb-2 text-sm uppercase tracking-wider">
+            Additional Reference
+          </h2>
+          <textarea
+            value={additionalReference}
+            onChange={e => setAdditionalReference(e.target.value)}
+            placeholder="Extra context, brand notes, links, or specific instructions for the AI..."
+            className="w-full h-24 bg-pl-dark border border-pl-border rounded-lg p-3 text-pl-text text-sm resize-none focus:outline-none focus:border-blue-500/50 transition-colors"
           />
           <button
             onClick={handleRun}
@@ -176,13 +334,13 @@ export default function B2BTOVPage() {
               </button>
             )}
           </div>
-          <div className="w-full h-[calc(100%-2rem)] min-h-[320px] bg-pl-dark border border-pl-border rounded-lg p-4 overflow-auto">
+          <div className="w-full min-h-[420px] bg-pl-dark border border-pl-border rounded-lg p-4 overflow-auto">
             {output ? (
               <div className="text-pl-text text-sm whitespace-pre-wrap leading-relaxed">
                 {output}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-pl-muted text-sm">
+              <div className="flex items-center justify-center h-full min-h-[400px] text-pl-muted text-sm">
                 {loading ? 'Applying Platinumlist B2B voice...' : 'TOV-applied copy will appear here.'}
               </div>
             )}
