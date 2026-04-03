@@ -65,6 +65,7 @@ Rules:
 - No keyword stuffing (max 1 keyword per 20 words)
 - Include section titles as part of the JSON keys above
 - If original content doesn't mention a section, write reasonable content or put "Information not available"
+- IMPORTANT: You MUST integrate the provided keywords naturally into the content. Each keyword should appear at least 2 times across the sections.
 `
 
     let aiResult: string
@@ -164,12 +165,36 @@ Rules:
       return NextResponse.json({ error: 'AI returned invalid JSON. Raw: ' + raw.slice(0, 200) }, { status: 500 })
     }
 
-    // Save to Supabase
+    // ── Count keyword usage in generated SEO content ──────────────────────────
+    const keywordsList = keywords
+      .split('\n')
+      .map((k: string) => k.trim())
+      .filter((k: string) => k.length > 0)
+
+    const keywordsTotal = keywordsList.length
+
+    // Combine all SEO content values into one string for keyword matching
+    const allSeoText = Object.values(seoContent)
+      .map((v) => String(v || ''))
+      .join(' ')
+      .toLowerCase()
+
+    // Count how many distinct keywords appear at least once in the generated content
+    let keywordsUsed = 0
+    for (const kw of keywordsList) {
+      if (allSeoText.includes(kw.toLowerCase())) {
+        keywordsUsed++
+      }
+    }
+
+    // Save to Supabase — now includes keyword tracking
     const { error: updateError } = await plClient
       .from('attractions')
       .update({
         seo_content: seoContent,
         seo_status: 'completed',
+        keywords_used: keywordsUsed,
+        keywords_total: keywordsTotal,
         updated_at: new Date().toISOString(),
       })
       .eq('id', attractionId)
@@ -178,7 +203,7 @@ Rules:
       return NextResponse.json({ error: 'Failed to save SEO content: ' + updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, seoContent })
+    return NextResponse.json({ success: true, seoContent, keywordsUsed, keywordsTotal })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
