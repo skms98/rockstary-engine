@@ -182,6 +182,7 @@ STRUCTURAL REWRITE RULES:
 
 LENGTH PRESERVATION (NON-NEGOTIABLE HARD RULE):
 - Count the words in the ORIGINAL DESCRIPTION before writing a single word
+- COUNT EVERY WORD IN THE FULL TEXT — including all paragraphs, legal disclaimers, credit lines, and any appended notes. Do NOT count only the opening paragraph. The baseline is the TOTAL word count of everything in the original description field.
 - Each rewrite MUST be within 80-120% of that word count — no more than 20% shorter, ever
 - The rewriter IMPROVES and ENHANCES quality — it NEVER condenses or summarises
 - If original is 200 words, each rewrite must be 160-240 words
@@ -785,8 +786,22 @@ HARD RULES (APPLY TO ALL 4 VARIANTS):
 - Every variant MUST be within 80-120% of original word count — no more than 20% shorter, ever
 - If shorter than 80% of original = FAILURE. Do not output as-is — ENHANCE. Add sensory detail, venue atmosphere, production elements, audience experience, emotional specificity until length reaches 80% minimum. Enhance, do not truncate.
 
-BANNED WORDS — final check before outputting (if any appear, rewrite):
-unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+BANNED WORD ZERO-TOLERANCE SCAN (MANDATORY BEFORE OUTPUTTING ANY VARIANT):
+Read every sentence of every variant. Search for each word/phrase below — including partial matches (e.g. "unforgettable" inside "unforgettable adventure" or "unforgettable experience").
+If ANY banned word/phrase is found, you MUST rewrite that sentence BEFORE outputting.
+DO NOT output any variant containing a banned word. That is a pipeline failure.
+
+Banned list: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+
+Approved replacements to use instead:
+- "unforgettable" → "one worth your evening" / "a night worth circling" / "genuinely special" / "well worth it"
+- "incredible" → "exceptional" / "striking" / "impressive" / "remarkable"
+- "amazing" → "exceptional" / "impressive" / "brilliant"
+- "spectacular" → "striking" / "sweeping" / "impressive"
+- "immerse yourself" → "step into" / "spend time in" / "explore"
+- "once-in-a-lifetime" → "rare" / "a distinctive evening" / "not something that comes around often"
+
+After scanning, state: "Banned word scan: CLEAR" or list what was found and fixed.
 
 TEASERS — CURATE AND ENHANCE FROM S2:
 Review all teasers generated in S2 (Recommended Versions step).
@@ -955,7 +970,14 @@ RANKING CRITERIA (in order of weight):
 4. TOV Compliance 15%: Highest B2C TOV 2.4 score (from S10 self-scores)
 5. Grammar & Readability 10%: Cleanest, most polished copy
 
-DISCARD RULES (apply before ranking):
+DISCARD RULES (apply before ranking — check in this exact order):
+
+STEP 1 — BANNED WORD SCAN (apply first, before anything else):
+Search every candidate version for these banned words/phrases: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, memorable moments, an evening to remember, immerse yourself, promises to be, we are pleased to announce, we are delighted, we are thrilled.
+- 1 banned word found: FLAG as "BANNED WORD — micro-edit required". Apply micro-edit (single word swap). Use: "unforgettable" → "well worth it" / "genuinely special"; "incredible" → "exceptional"; "amazing" → "impressive"; "immerse yourself" → "step into". Then continue to ranking.
+- 2+ banned words found: DISCARD entirely (too many violations to micro-edit safely). Cannot be ranked.
+
+STEP 2 — SCORE DISCARD:
 - Any version with S12 Fact Check < 70: DISCARD (too risky)
 - Any version with Organiser Safety Risk 8+/10: DISCARD (will cause pushback)
 - Any version with S11 Duplicate Risk > 60: DISCARD (SEO penalty risk)
@@ -977,10 +999,12 @@ For EACH version:
 3. WINNER SUMMARY:
 - Which version won and why (specific reasons referencing scores)
 - Final composite score
-- Micro-edits needed: [specific single-word fixes only, or "None"]
+- Banned word scan result: [MANDATORY — state "CLEAR" or list every banned word found and its replacement]
+- Micro-edits applied: [list any single-word fixes made, or "None"]
 
 4. PUBLICATION-READY VERSION:
-Copy the #1 ranked version VERBATIM from S10. Apply ONLY micro-edits noted above (single word swaps, typo fixes). Do NOT restructure, rewrite, or condense. Full description body, every sentence.
+Copy the #1 ranked version VERBATIM from S10. Apply ONLY micro-edits noted above (single word swaps, typo fixes, banned word replacements). Do NOT restructure, rewrite, or condense. Full description body, every sentence.
+FINAL CHECK: Before outputting this section, re-read every sentence and confirm no banned words remain.
 
 5. RUNNER-UP:
 Copy the #2 ranked version VERBATIM from S10. Full text, every sentence. Do NOT rewrite or summarise.
