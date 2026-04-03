@@ -193,7 +193,8 @@ SELF-CHECK: After writing each rewrite, go sentence by sentence and confirm no 5
 
 LENGTH PRESERVATION (NON-NEGOTIABLE HARD RULE):
 - Count the words in the ORIGINAL DESCRIPTION before writing a single word
-- COUNT EVERY WORD IN THE FULL TEXT — including all paragraphs, legal disclaimers, credit lines, and any appended notes. Do NOT count only the opening paragraph. The baseline is the TOTAL word count of everything in the original description field.
+- COUNT EVERY WORD IN THE FULL TEXT — including all paragraphs, legal disclaimers, credit lines, and any appended notes. Do NOT count only the opening paragraph or only the first sentence. The baseline is the TOTAL word count of everything in the original description field.
+- HOW TO COUNT: Split the full original text by spaces and count every token. Include all punctuation-attached words. A 3-paragraph description is likely 80-200 words — if you are counting below 70, you are undercounting and must recount.
 - Each rewrite MUST be within 80-120% of that word count — no more than 20% shorter, ever
 - The rewriter IMPROVES and ENHANCES quality — it NEVER condenses or summarises
 - If original is 200 words, each rewrite must be 160-240 words
@@ -762,8 +763,8 @@ Highest Platinumlist B2C TOV 2.4 compliance. Warmest, most human, most on-brand.
 Criteria: Highest TOV total — emotional hook, warmth, energy, audience connection.
 
 VARIANT 3 — SAFEST VERSION:
-Lowest organiser trigger risk. Closest to original structure while still being a genuine rewrite.
-Criteria: All prestige descriptors preserved verbatim. Minimal structural departure.
+Lowest organiser trigger risk. Preserves all facts, prestige descriptors, and emotional promises from the original — but written in entirely new sentences. This is NOT a light edit of the original. It must be a genuine rewrite that covers the same ground in different words.
+Criteria: All factual content and prestige descriptors preserved, but every sentence must be constructed from scratch. No phrase of 5+ consecutive words from the original may appear verbatim (same rule as all variants). SEO Uniqueness score MUST be above 40 — if your draft scores below 40, rewrite it further.
 
 VARIANT 4 — MOST UNIQUE VERSION:
 Highest uniqueness / lowest duplication score. Most creative restructuring while maintaining factual accuracy.
@@ -795,6 +796,7 @@ HARD RULES (APPLY TO ALL 4 VARIANTS):
 - Lead with experience, not logistics
 - Write like a knowledgeable friend, not a brochure
 - Every variant MUST be within 80-120% of original word count — no more than 20% shorter, ever
+- COUNT THE FULL ORIGINAL: Split S1 text by spaces across ALL paragraphs. A 2–3 paragraph description is typically 70–200 words. If you count below 70 words, you are only reading one paragraph — recount the complete text.
 - If shorter than 80% of original = FAILURE. Do not output as-is — ENHANCE. Add sensory detail, venue atmosphere, production elements, audience experience, emotional specificity until length reaches 80% minimum. Enhance, do not truncate.
 
 ORIGINALITY RULE (ANTI-PLAGIARISM — APPLIES TO ALL 4 VARIANTS):
@@ -995,11 +997,13 @@ Search every candidate version for these banned words/phrases: unforgettable, in
 - 1 banned word found: FLAG as "BANNED WORD — micro-edit required". Apply micro-edit (single word swap). Use: "unforgettable" → "well worth it" / "genuinely special"; "incredible" → "exceptional"; "amazing" → "impressive"; "immerse yourself" → "step into". Then continue to ranking.
 - 2+ banned words found: DISCARD entirely (too many violations to micro-edit safely). Cannot be ranked.
 
-STEP 2 — SCORE DISCARD:
-- Any version with S12 Fact Check < 70: DISCARD (too risky)
-- Any version with Organiser Safety Risk 8+/10: DISCARD (will cause pushback)
-- Any version with S11 Duplicate Risk > 60: DISCARD (SEO penalty risk)
+STEP 2 — SCORE DISCARD (these are HARD rules — no exceptions, no overrides):
+- Any version with S12 Fact Check score below 7.0/10: DISCARD (too risky to publish)
+- Any version with Organiser Safety self-score 8+/10 in S10: DISCARD (will cause pushback)
+- Any version with S11 SEO Duplicate Risk score above 60: DISCARD (SEO penalty risk — this means too similar to original or existing content). A score of 65 = DISCARD. A score of 61 = DISCARD. The threshold is strictly > 60.
 - Any version shorter than 80% of original word count: FLAG as "TOO SHORT — enhance before publication"
+
+IMPORTANT: If a version wins on fact check score ONLY because it is nearly identical to the original, that is NOT a quality win — it is a plagiarism failure. A version that reproduces the original text nearly verbatim will naturally score high on fact check but will also score high on SEO duplication (>60), which triggers the SEO discard rule. Apply the SEO rule first.
 
 OUTPUT FORMAT:
 
