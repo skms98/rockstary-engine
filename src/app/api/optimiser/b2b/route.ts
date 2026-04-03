@@ -4,7 +4,7 @@ import { createPLClient } from '@/lib/pl-supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { rawText, keywords, additionalContext, constraints, audience, audiences, voices, contentType } = await request.json()
+    const { rawText, keywords, additionalContext, constraints, audience, audiences, contentType } = await request.json()
 
     if (!rawText || rawText.trim() === '') {
       return NextResponse.json({ error: 'Raw text is required' }, { status: 400 })
@@ -41,41 +41,20 @@ export async function POST(request: NextRequest) {
       'government-tourism': 'Skew the tone toward Government & Tourism Boards: strategic, regionally proud, vision-aligned. Use words like vision, strategy, cultural impact, tourism growth, national agenda, ecosystem. Sample: "Powering the events ecosystem behind the region\'s boldest visions."',
     }
 
-    // Voice pillar modifiers for B2B TOV 2.2
-    const voiceModifiers: Record<string, string> = {
-      'confident-results': 'Lean into the CONFIDENT & RESULTS-ORIENTED pillar: lead with clarity and purpose, use assertive verbs, show business impact. No hedging. Sample phrases: "Plan fast. Sell smarter. Grow big." / "Here\'s how you can increase ROI with our platform." / "Sell more. Stress less. Scale your way."',
-      'exciting-energetic': 'Lean into the EXCITING & ENERGETIC pillar: bring momentum and drive. Make clients feel the opportunity. Sample phrases: "Your next sold-out show starts here." / "Let\'s make your next event unforgettable - here\'s how." / "The region\'s hottest events are powered by us."',
-      'calming-reassuring': 'Lean into the CALMING & REASSURING pillar: offer peace of mind, reduce decision anxiety, ease friction. Sample phrases: "You focus on the magic - we\'ll handle the rest." / "We\'ve got your back - from sign-up to scale-up." / "Your pace, your platform. Let\'s make it happen."',
-      'empowering-warm': 'Lean into the EMPOWERING & WARM pillar: speak like someone who has been in the crowd, not behind a screen. Human, local, grounded. Sample phrases: "We\'re with you - from planning to sold out." / "We\'re rooted in your market - we know what works and what doesn\'t." / "You\'ve got a big job. We\'re here to make it easier."',
-      'professional-friendly': 'Lean into the PROFESSIONAL YET FRIENDLY pillar: sharp and modern, but never cold or robotic. Balance authority with approachability. Sample phrases: "Smart tools. Seamless access. Real results." / "Real tools. Real support. Real growth." / "No fluff. No jargon. Just results that speak for themselves."',
-      'gcc-proud': 'Lean into the GCC-PROUD & REGIONALLY FLUENT pillar: embed local pride and cultural understanding. Show you know this market from the inside. Sample phrases: "Rooted in the Gulf. Built for the world." / "Born in Dubai. Built for the Gulf. Ready for the world." / "We\'re in it with you - from Riyadh to Jeddah."',
-    }
-
     // Support both legacy `audience` string and new `audiences` array
     const selectedAudiences: string[] = Array.isArray(audiences)
       ? audiences
       : [audience || 'default']
 
     let audienceInstruction: string
-    const nonDefaultAudiences = selectedAudiences.filter(a => a !== 'default')
-    if (nonDefaultAudiences.length === 0) {
+    const nonDefault = selectedAudiences.filter(a => a !== 'default')
+    if (nonDefault.length === 0) {
       audienceInstruction = audienceModifiers.default
-    } else if (nonDefaultAudiences.length === 1) {
-      audienceInstruction = audienceModifiers[nonDefaultAudiences[0]] || audienceModifiers.default
+    } else if (nonDefault.length === 1) {
+      audienceInstruction = audienceModifiers[nonDefault[0]] || audienceModifiers.default
     } else {
-      const blended = nonDefaultAudiences.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
+      const blended = nonDefault.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
       audienceInstruction = `Blend the following audience tones into one cohesive voice - do not write separate sections, just naturally weave these qualities together:\n\n${blended}`
-    }
-
-    // Build voice pillar instruction
-    const selectedVoices: string[] = Array.isArray(voices) ? voices : ['default']
-    const nonDefaultVoices = selectedVoices.filter(v => v !== 'default')
-    let voiceEmphasis = ''
-    if (nonDefaultVoices.length === 1) {
-      voiceEmphasis = `\n\nVOICE EMPHASIS:\n${voiceModifiers[nonDefaultVoices[0]] || ''}`
-    } else if (nonDefaultVoices.length > 1) {
-      const blendedVoices = nonDefaultVoices.map((v, i) => `${i + 1}. ${voiceModifiers[v] || ''}`).filter(Boolean).join('\n\n')
-      voiceEmphasis = `\n\nVOICE EMPHASIS - Blend these pillars naturally throughout the copy:\n${blendedVoices}`
     }
 
     const systemMessage = `You are a professional content optimiser for Platinumlist.net, the GCC's leading ticketing and entertainment technology platform serving event organisers, venues, and entertainment businesses.
@@ -83,14 +62,14 @@ export async function POST(request: NextRequest) {
 TONE OF VOICE (Platinumlist B2B TOV 2.2):
 You write like a sharp, confident partner who understands the business of live events. Your voice is bold, results-oriented, warm, and regionally rooted - never generic or cold.
 
-Vibe pillars:
-- Confident & Results-Oriented: "We don't just sell tickets - we sell out shows."
-- Exciting & Energetic: "The region's hottest events? They're powered by us."
-- Calming & Reassuring: "We handle the complexity. You enjoy the applause."
-- Empowering, Human & Warm: "Your vision. Our engine. Let's build something extraordinary."
-- Bold Yet Professional: "No fluff. No jargon. Just results that speak for themselves."
-- AI-Driven & Helpful: "Smart tools, real-time insights, and the data to back every decision."
-- GCC-Proud & Regionally Fluent: "Born in Dubai. Built for the Gulf. Ready for the world."
+TOV PILLARS - apply ALL of these in every piece:
+- Confident & Results-Oriented: Lead with clarity and purpose, assertive verbs, show impact. "Plan fast. Sell smarter. Grow big." / "We don't just sell tickets - we sell out shows."
+- Exciting & Energetic: Bring momentum and drive, make clients feel the opportunity. "Your next sold-out show starts here." / "The region's hottest events are powered by us."
+- Calming & Reassuring: Offer peace of mind, ease friction. "You focus on the magic - we'll handle the rest." / "We've got your back - from sign-up to scale-up."
+- Empowering, Human & Warm: Relatable and grounded, speak like someone who's been in the crowd. "We're with you - from planning to sold out." / "Your vision. Our engine."
+- Bold Yet Professional: Sharp and modern, never robotic or cold. "No fluff. No jargon. Just results that speak for themselves."
+- AI-Driven & Helpful: Showcase AI as a supportive, user-friendly strength. "Smart tools, real-time insights, and the data to back every decision."
+- GCC-Proud & Regionally Fluent: Embed local pride and cultural understanding. "Born in Dubai. Built for the Gulf. Ready for the world."
 
 HOW TO WRITE:
 Step 1 - Understand the Business Moment: What is the client feeling or seeking? Is it growth, confidence, partnership, innovation, or trust?
@@ -116,7 +95,7 @@ NEVER:
 - Use em dashes - use regular dashes instead
 - Sound cold or corporate ("Please find attached our proposal")
 
-Core brand insight: Platinumlist is the infrastructure behind the GCC's live entertainment ecosystem. We empower organisers, venues, and entertainment businesses to sell more, know more, and grow more. Our B2B voice should make clients feel like they've found a strategic partner, not just a vendor.${voiceEmphasis}
+Core brand insight: Platinumlist is the infrastructure behind the GCC's live entertainment ecosystem. We empower organisers, venues, and entertainment businesses to sell more, know more, and grow more. Our B2B voice should make clients feel like they've found a strategic partner, not just a vendor.
 
 AUDIENCE: ${audienceInstruction}`
 
@@ -243,7 +222,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       }
       parsed = JSON.parse(toParse)
     } catch {
-      // If JSON parsing fails, treat the whole response as optimised text
       parsed = { optimised_text: aiResult, summary: 'Applied B2B TOV 2.2', tone_notes: '' }
     }
 
@@ -260,7 +238,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       delete parsed._keywords_mapping
     }
 
-    // Count keyword usage from annotations in the optimised text
     if (keywordsTotal > 0 && parsed.optimised_text) {
       const usedIds = new Set<number>()
       const annotationRegex = /\([^)]+\)\s*\[([^\]]+)\]/g
