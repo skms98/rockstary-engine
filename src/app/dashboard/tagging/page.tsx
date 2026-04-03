@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 interface TaggingEntry {
@@ -103,9 +104,26 @@ export default function TaggingPage() {
   const tagSections = ['Genre', 'Nationality', 'Broad Type', 'Attractions', 'Festive', 'Sports', 'Gaming'];
   const domains = ['event', 'attraction', 'both'] as const;
 
+  const searchParams = useSearchParams();
+  const autoFillDone = useRef(false);
+
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Auto-fill new entry form when navigated from Events pipeline (Step B link)
+  useEffect(() => {
+    if (autoFillDone.current) return;
+    const eventId = searchParams.get('event_id');
+    const title = searchParams.get('title');
+    const url = searchParams.get('url');
+    if (eventId || title || url) {
+      autoFillDone.current = true;
+      if (title) setNewEntryTitle(title);
+      if (url) setNewEntryUrl(url);
+      setShowNewEntryModal(true);
+    }
+  }, [searchParams]);
 
   const loadAllData = async () => {
     try {
