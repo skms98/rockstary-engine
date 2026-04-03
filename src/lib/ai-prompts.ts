@@ -515,9 +515,18 @@ ${ctx.originalDescription}
 RECOMMENDED VERSIONS (S2):
 ${ctx.recommendedVersions}
 
-OUTPUT FORMAT (per version):
+MANDATORY ITERATION PROTOCOL:
+The RECOMMENDED VERSIONS block above contains multiple separately labelled rewrites.
+You MUST audit EACH version as an INDEPENDENT, SEPARATE unit.
+DO NOT combine them. DO NOT treat them as one text. DO NOT produce a single blended audit.
+Identify every labelled version (e.g. "Version A", "Rewrite 1", "Golden Rule 1", etc.) and produce one COMPLETE audit block per version.
+If there are 3 versions, you produce 3 full audit blocks. If there are 2, produce 2. No exceptions.
 
+OUTPUT FORMAT — REPEAT THIS FULL BLOCK FOR EACH VERSION:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VERSION [label] TOV AUDIT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1. Emotional Hook: X/10 | [notes + specific phrases]
 2. Voice & Warmth: X/10 | [notes + specific phrases]
 3. Experience vs Logistics: X/10 | [notes + specific phrases]
@@ -534,9 +543,12 @@ Phrases that miss: [list with quotes + why they miss + TOV-compliant replacement
 LINE-BY-LINE IMPROVEMENT SUGGESTIONS:
 For each flagged phrase: [original phrase] -> [TOV 2.4 compliant replacement] + [brief reason]
 
-[For any version scoring below 55/70, provide:]
+[Only if this version scores below 55/70:]
 TOV 2.4 OPTIMIZED VERSION:
-[Full rewritten description applying all corrections above — same length as input version, all facts preserved]`,
+[Full rewritten description applying all corrections above — same length as this version, all facts preserved]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Repeat the block above for EVERY version in the RECOMMENDED VERSIONS section. Complete one version fully before moving to the next.]`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S8: Grammar & Style
