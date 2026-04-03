@@ -251,60 +251,71 @@ TOP 3 TEASERS:
   // ═══════════════════════════════════════════════════════════════
   // Step S3: Fact Check Scores
   // Compares S1 (Original) vs S2 (Recommended Versions)
-  // Multi-step fact extraction, verification, severity classification
+  // Full forensic alignment analysis — facts, framing, descriptors, intent
   // ═══════════════════════════════════════════════════════════════
-  fact_check_scores: (ctx) => `You are a fact-checking analyst for Platinumlist.net event descriptions. You compare the ORIGINAL (source of truth) against the RECOMMENDED VERSIONS to ensure no facts were altered, omitted, or fabricated.
+  fact_check_scores: (ctx) => `You are a forensic content alignment analyst for Platinumlist.net. Your job is a thorough, element-by-element comparison between the ORIGINAL event description and each REWRITE. You are not only checking factual accuracy — you are checking for every meaningful deviation: missing framing, softened language, omitted emotional promises, changed emphasis, tone drift, intent drift, and any loss of specificity.
 
 ORIGINAL DESCRIPTION (S1 — source of truth):
 ${ctx.originalDescription}
 
-RECOMMENDED VERSIONS (S2 — versions to verify):
+RECOMMENDED VERSIONS (S2 — versions to check):
 ${ctx.recommendedVersions}
 
-STEP 1: IDENTIFY KEY FACTS FROM ORIGINAL
-Extract ALL factual anchors from the original:
-- Artist/performer/speaker names (exact spelling)
-- Dates, times, venue names, cities
-- Programme items (songs, acts, agenda items)
-- Production/presenter credit lines (e.g., "Presented by...")
-- Legal disclaimers (verbatim phrases that must survive)
-- Quantities (costume counts, stage numbers, etc.)
-- Prestige titles (e.g., "prima ballerina", "defining figure of...")
-- Age restrictions, ticket types, pricing
-- Unique phrases or required tone markers
+STEP 1: EXTRACT ALL ELEMENTS FROM ORIGINAL
+Go sentence by sentence through the original. Catalogue EVERY element:
+- Hard facts: artist/performer names, dates, times, venue names, cities, quantities, ticket types, age restrictions, legal disclaimers
+- Invitation framing: how the audience is invited in (e.g. "invites you to leave the ordinary behind")
+- Descriptors: every adjective and modifier applied to the experience (e.g. "immersive", "breathtaking", specific sensory adjectives)
+- Emotional promises: what the visitor is told they will feel or gain (e.g. "spark joy, awe, and unforgettable memories")
+- Sensory claims: specific experiential details (e.g. "waterfalls that flow upside down", "cosmic gardens that bloom before your eyes")
+- Transformation claims: statements about how the visitor or reality is changed (e.g. "where reality transforms")
+- Prestige signals: award mentions, prestige titles, credit lines
+- Tone and intent markers: phrases that define the cinematic, experiential, or emotional register of the original
 
-STEP 2: COMPARE EACH REWRITE
-For each rewrite, check every factual anchor:
-- PASS: Present and accurate
-- FAIL: Altered, missing, or paraphrased when it should be verbatim
-- FABRICATED: New information not present in original
+STEP 2: FORENSIC COMPARISON (per rewrite)
+For every element from Step 1, check each rewrite:
+- PRESERVED: Present and accurate
+- SOFTENED: Present but weakened (e.g. "waterfalls that flow upside down" becomes "waterfalls rise")
+- OMITTED: Element missing entirely
+- REFRAMED: Present but with changed emphasis or intent
+- FABRICATED: New element not present in original
 
-STEP 3: SEVERITY CLASSIFICATION
-- Critical: Wrong artist names, wrong dates, wrong venue, fabricated claims, missing legal text
-- Major: Missing important details, altered credit hierarchy, changed quantities, downgraded prestige title
-- Minor: Non-critical rephrasing that doesn't materially change meaning
+STEP 3: SCORING (0-10, one decimal place)
+- 9.0-10.0: All elements preserved or improved — APPROVED
+- 7.0-8.9: Minor omissions or softening — NEEDS MINOR REVIEW
+- 5.0-6.9: Significant omissions, intent drift, or softening — NEEDS REVISION
+- 0-4.9: Critical losses, fabrications, or complete tone/intent failure — REJECT
 
-STEP 4: SCORING (0-100)
-- 90-100: All facts preserved, no fabrication — APPROVED
-- 70-89: Minor omissions, no critical errors — NEEDS MINOR REVIEW
-- 50-69: Significant factual issues — NEEDS REVISION
-- 0-49: Critical factual errors — REJECT
+STEP 4: PRODUCE REPORT (one complete block per rewrite, in this exact format):
 
-STEP 5: SIDE-BY-SIDE COMPARISON
-For any FAIL or FABRICATED items, show:
-| Original phrase | Rewrite version | Issue type | Severity |
+─────────────────────────────────────────────
+REWRITE [N] ALIGNMENT REPORT
+─────────────────────────────────────────────
 
-OUTPUT FORMAT (per rewrite):
-REWRITE [N] FACT CHECK:
-- Factual anchors found in original: [count]
-- Anchors verified in rewrite: [count]/[total]
-- Critical issues: [list or "None"]
-- Major issues: [list or "None"]
-- Minor issues: [list or "None"]
-- Fabricated claims: [list or "None"]
-- Fact Check Score: XX/100
-- Verdict: APPROVED / NEEDS REVIEW / NEEDS REVISION / REJECT
-- Side-by-side comparison: [table for any failures]`,
+Fact Check Score: [X.X/10]
+
+Notes on Alignment
+[1-2 sentence prose summary. What core ideas does the rewrite preserve? What does it lose or drift from? Be specific and analytical.]
+
+Main alignment issues:
+[Bullet every deviation found. Use these labels:
+  * Missing [element type]: "[original phrase]" is removed.
+  * Softened: "[original phrase]" becomes "[rewrite phrase]" — less specific/vivid/direct.
+  * Changed emphasis: "[original phrase]" becomes "[rewrite phrase]" — intent shifts.
+  * Tone drift: The original is [describe tone], the new version is [describe tone].
+  * Fabricated: "[rewrite phrase]" has no basis in the original.
+  If there are NO issues: write "No issues found — fully aligned."]
+
+Side-by-Side Comparison
+| Key Element | Old Version | New Version |
+|---|---|---|
+[Include EVERY element catalogued in Step 1 — preserved or not. Full row for each. Do not skip passing elements.]
+
+Verdict
+[One sentence: Fully aligned / Partially aligned, not fully faithful / Not aligned. Brief reasoning.]
+
+Recommendation
+[One sentence: "Approved — no changes needed." OR "Revise before approval. Best fix: [specific instruction]."]`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S4: SEO Duplicate Content Analysis
@@ -828,9 +839,9 @@ Based on S11 SEO scores, rank the resolved versions from most to least SEO-safe 
 
   // ═══════════════════════════════════════════════════════════════
   // Step S12: Fact Check Final (Resolver S10 vs Original S1)
-  // Last verification gate before publication
+  // Last verification gate before publication — full forensic alignment
   // ═══════════════════════════════════════════════════════════════
-  fact_check_final: (ctx) => `You are the final fact-checking gate for Platinumlist.net. This is the LAST verification check before publication. No resolved version should be published if it fails this check.
+  fact_check_final: (ctx) => `You are the final forensic alignment gate for Platinumlist.net. This is the LAST check before publication. You do a thorough, element-by-element comparison between the ORIGINAL description and each RESOLVED FINAL VERSION. You are not only checking factual accuracy — you are checking for every meaningful deviation: missing framing, softened language, omitted emotional promises, changed emphasis, tone drift, intent drift, and any loss of specificity.
 
 ORIGINAL DESCRIPTION (S1 — source of truth):
 ${ctx.prevOriginalDescription || ctx.originalDescription}
@@ -838,44 +849,61 @@ ${ctx.prevOriginalDescription || ctx.originalDescription}
 RESOLVED FINAL VERSIONS (S10 — candidates for publication):
 ${ctx.resolverOutput}
 
-STEP 1: IDENTIFY KEY FACTS FROM ORIGINAL
-Extract ALL factual anchors:
-- Artist/performer names (exact spelling)
-- Dates, times, venues, cities
-- Programme items in correct order
-- Presenter/producer credit lines (verbatim phrases)
-- Legal disclaimers (must survive word-for-word)
-- Quantities, prestige titles, award mentions
-- Age restrictions, ticket categories
+STEP 1: EXTRACT ALL ELEMENTS FROM ORIGINAL
+Go sentence by sentence. Catalogue EVERY element:
+- Hard facts: artist/performer names, dates, times, venue names, cities, quantities, ticket types, age restrictions, legal disclaimers
+- Invitation framing: how the audience is invited in (specific phrasing that defines the opening)
+- Descriptors: every adjective and modifier applied to the experience
+- Emotional promises: what the visitor is told they will feel or gain
+- Sensory claims: specific experiential details and imagery
+- Transformation claims: statements about how the visitor or reality is changed
+- Prestige signals: award mentions, prestige titles, credit lines, verbatim required phrases
+- Tone and intent markers: phrases that define the cinematic, experiential, or emotional register
 
-STEP 2: VERIFY EACH RESOLVED VERSION
-For each anchor: PASS (present and accurate) / FAIL (altered or missing) / FABRICATED (new info not in original)
+STEP 2: FORENSIC COMPARISON (per resolved version)
+For every element from Step 1:
+- PRESERVED: Present and accurate
+- SOFTENED: Present but weakened or made less specific
+- OMITTED: Element missing entirely
+- REFRAMED: Present but with changed emphasis or intent
+- FABRICATED: New element not present in original
 
-STEP 3: SEVERITY CLASSIFICATION
-- Critical: Wrong artist names, wrong dates, wrong venue, fabricated claims, missing legal text
-- Major: Missing important details, altered credits, changed quantities, prestige downgrade
-- Minor: Acceptable non-critical rephrasing
+STEP 3: FINAL SCORING (0-10, one decimal place)
+- 9.0-10.0: Publication ready, all elements preserved or improved — APPROVED
+- 7.0-8.9: Minor fixes needed — APPROVED WITH FIXES
+- 5.0-6.9: Significant issues — NOT APPROVED (return to resolver)
+- 0-4.9: Critical failures — REJECT
 
-STEP 4: FINAL SCORING (0-100)
-- 90-100: Publication ready — APPROVED
-- 70-89: Minor fixes needed — APPROVED WITH FIXES (list changes)
-- 50-69: Significant issues — NOT APPROVED (return to resolver)
-- 0-49: Critical errors — REJECT
+STEP 4: PRODUCE REPORT (one complete block per resolved version, in this exact format):
 
-STEP 5: SIDE-BY-SIDE COMPARISON (for any FAIL or FABRICATED items)
-| Original phrase | Resolved version | Issue type | Severity | Recommended fix |
+─────────────────────────────────────────────
+[VARIANT NAME] — FINAL FACT CHECK
+─────────────────────────────────────────────
 
-OUTPUT FORMAT (per resolved version):
-[VARIANT NAME] — FINAL FACT CHECK:
-- Factual anchors from original: [count]
-- Anchors verified: [count]/[total]
-- Critical issues: [list or "None"]
-- Major issues: [list or "None"]
-- Minor issues: [list or "None"]
-- Fabricated claims: [list or "None"]
-- Final Fact Check Score: XX/100
-- Publication Verdict: APPROVED / APPROVED WITH FIXES / NOT APPROVED / REJECT
-- Required corrections before publication: [list specific changes needed, or "None"]`,
+Fact Check Score: [X.X/10]
+
+Notes on Alignment
+[1-2 sentence prose summary. What does this version preserve well? What does it lose, soften, or drift from? Be specific and analytical.]
+
+Main alignment issues:
+[Bullet every deviation. Use these labels:
+  * Missing [element type]: "[original phrase]" is removed.
+  * Softened: "[original phrase]" becomes "[resolved phrase]" — less specific/vivid/direct.
+  * Changed emphasis: "[original phrase]" becomes "[resolved phrase]" — intent shifts.
+  * Tone drift: The original is [describe], the resolved version is [describe].
+  * Fabricated: "[resolved phrase]" has no basis in the original.
+  If there are NO issues: write "No issues found — fully aligned."]
+
+Side-by-Side Comparison
+| Key Element | Old Version | New Version |
+|---|---|---|
+[Include EVERY element from Step 1 — preserved or not. Full row for each. Do not skip passing elements.]
+
+Verdict
+[One sentence: Fully aligned / Partially aligned, not fully faithful / Not aligned.]
+
+Recommendation
+[One sentence: "Approved — no changes needed." OR "Revise before publication. Best fix: [specific instruction]."]`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S13: Ranked Top Versions
