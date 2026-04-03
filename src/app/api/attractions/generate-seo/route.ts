@@ -129,22 +129,32 @@ Rules:
       // Strip markdown code blocks if present
       toParse = toParse.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
       // Handle {"result": "..."} wrapper — edge function may return content inside a result key,
-      // sometimes with unescaped inner quotes that make the outer JSON invalid
+      // possibly with unescaped inner quotes that make the outer JSON invalid.
       if (toParse.startsWith('{"result":') || toParse.startsWith('{ "result":')) {
         try {
-          // Try clean JSON parse of the wrapper first
+          // Try clean JSON parse of the wrapper first (valid JSON case)
           const wrapper = JSON.parse(toParse)
           if (wrapper?.result) {
             toParse = typeof wrapper.result === 'string' ? wrapper.result : JSON.stringify(wrapper.result)
           }
         } catch {
-          // Outer JSON invalid (unescaped inner quotes) — extract inner JSON by position:
-          // skip past {"result": " to find the inner { that starts the SEO JSON
+          // Outer JSON invalid (unescaped inner quotes) — use brace counting to extract inner SEO JSON.
+          // Find the { that starts the inner JSON object (after "result": ")
           const resultKeyEnd = toParse.indexOf('"result"') + 8
           const innerStart = toParse.indexOf('{', resultKeyEnd)
-          const innerEnd = toParse.lastIndexOf('}')
-          if (innerStart !== -1 && innerEnd > innerStart) {
-            toParse = toParse.slice(innerStart, innerEnd + 1)
+          if (innerStart !== -1) {
+            let braceCount = 0
+            let innerEnd = -1
+            for (let i = innerStart; i < toParse.length; i++) {
+              if (toParse[i] === '{') braceCount++
+              else if (toParse[i] === '}') {
+                braceCount--
+                if (braceCount === 0) { innerEnd = i; break }
+              }
+            }
+            if (innerEnd !== -1) {
+              toParse = toParse.slice(innerStart, innerEnd + 1)
+            }
           }
         }
       }
