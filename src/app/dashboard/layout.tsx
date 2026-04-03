@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isMiniTools = pathname.startsWith('/dashboard/mini-tools')
   const isB2BTOV = pathname.startsWith('/dashboard/b2b-tov')
   const isB2CTOV = pathname.startsWith('/dashboard/b2c-tov')
+  const isOptimiser = pathname.startsWith('/dashboard/optimiser')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -162,6 +163,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             {sidebarOpen && <span className="font-medium">Mini Tools</span>}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard/optimiser')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isOptimiser
+                ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">Optimiser</span>}
           </button>
 
           {sidebarOpen && (
