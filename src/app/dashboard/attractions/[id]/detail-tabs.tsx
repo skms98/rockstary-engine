@@ -39,36 +39,13 @@ function SeoSection({ label, content, isTitle }: { label: string; content: strin
   )
 }
 
-// ── SEO Tab ──────────────────────────────────────────────────
-export function SeoTab({ entry }: { entry: AttractionEntry }) {
+// ── SEO Tab ──────────────────────────────────────────────────────────────────
+export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
   const seo = entry.seo_content || {}
-  const hasSeoContent = Object.keys(seo).length > 0 && Object.values(seo).some(v => v && String(v).trim() !== '')
-  
-  // Define section display order and labels
-  const seoSections: { key: string; label: string; isTitle?: boolean }[] = [
-    { key: 'h1', label: 'H1 Headline', isTitle: true },
-    { key: 'teaser', label: 'Teaser / Subtitle' },
-    { key: 'what_to_expect_title', label: 'Section Title' },
-    { key: 'what_to_expect', label: 'What To Expect' },
-    { key: 'highlights_title', label: 'Section Title' },
-    { key: 'highlights', label: 'Highlights' },
-    { key: 'inclusions_title', label: 'Section Title' },
-    { key: 'inclusions', label: 'What\'s Included' },
-    { key: 'exclusions_title', label: 'Section Title' },
-    { key: 'exclusions', label: 'Exclusions' },
-    { key: 'timing_title', label: 'Section Title' },
-    { key: 'ticket_info_title', label: 'Section Title' },
-    { key: 'ticket_info', label: 'Ticket Information' },
-    { key: 'important_info_title', label: 'Section Title' },
-    { key: 'important_info', label: 'Important Info' },
-    { key: 'cancellation_title', label: 'Section Title' },
-    { key: 'cancellation', label: 'Cancellation Policy' },
-    { key: 'address_title', label: 'Section Title' },
-    { key: 'how_to_get_there_title', label: 'Section Title' },
-    { key: 'by_car', label: 'By Car' },
-    { key: 'by_public_transport', label: 'By Public Transport' },
-    { key: 'by_taxi', label: 'By Taxi' },
-  ]
+  const hasSeoCont = Object.keys(seo).length > 0 && Object.values(seo).some(v => v && String(v).trim() !== '')
 
   // Group sections into logical blocks for cleaner display
   const mainSections = [
@@ -84,15 +61,53 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
     { label: 'Location & Directions', keys: ['by_car', 'by_public_transport', 'by_taxi'] },
   ]
 
+  const generateSeoContent = async () => {
+    setGenerating(true)
+    setGenerateError(null)
+    try {
+      const res = await fetch('/api/attractions/generate-seo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attractionId: entry.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setGenerateError(data.error || 'Failed to generate SEO content')
+      } else {
+        // Reload the entry to reflect new seo_content + seo_status
+        await save({})
+      }
+    } catch (err: any) {
+      setGenerateError(err.message || 'Unknown error')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const markSeoComplete = async () => {
+    await save({ seo_status: 'completed' } as Partial<AttractionEntry>)
+  }
+
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-6">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-white font-semibold">SEO Optimization — Column D Rewrite</h3>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-          entry.seo_status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
-          entry.seo_status === 'processing' ? 'bg-amber-500/20 text-amber-400' :
-          'bg-gray-600/30 text-gray-400'
-        }`}>{entry.seo_status}</span>
+        <div className="flex items-center gap-3">
+          {hasSeoCont && entry.seo_status !== 'completed' && (
+            <button
+              onClick={markSeoComplete}
+              disabled={saving}
+              className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded-full hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : '✓ Mark SEO Complete'}
+            </button>
+          )}
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            entry.seo_status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' :
+            entry.seo_status === 'processing' ? 'bg-amber-500/20 text-amber-400' :
+            'bg-gray-600/30 text-gray-400'
+          }`}>{entry.seo_status}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -107,7 +122,7 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
         {/* Column D: SEO Optimised — segmented */}
         <div>
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">SEO Optimised (Column D)</h4>
-          {hasSeoContent ? (
+          {hasSeoCont ? (
             <div className="space-y-3 max-h-[700px] overflow-y-auto pr-1">
               {mainSections.map((section) => {
                 const values = section.keys.map(k => seo[k] ? String(seo[k]).trim() : '').filter(Boolean)
@@ -136,8 +151,32 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
               ))}
             </div>
           ) : (
-            <div className="bg-gray-900/50 rounded-lg p-4 text-gray-500 text-sm italic">
-              Not yet processed — advance to SEO stage to begin optimization
+            <div className="bg-gray-900/50 rounded-lg p-6 flex flex-col items-center justify-center gap-4 min-h-[200px]">
+              {generateError && (
+                <p className="text-red-400 text-xs text-center mb-1">{generateError}</p>
+              )}
+              <p className="text-gray-500 text-sm text-center">
+                {entry.raw_text
+                  ? 'Column C has content — ready to generate SEO copy.'
+                  : 'No raw content yet (Column C is empty).'}
+              </p>
+              <button
+                onClick={generateSeoContent}
+                disabled={generating || !entry.raw_text}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+              >
+                {generating ? (
+                  <>
+                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    Generating SEO Content…
+                  </>
+                ) : (
+                  <>✦ Generate SEO Content</>
+                )}
+              </button>
+              {generating && (
+                <p className="text-gray-500 text-xs">This may take 20–40 seconds…</p>
+              )}
             </div>
           )}
         </div>
@@ -160,7 +199,7 @@ export function SeoTab({ entry }: { entry: AttractionEntry }) {
   )
 }
 
-// ── Tagging Tab ──────────────────────────────────────────────
+// ── Tagging Tab ──────────────────────────────────────────────────────────────
 export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [editDomain, setEditDomain] = useState(entry.domain || '')
   const [editP1, setEditP1] = useState(entry.primary_category || '')
@@ -287,7 +326,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ──────────────────────────────────────────────
+// ── Review Tab ──────────────────────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
@@ -317,7 +356,7 @@ export function ReviewTab({ entry, save, saving, advanceStage }: { entry: Attrac
       <div className="flex items-center gap-3">
         <button onClick={() => save({ review_notes: reviewNotes || null })} disabled={saving} className="px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors">Save Notes</button>
         {entry.stage === 'review' && (
-          <button onClick={advanceStage} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">Approve & Export →</button>
+          <button onClick={advanceStage} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">Approve & Export ➔</button>
         )}
       </div>
       {entry.reviewed_at && (
