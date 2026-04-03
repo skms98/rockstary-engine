@@ -60,12 +60,12 @@ function FormattedContent({ text }: { text: string }) {
       return
     }
 
-    // Bullet points â match -, â¢, *, â, âº, â¸, â¦, â, â, â, â¬¥, â¬ and any non-alphanumeric single-char prefix followed by space
-    const bulletMatch = trimmed.match(/^(?:[-â¢*ââºâ¸â¦ââââ¬¥â¬â§â¶â¦¿ââ£â¡â]|\p{So}|\p{Sk})\s+(.*)/u)
+    // Bullet points — match -, •, *, →, ►, ▸, ▦, ●, ○, ■, ⬥, ⬤ and any non-alphanumeric single-char prefix followed by space
+    const bulletMatch = trimmed.match(/^(?:[-•*→►▸▦●○■⬥⬤§¶⦿⊛⊡⬥]|\p{So}|\p{Sk})\s+(.*)/u)
     if (bulletMatch) {
       elements.push(
         <div key={i} className="flex gap-2 ml-2 my-0.5">
-          <span className="text-pl-gold/60 mt-0.5 flex-shrink-0">â¢</span>
+          <span className="text-pl-gold/60 mt-0.5 flex-shrink-0">•</span>
           <span className="text-sm text-pl-text-dim leading-relaxed">{renderInline(bulletMatch[1])}</span>
         </div>
       )
@@ -194,6 +194,10 @@ export default function EventDetailPage() {
   const [runningAll, setRunningAll] = useState(false)
   const [fetchingDesc, setFetchingDesc] = useState(false)
   const [deletingEntry, setDeletingEntry] = useState(false)
+  // Step B two-phase tagging state
+  const [categoriesPhase, setCategoriesPhase] = useState<'initial' | 'validate' | null>(null)
+  const [categoriesInitialProcessing, setCategoriesInitialProcessing] = useState(false)
+  const [categoriesValidateProcessing, setCategoriesValidateProcessing] = useState(false)
 
   useEffect(() => {
     loadEntry()
@@ -269,6 +273,41 @@ export default function EventDetailPage() {
     }
   }
 
+  // Step B two-phase tagging — calls /api/ai/categories-process
+  async function runCategoriesPhase(phase: 'initial' | 'validate') {
+    const authToken = await getAuthToken()
+    if (!authToken) return
+
+    if (phase === 'initial') setCategoriesInitialProcessing(true)
+    else setCategoriesValidateProcessing(true)
+
+    try {
+      const res = await fetch('/api/ai/categories-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: params.id, phase, authToken }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.result) {
+        if (phase === 'initial') {
+          setEntry(prev => prev ? { ...prev, categories_initial: data.result, status: 'in_progress' } : null)
+          setCategoriesPhase('validate')
+        } else {
+          setEntry(prev => prev ? { ...prev, categories: data.result, status: 'in_progress' } : null)
+          setCategoriesPhase(null)
+        }
+      } else {
+        alert(`Tagging Error: ${data.error}`)
+      }
+    } catch (err: any) {
+      alert(`Network error: ${err.message}`)
+    } finally {
+      if (phase === 'initial') setCategoriesInitialProcessing(false)
+      else setCategoriesValidateProcessing(false)
+    }
+  }
+
   async function runAllAISteps() {
     const authToken = await getAuthToken()
     if (!authToken) return
@@ -281,15 +320,49 @@ export default function EventDetailPage() {
     for (const stepField of AI_STEPS) {
       if (!optionalSteps.includes(stepField) && !entry?.original_description) continue
 
-      setAiProcessing(prev => ({ ...prev, [stepField]: true }))
+      // Step B (categories) uses special two-phase flow
+      if (stepField === 'categories') {
+        if (!entry?.original_description) continue
+        // Run initial phase
+        setCategoriesInitialProcessing(true)
+        try {
+          const res = await fetch('/api/ai/categories-process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entryId: params.id, phase: 'initial', authToken }),
+          })
+          const data = await res.json()
+          if (res.ok && data.result) {
+            setEntry(prev => prev ? { ...prev, categories_initial: data.result } : null)
+          }
+        } catch { /* continue */ } finally {
+          setCategoriesInitialProcessing(false)
+        }
+        // Run validate phase
+        setCategoriesValidateProcessing(true)
+        try {
+          const res = await fetch('/api/ai/categories-process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entryId: params.id, phase: 'validate', authToken }),
+          })
+          const data = await res.json()
+          if (res.ok && data.result) {
+            setEntry(prev => prev ? { ...prev, categories: data.result } : null)
+          }
+        } catch { /* continue */ } finally {
+          setCategoriesValidateProcessing(false)
+        }
+        continue
+      }
 
+      setAiProcessing(prev => ({ ...prev, [stepField]: true }))
       try {
         const res = await fetch('/api/ai/process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ entryId: params.id, stepField, authToken }),
         })
-
         const data = await res.json()
         if (res.ok && data.result) {
           setEntry(prev => prev ? { ...prev, [stepField]: data.result } : null)
@@ -435,7 +508,7 @@ export default function EventDetailPage() {
   const completedCount = STEPS_CONFIG.filter(s => getStepStatus(s.field) === 'done').length
   const totalSteps = STEPS_CONFIG.length
   const canRunAI = (field: string) => AI_STEPS.includes(field)
-  const anyStepProcessing = Object.values(aiProcessing).some(v => v)
+  const anyStepProcessing = Object.values(aiProcessing).some(v => v) || categoriesInitialProcessing || categoriesValidateProcessing
 
   return (
     <div className="p-8 max-w-5xl">
@@ -560,9 +633,13 @@ export default function EventDetailPage() {
           const value = getFieldValue(step.field)
           const isAIStep = canRunAI(step.field)
           const isProcessing = aiProcessing[step.field]
+          const isCategoriesStep = step.field === 'categories'
+          const isCategoriesProcessing = categoriesInitialProcessing || categoriesValidateProcessing
+          const hasInitial = isCategoriesStep && !!(entry as any).categories_initial
+          const hasFinal = isCategoriesStep && !!entry.categories
 
           return (
-            <div key={step.step} className={`pl-card overflow-hidden transition-all ${isActive ? 'border-pl-gold/40 shadow-lg shadow-pl-gold/5' : ''} ${isProcessing ? 'border-purple-500/40 shadow-lg shadow-purple-500/5' : ''}`}>
+            <div key={step.step} className={`pl-card overflow-hidden transition-all ${isActive ? 'border-pl-gold/40 shadow-lg shadow-pl-gold/5' : ''} ${(isProcessing || isCategoriesProcessing && isCategoriesStep) ? 'border-purple-500/40 shadow-lg shadow-purple-500/5' : ''}`}>
               {/* Step Header */}
               <div className="flex items-center">
                 <button
@@ -580,13 +657,13 @@ export default function EventDetailPage() {
                 >
                   {/* Step number */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                    isProcessing
+                    (isProcessing || (isCategoriesStep && isCategoriesProcessing))
                       ? 'bg-purple-500/20 text-purple-400'
                       : status === 'done'
                         ? 'bg-pl-success/20 text-pl-success'
                         : 'bg-pl-muted/20 text-pl-muted'
                   }`}>
-                    {isProcessing ? (
+                    {(isProcessing || (isCategoriesStep && isCategoriesProcessing)) ? (
                       <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
                     ) : status === 'done' ? (
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -601,7 +678,12 @@ export default function EventDetailPage() {
                       <span className="text-xs font-mono text-pl-gold/60">Step {step.step}</span>
                       <span className="text-xs text-pl-muted">Col {step.column}</span>
                       {step.optional && <span className="text-[10px] bg-pl-muted/20 text-pl-muted px-2 py-0.5 rounded-full">Optional</span>}
-                      {isAIStep && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">AI</span>}
+                      {isAIStep && !isCategoriesStep && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">AI</span>}
+                      {isCategoriesStep && (
+                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
+                          {hasFinal ? 'Validated' : hasInitial ? 'Initial Done' : 'AI 2-Phase'}
+                        </span>
+                      )}
                     </div>
                     <p className="font-medium text-white text-sm mt-0.5">{step.label}</p>
                     {/* Content preview when collapsed */}
@@ -614,10 +696,10 @@ export default function EventDetailPage() {
                       <span className="text-[10px] text-pl-muted font-mono">{value.length.toLocaleString()}c</span>
                     )}
                     <span className={`px-2 py-1 rounded text-xs ${
-                      isProcessing ? 'bg-purple-500/20 text-purple-400' :
+                      (isProcessing || (isCategoriesStep && isCategoriesProcessing)) ? 'bg-purple-500/20 text-purple-400' :
                       status === 'done' ? 'badge-done' : 'badge-pending'
                     }`}>
-                      {isProcessing ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
+                      {(isProcessing || (isCategoriesStep && isCategoriesProcessing)) ? 'Processing...' : status === 'done' ? 'Done' : 'Pending'}
                     </span>
                   </div>
 
@@ -627,8 +709,8 @@ export default function EventDetailPage() {
                   </svg>
                 </button>
 
-                {/* AI Run Button (outside the expand button) */}
-                {isAIStep && !isActive && (
+                {/* AI Run Button (outside the expand button) — only for non-categories AI steps */}
+                {isAIStep && !isActive && !isCategoriesStep && (
                   <button
                     onClick={(e) => { e.stopPropagation(); runAIStep(step.field) }}
                     disabled={isProcessing || runningAll || anyStepProcessing}
@@ -640,13 +722,30 @@ export default function EventDetailPage() {
                     </svg>
                   </button>
                 )}
+                {/* Categories quick-run button */}
+                {isCategoriesStep && !isActive && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!hasInitial) runCategoriesPhase('initial')
+                      else runCategoriesPhase('validate')
+                    }}
+                    disabled={isCategoriesProcessing || runningAll || anyStepProcessing || !entry.original_description}
+                    className="mr-4 p-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 hover:text-amber-300 transition-all disabled:opacity-30"
+                    title={!entry.original_description ? 'Need original description first' : !hasInitial ? 'Run Initial Tagging' : 'Run Validator'}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a2 2 0 012-2z" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               {/* Expanded Content */}
               {isActive && (
                 <div className="border-t border-pl-border">
                   {/* Toolbar */}
-                  <div className="flex items-center gap-2 px-4 py-2 bg-pl-dark/40 border-b border-pl-border/50">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-pl-dark/40 border-b border-pl-border/50 flex-wrap">
                     <button
                       onClick={() => { setEditMode(false) }}
                       className={`text-xs px-3 py-1 rounded-md transition-all ${!editMode ? 'bg-pl-gold/20 text-pl-gold font-medium' : 'text-pl-muted hover:text-white'}`}
@@ -662,10 +761,69 @@ export default function EventDetailPage() {
                     <div className="flex-1" />
                     {value && (
                       <span className="text-[10px] text-pl-muted font-mono">
-                        {value.length.toLocaleString()} chars Â· {value.split('\n').length} lines
+                        {value.length.toLocaleString()} chars · {value.split('\n').length} lines
                       </span>
                     )}
-                    {isAIStep && (
+
+                    {/* Step B — two-phase tagging buttons + Tagging Tool link */}
+                    {isCategoriesStep && (
+                      <>
+                        <a
+                          href={`/dashboard/tagging?event_id=${(params as any).id}&title=${encodeURIComponent(entry.event_title || '')}&url=${encodeURIComponent(entry.event_url || '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 hover:text-amber-300 font-medium transition-all"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Tagging Tool
+                        </a>
+                        <button
+                          onClick={() => runCategoriesPhase('initial')}
+                          disabled={categoriesInitialProcessing || categoriesValidateProcessing || runningAll || !entry.original_description}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-purple-600/80 hover:bg-purple-500 text-white font-medium disabled:opacity-40 transition-all"
+                          title={!entry.original_description ? 'Original description required' : 'Run Initial Tagging (Phase 1)'}
+                        >
+                          {categoriesInitialProcessing ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Running...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              {hasInitial ? 'Re-run Initial' : 'Run Initial'}
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => runCategoriesPhase('validate')}
+                          disabled={!hasInitial || categoriesInitialProcessing || categoriesValidateProcessing || runningAll}
+                          className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-md bg-green-600/80 hover:bg-green-500 text-white font-medium disabled:opacity-40 transition-all"
+                          title={!hasInitial ? 'Run Initial phase first' : 'Run Validator (Phase 2)'}
+                        >
+                          {categoriesValidateProcessing ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              Validating...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {hasFinal ? 'Re-validate' : 'Run Validator'}
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
+
+                    {/* Standard AI steps */}
+                    {isAIStep && !isCategoriesStep && (
                       <button
                         onClick={() => runAIStep(step.field)}
                         disabled={isProcessing || runningAll || anyStepProcessing}
@@ -688,8 +846,21 @@ export default function EventDetailPage() {
                     )}
                   </div>
 
+                  {/* Step B — Initial result sub-panel */}
+                  {isCategoriesStep && hasInitial && (
+                    <div className="px-4 pt-3 pb-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mb-1.5">Phase 1 — Initial Tagging</p>
+                      <div className="max-h-[200px] overflow-y-auto pr-2 custom-scrollbar rounded-lg bg-pl-dark/40 p-3 border border-purple-500/20">
+                        <FormattedContent text={(entry as any).categories_initial} />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Content Area */}
                   <div className="p-4 bg-pl-dark/20">
+                    {isCategoriesStep && hasFinal && (
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-green-400 mb-2">Phase 2 — Validated Result</p>
+                    )}
                     {editMode ? (
                       <>
                         <textarea
@@ -722,7 +893,11 @@ export default function EventDetailPage() {
                       </>
                     ) : (
                       <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                        <FormattedContent text={value} />
+                        {isCategoriesStep && !hasInitial && !hasFinal ? (
+                          <p className="text-pl-muted italic text-sm">Run Initial tagging first, then Validator to get the final categories and tags.</p>
+                        ) : (
+                          <FormattedContent text={value} />
+                        )}
                       </div>
                     )}
                   </div>
@@ -735,4 +910,3 @@ export default function EventDetailPage() {
     </div>
   )
 }
-
