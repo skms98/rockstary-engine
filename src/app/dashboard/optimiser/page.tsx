@@ -441,7 +441,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
                         km.action === 'synonym' ? 'bg-amber-500/20 text-amber-400' :
                         'bg-pl-border text-pl-muted'
                       }`}>
-                        {�m.id}
+                        {km.id}
                       </span>
                       <span className="text-pl-muted">{km.original}</span>
                       <span className="text-pl-muted/50 mx-1">-</span>
