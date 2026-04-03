@@ -52,6 +52,7 @@ function SeoSection({ label, content, isTitle }: { label: string; content: strin
 export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
+  const [kwFilter, setKwFilter] = useState<'all' | 'used' | 'merged' | 'synonym'>('all')
 
   const seo = entry.seo_content || {}
   const hasSeoCont = Object.keys(seo).length > 0 && Object.values(seo).some(v => v && String(v).trim() !== '')
@@ -102,6 +103,19 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-white font-semibold">SEO Optimization — Column D Rewrite</h3>
         <div className="flex items-center gap-3">
+          {hasSeoCont && (
+            <button
+              onClick={generateSeoContent}
+              disabled={generating}
+              className="px-3 py-1 bg-amber-600/80 text-white text-xs font-medium rounded-full hover:bg-amber-700 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+            >
+              {generating ? (
+                <><span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" /> Regenerating…</>
+              ) : (
+                <>℻ Regenerate</>
+              )}
+            </button>
+          )}
           {hasSeoCont && entry.seo_status !== 'completed' && (
             <button
               onClick={markSeoComplete}
@@ -193,13 +207,44 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
 
       {entry.keywords_list && (
         <div className="mt-5 pt-5 border-t border-gray-700/50">
-          <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Keywords ({entry.keywords_used ?? 0}/{entry.keywords_total ?? 0} used)</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-gray-400 text-xs font-medium uppercase tracking-wide">Keywords ({entry.keywords_used ?? 0}/{entry.keywords_total ?? 0} used)</h4>
+            {/* Filter buttons matching the legend */}
+            {hasSeoCont && (
+              <div className="flex items-center gap-1">
+                {(['all', 'used', 'merged', 'synonym'] as const).map((filter) => {
+                  const colors = {
+                    all: kwFilter === 'all' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-500 hover:text-gray-300',
+                    used: kwFilter === 'used' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-800 text-gray-500 hover:text-gray-300',
+                    merged: kwFilter === 'merged' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-800 text-gray-500 hover:text-gray-300',
+                    synonym: kwFilter === 'synonym' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-800 text-gray-500 hover:text-gray-300',
+                  }
+                  const dots = { all: 'bg-gray-400', used: 'bg-emerald-400', merged: 'bg-cyan-400', synonym: 'bg-purple-400' }
+                  return (
+                    <button key={filter} onClick={() => setKwFilter(filter)} className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors flex items-center gap-1 ${colors[filter]}`}>
+                      {filter !== 'all' && <span className={`w-1.5 h-1.5 rounded-full ${dots[filter]} inline-block`} />}
+                      {filter === 'all' ? 'All' : filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => {
               // Check if this keyword has mapping data
               const mapping = Array.isArray(entry.keywords_mapping)
                 ? entry.keywords_mapping.find((m: any) => m.id === i + 1)
                 : null
+              // Determine keyword type for filtering
+              const kwType = mapping
+                ? mapping.action === 'used' ? 'used'
+                : mapping.action?.startsWith('merged') ? 'merged'
+                : mapping.action === 'synonym' ? 'synonym'
+                : 'used'
+                : 'used'
+              // Apply filter
+              if (kwFilter !== 'all' && kwType !== kwFilter) return null
               const actionColor = mapping
                 ? mapping.action === 'used' ? 'border-emerald-500/40 bg-emerald-500/5'
                 : mapping.action?.startsWith('merged') ? 'border-cyan-500/40 bg-cyan-500/5'
@@ -210,11 +255,14 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
                 <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border ${actionColor}`}>
                   <span className="text-blue-400 font-mono font-medium text-xs">[{i + 1}]</span>
                   <span className="text-blue-300">{kw.trim()}</span>
-                  {mapping && mapping.action !== 'used' && (
-                    <span className={`text-[10px] font-medium ml-1 ${
-                      mapping.action?.startsWith('merged') ? 'text-cyan-400' : 'text-purple-400'
-                    }`}>
-                      {mapping.action?.startsWith('merged') ? '⇢ merged' : `⇢ "${mapping.as_written}"`}
+                  {mapping && mapping.action?.startsWith('merged') && mapping.merged_ids && (
+                    <span className="text-cyan-400 text-[10px] font-medium ml-1">
+                      ⇢ merged [{mapping.merged_ids.join(', ')}]
+                    </span>
+                  )}
+                  {mapping && mapping.action === 'synonym' && (
+                    <span className="text-purple-400 text-[10px] font-medium ml-1">
+                      ⇢ "{mapping.as_written}" [{mapping.id}*]
                     </span>
                   )}
                   {mapping && <span className="text-gray-500 text-[10px] ml-0.5">×{mapping.times ?? 0}</span>}
@@ -236,7 +284,7 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
   )
 }
 
-// ── Tagging Tab ──────────────────────────────────────────────────────────────
+// ── Tagging Tab ───────────────────────────────────────────────────────────────
 export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [editDomain, setEditDomain] = useState(entry.domain || '')
   const [editP1, setEditP1] = useState(entry.primary_category || '')
@@ -363,7 +411,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ──────────────────────────────────────────────────────────────
+// ── Review Tab ───────────────────────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
