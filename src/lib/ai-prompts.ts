@@ -186,7 +186,17 @@ LENGTH PRESERVATION (NON-NEGOTIABLE HARD RULE):
 - The rewriter IMPROVES and ENHANCES quality — it NEVER condenses or summarises
 - If original is 200 words, each rewrite must be 160-240 words
 - At the end of each rewrite state: "Word count: X (original: Y, ratio: Z%)"
-- SELF-CHECK BEFORE FINISHING: Count your words. If your version is shorter than 80% of the original, DO NOT stop — ENHANCE IT. Go back through every sentence and expand with: additional sensory detail ("the scent of the gardens", "the sound of the crowd"), venue atmosphere ("the scale of the space", "the light as it shifts"), experiential depth ("what the visitor sees/feels/discovers"), and emotional specificity. Keep expanding until you reach 80% minimum. A short rewrite means you have not done your job — enhance, do not truncate.
+
+COMMON SHORTENING VIOLATIONS — these all reduce word count and are FORBIDDEN:
+- Dropping adjectives from the original (e.g. "12 breathtaking immersive worlds" → "12 immersive worlds" loses "breathtaking")
+- Collapsing a list into fewer items (e.g. "joy, awe, and unforgettable memories" → "joy and wonder" loses two items)
+- Merging two sentences into one
+- Softening specific imagery into vaguer language (e.g. "waterfalls that flow upside down" → "waterfalls cascading upwards")
+- Removing an opening invitation line and replacing it with a shorter one
+- Dropping "before your eyes", "at your feet", or similar experiential qualifiers
+If you catch yourself doing ANY of the above, stop and restore the original richness.
+
+SELF-CHECK BEFORE FINISHING: Literally count your words. If your version is shorter than 80% of the original, DO NOT submit — ENHANCE IT. Go back and add: the dropped adjectives back in, the full emotional list (not a trimmed version), additional sensory detail, venue atmosphere, experiential depth. Keep enhancing until you reach 80% minimum. A short rewrite means you condensed instead of rewrote — fix it.
 
 PRE-SUBMISSION QUALITY CHECKLIST (complete before finalising):
 All facts preserved / All prestige titles intact / Legal disclaimers verbatim / No setlist implication / No interpretive language / Opener structure rotated / CTA unique across versions / Variation under 50% / Word count within 80-120% of original / 3 rewrites delivered / 20 teasers delivered / No banned words
