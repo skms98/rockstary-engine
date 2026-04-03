@@ -190,7 +190,16 @@ export async function POST(request: NextRequest) {
     let aiResult: string
     const systemMessage = isAttraction
       ? 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
-      : 'You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.'
+      : `You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.
+
+You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core rules:
+- Write like a warm, knowledgeable friend - not a brochure or press release
+- Lead with experience and emotion, not logistics
+- Use casual, rhythmic, modern phrasing. UK English throughout
+- Active voice preferred. Sentences max 22-24 words
+- NEVER use em dashes (the — character is banned)
+- BANNED WORDS: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, we are pleased to announce, we are delighted, we are thrilled, immerse yourself, promises to be, memorable moments, an evening to remember
+- 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
     try {
       const plClient = createPLClient()
@@ -273,7 +282,7 @@ export async function POST(request: NextRequest) {
     }
     // Step B (categories) also extracts tags from the combined output
     if (stepField === 'categories') {
-      const tagsMatch = aiResult.match(/TAGS:\s*\n([^\n]+)/i)
+      const tagsMatch = aiResult.match(/TAGS:\s/\n([^\n]+)/i)
       if (tagsMatch) {
         updateData.tags = tagsMatch[1].trim()
       }
