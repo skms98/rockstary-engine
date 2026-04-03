@@ -58,8 +58,24 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
   const [keywords, setKeywords] = useState('')
   const [additionalContext, setAdditionalContext] = useState('')
   const [contentType, setContentType] = useState('General')
-  const [audience, setAudience] = useState('default')
+  const [selectedAudiences, setSelectedAudiences] = useState<string[]>(['default'])
   const [constraints, setConstraints] = useState<Record<ConstraintKey, string>>({ minChars: '', maxChars: '', minWords: '', maxWords: '' })
+
+  const toggleAudience = (value: string) => {
+    if (value === 'default') {
+      setSelectedAudiences(['default'])
+    } else {
+      setSelectedAudiences(prev => {
+        const withoutDefault = prev.filter(a => a !== 'default')
+        if (withoutDefault.includes(value)) {
+          const next = withoutDefault.filter(a => a !== value)
+          return next.length === 0 ? ['default'] : next
+        } else {
+          return [...withoutDefault, value]
+        }
+      })
+    }
+  }
 
   const [result, setResult] = useState<string>('')
   const [summary, setSummary] = useState('')
@@ -98,7 +114,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
           keywords: keywords.trim() || undefined,
           additionalContext: additionalContext.trim() || undefined,
           contentType,
-          audience,
+          audiences: selectedAudiences,
           constraints: Object.keys(constraintPayload).length > 0 ? constraintPayload : undefined,
         }),
       })
@@ -252,23 +268,45 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
 
           {/* Audience */}
           <div>
-            <label className="text-xs text-pl-muted uppercase tracking-wider mb-2 block">Audience</label>
-            <div className="space-y-1.5">
-              {audiences.map(a => (
-                <button
-                  key={a.value}
-                  onClick={() => setAudience(a.value)}
-                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-sm ${
-                    audience === a.value
-                      ? `${accentBgLight} ${accentBorder} ${accentText}`
-                      : 'border-pl-border text-pl-text-dim hover:border-pl-border/60 hover:bg-pl-card'
-                  }`}
-                >
-                  <span className="font-medium">{a.label}</span>
-                  <span className="text-[10px] text-pl-muted ml-2">{a.desc}</span>
-                </button>
-              ))}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-pl-muted uppercase tracking-wider">Audience</label>
+              {selectedAudiences.length > 1 && (
+                <span className={`text-[10px] px-2 py-0.5 rounded-full border ${accentLegendClass}`}>
+                  {selectedAudiences.length} segments blended
+                </span>
+              )}
             </div>
+            <div className="space-y-1.5">
+              {audiences.map(a => {
+                const isSelected = selectedAudiences.includes(a.value)
+                return (
+                  <button
+                    key={a.value}
+                    onClick={() => toggleAudience(a.value)}
+                    className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-sm flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? `${accentBgLight} ${accentBorder} ${accentText}`
+                        : 'border-pl-border text-pl-text-dim hover:border-pl-border/60 hover:bg-pl-card'
+                    }`}
+                  >
+                    <span>
+                      <span className="font-medium">{a.label}</span>
+                      <span className="text-[10px] text-pl-muted ml-2">{a.desc}</span>
+                    </span>
+                    <span className={`w-4 h-4 flex-shrink-0 rounded border transition-all flex items-center justify-center ${
+                      isSelected ? `${accentBg} border-transparent` : 'border-pl-border'
+                    }`}>
+                      {isSelected && (
+                        <svg className={`w-2.5 h-2.5 ${isB2C ? 'text-pl-dark' : 'text-white'}`} fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-pl-muted mt-1.5">Select multiple to blend segment tones. Default resets to base voice.</p>
           </div>
 
           {/* Constraints */}
@@ -403,7 +441,7 @@ function OptimiserPanel({ type }: { type: 'b2c' | 'b2b' }) {
                         km.action === 'synonym' ? 'bg-amber-500/20 text-amber-400' :
                         'bg-pl-border text-pl-muted'
                       }`}>
-                        {’m.id}
+                        {ï¿½m.id}
                       </span>
                       <span className="text-pl-muted">{km.original}</span>
                       <span className="text-pl-muted/50 mx-1">-</span>
