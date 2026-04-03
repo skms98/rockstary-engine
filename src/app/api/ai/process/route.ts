@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     let prompt: string
 
     if (isAttraction) {
-      // ATTRACTIONS MODE â keyword-optimized pipeline
+      // ATTRACTIONS MODE — keyword-optimized pipeline
       const attractionPromptKey = ATTRACTION_FIELD_TO_PROMPT[stepField]
       if (!attractionPromptKey || !ATTRACTION_PROMPTS[attractionPromptKey]) {
         return NextResponse.json({ error: `No attraction AI prompt available for step: ${stepField}` }, { status: 400 })
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       prompt = ATTRACTION_PROMPTS[attractionPromptKey](actx)
 
     } else {
-      // EVENTS MODE â original 13-step pipeline
+      // EVENTS MODE — original 13-step pipeline
       const promptKey = STEP_FIELD_TO_PROMPT[stepField]
       if (!promptKey || !STEP_PROMPTS[promptKey]) {
         return NextResponse.json({ error: `No AI prompt available for step: ${stepField}` }, { status: 400 })
@@ -197,7 +197,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 - Lead with experience and emotion, not logistics
 - Use casual, rhythmic, modern phrasing. UK English throughout
 - Active voice preferred. Sentences max 22-24 words
-- NEVER use em dashes (the — character is banned)
+- NEVER use em dashes (the \u2014 character is banned)
 - BANNED WORDS: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, we are pleased to announce, we are delighted, we are thrilled, immerse yourself, promises to be, memorable moments, an evening to remember
 - 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
@@ -214,9 +214,9 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
-        // Heavy steps (reviewer, resolver, ranked) need more tokens
+        // Heavy steps (reviewer, resolver, ranked) need more tokens — 16384 for full 4-variant output
         const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
-        const maxTokens = heavySteps.includes(stepField) ? 8192 : 4096
+        const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
         const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -241,7 +241,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
         aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
       } else if (anthropicKey) {
         const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions']
-        const maxTokens = heavySteps.includes(stepField) ? 8192 : 4096
+        const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
         const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -282,7 +282,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
     }
     // Step B (categories) also extracts tags from the combined output
     if (stepField === 'categories') {
-      const tagsMatch = aiResult.match(/TAGS:\s/\n([^\n]+)/i)
+      const tagsMatch = aiResult.match(/TAGS:\s*\n([^\n]+)/i)
       if (tagsMatch) {
         updateData.tags = tagsMatch[1].trim()
       }
