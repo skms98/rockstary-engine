@@ -4,7 +4,7 @@ import { createPLClient } from '@/lib/pl-supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { rawText, keywords, additionalContext, constraints, audience, audiences, voices, contentType } = await request.json()
+    const { rawText, keywords, additionalContext, constraints, audience, audiences, contentType } = await request.json()
 
     if (!rawText || rawText.trim() === '') {
       return NextResponse.json({ error: 'Raw text is required' }, { status: 400 })
@@ -41,40 +41,20 @@ export async function POST(request: NextRequest) {
       'cultural-highclass': 'Skew the tone toward Cultural Enthusiasts / High-Class Audiences: elegant, nostalgic, emotionally rich. Use words like legacy, timeless, journey, sentiment, depth. Sample: "Where memory meets melody."',
     }
 
-    // Voice pillar modifiers for B2C TOV 2.4
-    const voiceModifiers: Record<string, string> = {
-      'energetic-playful': 'Lean into the ENERGETIC & PLAYFUL pillar: use rhythmic, punchy phrasing with short sentences and lively verbs (tap, drop, unlock, blast, fire). Mirror the energy of the event. Sample phrases: "Your vibe, your night. Let\'s go." / "Let the countdown begin." / "Catch you at the show!"',
-      'inviting-human': 'Lean into the INVITING & HUMAN pillar: speak like a trusted, upbeat friend. Use warm contractions and casual phrasing. Sample phrases: "We\'ve got you." / "Just a heads-up..." / "You\'re all set - your ticket\'s ready when you are."',
-      'reassuring-kind': 'Lean into the REASSURING & KIND pillar: lead with empathy, offer calm and support. Start error or support copy with acknowledgment. Sample phrases: "Totally get how that feels - let\'s sort it out fast." / "Still no luck? We\'re a tap away."',
-      'joyful-actionable': 'Lean into the JOYFUL & ACTIONABLE pillar: pair upbeat energy with a clear, irresistible call to action. End with momentum. Sample phrases: "Grab your spot." / "Let the night write itself into memory." / "Let the memories rise."',
-      'inclusive-local': 'Lean into the INCLUSIVE & LOCAL pillar: celebrate GCC diversity, use references that resonate regionally. Make all audiences feel seen. Sample phrases: "From rooftop beats to desert breeze - it\'s all here." / "From Jeddah to Dubai, this one\'s for everyone."',
-    }
-
     // Support both legacy `audience` string and new `audiences` array
     const selectedAudiences: string[] = Array.isArray(audiences)
       ? audiences
       : [audience || 'default']
 
     let audienceInstruction: string
-    const nonDefaultAudiences = selectedAudiences.filter(a => a !== 'default')
-    if (nonDefaultAudiences.length === 0) {
+    const nonDefault = selectedAudiences.filter(a => a !== 'default')
+    if (nonDefault.length === 0) {
       audienceInstruction = audienceModifiers.default
-    } else if (nonDefaultAudiences.length === 1) {
-      audienceInstruction = audienceModifiers[nonDefaultAudiences[0]] || audienceModifiers.default
+    } else if (nonDefault.length === 1) {
+      audienceInstruction = audienceModifiers[nonDefault[0]] || audienceModifiers.default
     } else {
-      const blended = nonDefaultAudiences.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
+      const blended = nonDefault.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
       audienceInstruction = `Blend the following audience tones into one cohesive voice - do not write separate sections, just naturally weave these qualities together:\n\n${blended}`
-    }
-
-    // Build voice pillar instruction
-    const selectedVoices: string[] = Array.isArray(voices) ? voices : ['default']
-    const nonDefaultVoices = selectedVoices.filter(v => v !== 'default')
-    let voiceEmphasis = ''
-    if (nonDefaultVoices.length === 1) {
-      voiceEmphasis = `\n\nVOICE EMPHASIS:\n${voiceModifiers[nonDefaultVoices[0]] || ''}`
-    } else if (nonDefaultVoices.length > 1) {
-      const blendedVoices = nonDefaultVoices.map((v, i) => `${i + 1}. ${voiceModifiers[v] || ''}`).filter(Boolean).join('\n\n')
-      voiceEmphasis = `\n\nVOICE EMPHASIS - Blend these pillars naturally throughout the copy:\n${blendedVoices}`
     }
 
     const systemMessage = `You are a professional content optimiser for Platinumlist.net, the GCC's go-to platform for tickets to concerts, attractions, sports, and cultural events.
@@ -82,12 +62,12 @@ export async function POST(request: NextRequest) {
 TONE OF VOICE (Platinumlist B2C TOV 2.4):
 You write like a trusted, upbeat friend who knows what's on. Your voice is emotionally aware, clear, and confident - never stiff or robotic.
 
-Vibe pillars:
-- Inviting & Human: "We've got you." / "Just a heads-up..."
-- Energetic & Playful: "Let the countdown begin." / "Catch you at the show!"
-- Inclusive & Local: "From beach beats to rooftop movies - it's all here."
-- Reassuring & Kind: "Totally get how that feels - let's fix it fast."
-- Joyful & Actionable: "Grab your spot." / "Let the weekend write its soundtrack."
+TOV PILLARS - apply ALL of these in every piece:
+- Inviting & Human: Warm, conversational, like a trusted friend. "We've got you." / "Just a heads-up..."
+- Energetic & Playful: Rhythmic, punchy, social energy. "Let the countdown begin." / "Catch you at the show!"
+- Inclusive & Local: GCC-aware, celebrate regional diversity. "From beach beats to rooftop movies - it's all here."
+- Reassuring & Kind: Lead with empathy and calm support. "Totally get how that feels - let's fix it fast."
+- Joyful & Actionable: Upbeat CTA energy with clear next steps. "Grab your spot." / "Let the weekend write its soundtrack."
 
 HOW TO WRITE:
 Step 1 - Understand the Emotional Moment: What is the user feeling or seeking? Is it hype, clarity, nostalgia, trust, relief, or joy?
@@ -111,7 +91,7 @@ NEVER:
 - Use phrases that push without warmth ("Buy now")
 - Use em dashes - use regular dashes instead
 
-Core brand insight: We are a healthier alternative to fast dopamine. We invite people to trade noise for presence, endless content for real connection. Our words should make space to feel something real.${voiceEmphasis}
+Core brand insight: We are a healthier alternative to fast dopamine. We invite people to trade noise for presence, endless content for real connection. Our words should make space to feel something real.
 
 AUDIENCE: ${audienceInstruction}`
 
@@ -238,7 +218,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       }
       parsed = JSON.parse(toParse)
     } catch {
-      // If JSON parsing fails, treat the whole response as optimised text
       parsed = { optimised_text: aiResult, summary: 'Applied B2C TOV 2.4', tone_notes: '' }
     }
 
@@ -255,7 +234,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       delete parsed._keywords_mapping
     }
 
-    // Count keyword usage from annotations in the optimised text
     if (keywordsTotal > 0 && parsed.optimised_text) {
       const usedIds = new Set<number>()
       const annotationRegex = /\([^)]+\)\s*\[([^\]]+)\]/g
