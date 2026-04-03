@@ -40,7 +40,6 @@ TOV DO's:
 - Write like a knowledgeable friend, not a brochure
 
 TOV DON'Ts:
-- HARDWIRED RULE: Never use em dashes (the — character is completely banned everywhere)
 - No robotic or corporate phrasing ("We are pleased to announce", "Don't miss out")
 - No passive constructions where active works
 - No empty adjectives (amazing, incredible, unforgettable, spectacular, must-see, extraordinary)
@@ -785,7 +784,6 @@ Key differences from S2 versions: [what changed and why]
 Word count: X (original: Y, ratio: Z%)
 
 HARD RULES (APPLY TO ALL 4 VARIANTS):
-- No em dashes (NEVER use the — character anywhere)
 - UK English throughout (colour, organise, centre)
 - All factual anchors from S1 preserved exactly
 - Legal/credit text from S1 preserved verbatim
