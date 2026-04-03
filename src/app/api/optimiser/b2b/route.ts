@@ -4,7 +4,7 @@ import { createPLClient } from '@/lib/pl-supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { rawText, keywords, additionalContext, constraints, audience, contentType } = await request.json()
+    const { rawText, keywords, additionalContext, constraints, audience, audiences, contentType } = await request.json()
 
     if (!rawText || rawText.trim() === '') {
       return NextResponse.json({ error: 'Raw text is required' }, { status: 400 })
@@ -41,7 +41,21 @@ export async function POST(request: NextRequest) {
       'government-tourism': 'Skew the tone toward Government & Tourism Boards: strategic, regionally proud, vision-aligned. Use words like vision, strategy, cultural impact, tourism growth, national agenda, ecosystem. Sample: "Powering the events ecosystem behind the region\'s boldest visions."',
     }
 
-    const audienceInstruction = audienceModifiers[audience || 'default'] || audienceModifiers.default
+    // Support both legacy `audience` string and new `audiences` array
+    const selectedAudiences: string[] = Array.isArray(audiences)
+      ? audiences
+      : [audience || 'default']
+
+    let audienceInstruction: string
+    const nonDefault = selectedAudiences.filter(a => a !== 'default')
+    if (nonDefault.length === 0) {
+      audienceInstruction = audienceModifiers.default
+    } else if (nonDefault.length === 1) {
+      audienceInstruction = audienceModifiers[nonDefault[0]] || audienceModifiers.default
+    } else {
+      const blended = nonDefault.map((a, i) => `${i + 1}. ${audienceModifiers[a] || ''}`).filter(Boolean).join('\n\n')
+      audienceInstruction = `Blend the following audience tones into one cohesive voice - do not write separate sections, just naturally weave these qualities together:\n\n${blended}`
+    }
 
     const systemMessage = `You are a professional content optimiser for Platinumlist.net, the GCC's leading ticketing and entertainment technology platform serving event organisers, venues, and entertainment businesses.
 
