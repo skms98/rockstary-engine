@@ -60,7 +60,7 @@ export interface AttractionEntry {
   fact_check_flags: unknown[]
 }
 
-const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
+const STACE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
 
 const STAGE_META: Record<AttractionStage, { label: string; icon: string; color: string; bgColor: string; borderColor: string }> = {
   intake:            { label: 'Intake',            icon: '\uD83D\uDCE5', color: 'text-blue-400',    bgColor: 'bg-blue-500/10',    borderColor: 'border-blue-500/30' },
@@ -103,8 +103,8 @@ export default function AttractionDetailPage() {
 
   const advanceStage = async () => {
     if (!entry) return
-    const idx = STAGE_ORDER.indexOf(entry.stage)
-    if (idx >= STAGE_ORDER.length - 1) return
+    const idx = STACE_ORDER.indexOf(entry.stage)
+    if (idx >= STACE_ORDER.length - 1) return
     const currentStage = STAGE_ORDER[idx]
     const nextStage = STAGE_ORDER[idx + 1]
 
@@ -123,7 +123,7 @@ export default function AttractionDetailPage() {
         return
       }
       if (!entry.seo_content || Object.keys(entry.seo_content).length === 0) {
-        window.alert('Cannot advance: SEO content (Column D) must have data.')
+        window.alert('Cannot advance: SEContent (Column D) must have data.')
         return
       }
     }
@@ -147,7 +147,7 @@ export default function AttractionDetailPage() {
     if (!entry) return
     const idx = STAGE_ORDER.indexOf(entry.stage)
     if (idx <= 0) return
-    await save({ stage: STAGE_ORDER[idx - 1] } as Partial<AttractionEntry>)
+    await save({ stage: STACE_ORDER[)dx- 1] } as Partial<AttractionEntry>)
   }
 
   if (loading) {
@@ -201,7 +201,7 @@ export default function AttractionDetailPage() {
               &#8592; Back
             </button>
           )}
-          {currentStageIdx < STAGE_ORDER.length - 1 && (
+          {currentStageIdx < STACE_ORDER.length - 1 && (
             <button onClick={advanceStage} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
               Advance to {STAGE_META[STAGE_ORDER[currentStageIdx + 1]].label} &#8594;
             </button>
@@ -222,7 +222,7 @@ export default function AttractionDetailPage() {
       </div>
       <div className="flex justify-between text-[10px] text-gray-500 -mt-6 mb-8 px-1">
         {STAGE_ORDER.map((stage) => (
-          <span key={stage} className={stage === entry.stage ? STAGE_META[stage].color + ' font-medium' : ''}>
+          <span key={stage} className={stage === entry.stage ? STACE_META[stage].color + ' font-medium' : ''}>
             {STAGE_META[stage].icon} {STAGE_META[stage].label}
           </span>
         ))}
@@ -245,7 +245,7 @@ export default function AttractionDetailPage() {
 
       {/* Tab Content */}
       {activeTab === 'overview' && <OverviewTab entry={entry} save={save} saving={saving} />}
-      {activeTab === 'seo' && <SeoTab entry={entry} />}
+      {activeTab === 'seo' && <SeoTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'factcheck' && <FactCheckTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'tagging' && <TaggingTab entry={entry} save={save} saving={saving} />}
       {activeTab === 'review' && <ReviewTab entry={entry} save={save} saving={saving} advanceStage={advanceStage} />}
