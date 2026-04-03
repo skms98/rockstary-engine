@@ -4,16 +4,24 @@
 import { useState, useEffect } from 'react'
 import type { AttractionEntry } from './page'
 
-// Helper: render keyword annotations like (keyword) [1] with highlights
+// Helper: render keyword annotations like (keyword) [1], (merged) [1, 2], (synonym) [3*] with highlights
 function HighlightedText({ text }: { text: string }) {
   if (!text) return null
-  // Split on (keyword) [number] pattern and highlight them
-  const parts = text.split(/(\([^)]+\)\s*\[\d+\])/)
+  // Split on all annotation patterns: (text) [N], (text) [N1, N2], (text) [N*]
+  const parts = text.split(/(\([^)]+\)\s*\[[^\]]+\])/)
   return (
     <span>
       {parts.map((part, i) => {
-        if (/^\([^)]+\)\s*\[\d+\]$/.test(part)) {
-          return <span key={i} className="text-blue-400 font-medium bg-blue-500/10 px-1 rounded">{part}</span>
+        if (/^\([^)]+\)\s*\[[^\]]+\]$/.test(part)) {
+          // Determine annotation type for styling
+          const isSynonym = /\[\d+\*\]$/.test(part)
+          const isMerged = /\[\d+\s*,\s*\d+/.test(part)
+          const colorClass = isSynonym
+            ? 'text-purple-400 font-medium bg-purple-500/10 px-1 rounded'
+            : isMerged
+            ? 'text-cyan-400 font-medium bg-cyan-500/10 px-1 rounded'
+            : 'text-blue-400 font-medium bg-blue-500/10 px-1 rounded'
+          return <span key={i} className={colorClass}>{part}</span>
         }
         return <span key={i}>{part}</span>
       })}
@@ -185,22 +193,50 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
 
       {entry.keywords_list && (
         <div className="mt-5 pt-5 border-t border-gray-700/50">
-          <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Keywords ({entry.keywords_used}/{entry.keywords_total} used)</h4>
+          <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Keywords ({entry.keywords_used ?? 0}/{entry.keywords_total ?? 0} used)</h4>
           <div className="flex flex-wrap gap-2">
-            {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => (
-              <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900/50 border border-gray-700/50 text-sm">
-                <span className="text-blue-400 font-mono font-medium text-xs">[{i + 1}]</span>
-                <span className="text-blue-300">{kw.trim()}</span>
-              </span>
-            ))}
+            {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => {
+              // Check if this keyword has mapping data
+              const mapping = Array.isArray(entry.keywords_mapping)
+                ? entry.keywords_mapping.find((m: any) => m.id === i + 1)
+                : null
+              const actionColor = mapping
+                ? mapping.action === 'used' ? 'border-emerald-500/40 bg-emerald-500/5'
+                : mapping.action?.startsWith('merged') ? 'border-cyan-500/40 bg-cyan-500/5'
+                : mapping.action === 'synonym' ? 'border-purple-500/40 bg-purple-500/5'
+                : 'border-gray-700/50 bg-gray-900/50'
+                : 'border-gray-700/50 bg-gray-900/50'
+              return (
+                <span key={i} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border ${actionColor}`}>
+                  <span className="text-blue-400 font-mono font-medium text-xs">[{i + 1}]</span>
+                  <span className="text-blue-300">{kw.trim()}</span>
+                  {mapping && mapping.action !== 'used' && (
+                    <span className={`text-[10px] font-medium ml-1 ${
+                      mapping.action?.startsWith('merged') ? 'text-cyan-400' : 'text-purple-400'
+                    }`}>
+                      {mapping.action?.startsWith('merged') ? '⇢ merged' : `⇢ "${mapping.as_written}"`}
+                    </span>
+                  )}
+                  {mapping && <span className="text-gray-500 text-[10px] ml-0.5">×{mapping.times ?? 0}</span>}
+                </span>
+              )
+            })}
           </div>
+          {/* Legend for annotation colors */}
+          {hasSeoCont && (
+            <div className="flex items-center gap-4 mt-3 text-[10px] text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Standard</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400 inline-block" /> Merged</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400 inline-block" /> Synonym</span>
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-// ── Tagging Tab ───────────────────────────────────────────────────────────────
+// ── Tagging Tab ──────────────────────────────────────────────────────────────
 export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [editDomain, setEditDomain] = useState(entry.domain || '')
   const [editP1, setEditP1] = useState(entry.primary_category || '')
@@ -327,7 +363,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ───────────────────────────────────────────────────────────────
+// ── Review Tab ──────────────────────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
