@@ -178,18 +178,18 @@ STRUCTURAL REWRITE RULES:
 3. Sentence variation: Mix short, medium, and long. Use clause inversion and rhythm variation.
 4. CTA: Each rewrite must use a different action verb and different sentence structure (Secure your seat / Attend / Be present / See / Reserve access / Join this evening)
 5. Credit hierarchy: Preserve all named credits in same prominence order. Integrate narratively.
-6. Strategic variation: Maximum 50% structural variation — NOT content reduction. Never cut factual richness.
+6. Strategic variation: Maximum 30% structural variation — NOT content reduction. Never cut factual richness.
 
-LENGTH PRESERVATION (CRITICAL):
-- Count the words in the ORIGINAL DESCRIPTION
-- Each rewrite MUST be within 80-120% of that word count
+LENGTH PRESERVATION (NON-NEGOTIABLE HARD RULE):
+- Count the words in the ORIGINAL DESCRIPTION before writing a single word
+- Each rewrite MUST be within 70-130% of that word count — meaning a maximum of 30% shorter
 - The rewriter IMPROVES quality — it NEVER condenses or summarises
-- If original is 200 words, each rewrite must be 160-240 words
+- If original is 200 words, each rewrite must be 140-260 words
 - At the end of each rewrite state: "Word count: X (original: Y, ratio: Z%)"
-- If your version is shorter than 80%, ADD detail: sensory language, venue atmosphere, production elements, audience experience
+- BEFORE SUBMITTING: if your version is shorter than 70% of the original word count, STOP. Do not submit. Add sensory language, venue atmosphere, production elements, and audience experience detail until you reach 70% minimum. A short rewrite is a failed rewrite.
 
 PRE-SUBMISSION QUALITY CHECKLIST (complete before finalising):
-All facts preserved / All prestige titles intact / Legal disclaimers verbatim / No setlist implication / No interpretive language / Opener structure rotated / CTA unique across versions / Variation under 50% / 3 rewrites delivered / 20 teasers delivered / No banned words
+All facts preserved / All prestige titles intact / Legal disclaimers verbatim / No setlist implication / No interpretive language / Opener structure rotated / CTA unique across versions / Variation under 30% / Word count within 70-130% of original / 3 rewrites delivered / 20 teasers delivered / No banned words
 
 BANNED WORDS CHECK — search output before submitting. If ANY appear, rewrite that sentence:
 unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, promises to be, memorable moments, an evening to remember, immerse yourself
@@ -656,7 +656,7 @@ YOUR TASKS:
    - Top 3 strengths (specific, citing actual phrases)
    - Top 3 weaknesses (specific, citing actual phrases)
    - Priority edits needed (line-by-line where necessary)
-   - LENGTH CHECK: Is this version within 80-120% of original word count? If shorter than 80%, flag as "TOO SHORT — resolver must expand, not condense"
+   - LENGTH CHECK: Is this version within 70-130% of original word count? If shorter than 70%, flag as "TOO SHORT — resolver must expand, not condense"
    - Banned words found: [list any banned words/phrases that slipped through]
    - Em dashes found: [list any — characters]
 
@@ -679,7 +679,7 @@ YOUR TASKS:
    - Opening approach: [what angle, what first sentence logic]
    - Structure: [how to order paragraphs, what to emphasise]
    - Tone target: [which audience segment, which TOV pillar to lead with]
-   - Length target: [X words — within 80-120% of original word count of Y]
+   - Length target: [X words — within 70-130% of original word count of Y, minimum 70%]
    - Elements to carry forward from each S2 version
    - Specific fixes the resolver MUST apply
 
@@ -770,8 +770,8 @@ HARD RULES (APPLY TO ALL 4 VARIANTS):
 - Active voice preferred
 - Lead with experience, not logistics
 - Write like a knowledgeable friend, not a brochure
-- Every variant MUST be within 80-120% of original word count
-- If shorter than 80% of original = FAILURE. Add sensory detail, venue atmosphere, production elements, audience experience until length matches.
+- Every variant MUST be within 70-130% of original word count — maximum 30% shorter, never more
+- If shorter than 70% of original = FAILURE. Do not output. Add sensory detail, venue atmosphere, production elements, audience experience until length reaches 70% minimum.
 
 BANNED WORDS — final check before outputting (if any appear, rewrite):
 unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
@@ -945,7 +945,7 @@ DISCARD RULES (apply before ranking):
 - Any version with S12 Fact Check < 70: DISCARD (too risky)
 - Any version with Organiser Safety Risk 8+/10: DISCARD (will cause pushback)
 - Any version with S11 Duplicate Risk > 60: DISCARD (SEO penalty risk)
-- Any version shorter than 80% of original word count: FLAG as "too short"
+- Any version shorter than 70% of original word count: DISCARD as "too short — failed length rule"
 
 OUTPUT FORMAT:
 
