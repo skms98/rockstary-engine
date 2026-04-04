@@ -854,11 +854,11 @@ EM DASH ZERO TOLERANCE: Before outputting ANY variant, scan the full text for th
 
 CTA REQUIREMENT (MANDATORY FOR ALL 4 VARIANTS):
 Every variant MUST end with a clear, warm call-to-action sentence as its final sentence. The CTA must be present in all 4 variants — no variant may end on a descriptive sentence. Use a different verb across variants to maintain structural variety:
-- Variant 1 example endings: "Grab your tickets now." / "Book your visit at platinumlist.net."
-- Variant 2 example endings: "Secure your spot at platinumlist.net." / "Find tickets on Platinumlist."
+- Variant 1 example endings: "Grab your tickets now." / "Book your visit on Platinumlist."
+- Variant 2 example endings: "Secure your spot on Platinumlist." / "Find tickets on Platinumlist."
 - Variant 3 example endings: "Reserve your place today." / "See it for yourself — tickets on Platinumlist."
 - Variant 4 example endings: "Be there." / "Tickets available now on Platinumlist."
-The CTA must feel warm and inviting, not pushy. Never use: "Don't miss out", "You won't want to miss this", "Hurry", "Limited tickets remaining" (unless confirmed in original).
+The CTA must feel warm and inviting, not pushy. No exclamation marks in CTAs — ever. Never use: "Don't miss out", "You won't want to miss this", "Hurry", "Limited tickets remaining" (unless confirmed in original). Never mention platinumlist.net as a URL — write "on Platinumlist" if a platform reference is needed.
 
 ORIGINALITY RULE (ANTI-PLAGIARISM — APPLIES TO ALL 4 VARIANTS):
 No phrase of 5 or more consecutive words from the original description (S1) may appear verbatim in any resolved variant.
