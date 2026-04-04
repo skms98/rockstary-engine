@@ -123,7 +123,7 @@ export default function QATaggingPage() {
   const scanSizeConfig = [
     { id: '50' as const, label: '⚡ Quick (50)' },
     { id: '300' as const, label: '📊 Normal (300)' },
-    { id: 'full' as const, label: '🔍 Full Scan' },
+    { id: 'full' as const, label: '📍 900+ Max Scan' },
   ]
 
   return (
