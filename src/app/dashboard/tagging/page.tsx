@@ -50,21 +50,13 @@ interface Stats {
 }
 
 export default function TaggingPage() {
-  const [activeTab, setActiveTab] = useState<'classify' | 'taxonomy' | 'prompts' | 'qa'>('classify');
+  const [activeTab, setActiveTab] = useState<'classify' | 'taxonomy' | 'prompts'>('classify');
   const [entries, setEntries] = useState<TaggingEntry[]>([]);
   const [categories, setCategories] = useState<TaxonomyItem[]>([]);
   const [tags, setTags] = useState<TaxonomyItem[]>([]);
   const [prompts, setPrompts] = useState<Map<string, TaggingPrompt>>(new Map());
   const [stats, setStats] = useState<Stats>({ total: 0, initial_done: 0, validated: 0, error: 0 });
 
-  // QA tab state
-  const [qaMode, setQaMode] = useState<'categories' | 'tags' | 'both' | 'no-tags'>('both');
-  const [qaScanSize, setQaScanSize] = useState<'50' | '300' | 'full'>('300');
-  const [qaScanning, setQaScanning] = useState(false);
-  const [qaIssues, setQaIssues] = useState<any[]>([]);
-  const [qaScanned, setQaScanned] = useState(0);
-  const [qaHasScanned, setQaHasScanned] = useState(false);
-  const [qaError, setQaError] = useState<string | null>(null);
 
   const [showNewEntryModal, setShowNewEntryModal] = useState(false);
   const [newEntryTitle, setNewEntryTitle] = useState('');
@@ -290,7 +282,24 @@ export default function TaggingPage() {
   };
 
 
-  const handleRunInitialTagging = async (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!confirm('Delete this entry? This cannot be undone.')) return;
+    try {
+      const { error: deleteError } = await supabase
+        .from('tagging_entries')
+        .delete()
+        .eq('id', entryId);
+      if (deleteError) throw deleteError;
+      const updated = entries.filter(e => e.id !== entryId);
+      setEntries(updated);
+      if (expandedEntryId === entryId) setExpandedEntryId(null);
+      calculateStats(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete entry');
+    }
+  };
+
+    const handleRunInitialTagging = async (entryId: string) => {
     try {
       setProcessingEntryId(entryId);
       setProcessingPhase('initial');
@@ -353,7 +362,7 @@ export default function TaggingPage() {
         },
         body: JSON.stringify({
           entryId,
-          phase: 'validator',
+          phase: 'validate',
           initialResult: entry.initial_result,
           authToken,
         }),
@@ -834,7 +843,7 @@ export default function TaggingPage() {
 
       {/* Tabs */}
       <div className="flex gap-4 mb-6 border-b border-pl-border">
-        {(['classify', 'taxonomy', 'prompts', 'qa'] as const).map(tab => (
+        {(['classify', 'taxonomy', 'prompts'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -847,7 +856,6 @@ export default function TaggingPage() {
             {tab === 'classify' && 'Classify'}
             {tab === 'taxonomy' && 'Taxonomy'}
             {tab === 'prompts' && 'Prompts'}
-            {tab === 'qa' && '⚡ QA Check'}
           </button>
         ))}
       </div>
@@ -879,6 +887,13 @@ export default function TaggingPage() {
                         <h3 className="font-semibold text-white mb-2">{entry.title}</h3>
                         <p className="text-pl-muted text-sm">{formatSourceTextPreview(entry.source_text)}</p>
                       </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteEntry(entry.id); }}
+                        className="p-1.5 text-pl-warning hover:bg-pl-warning/10 rounded transition opacity-50 hover:opacity-100"
+                        title="Delete entry"
+                      >
+                        <TrashIcon />
+                      </button>
                       <span className={`px-3 py-1 rounded text-sm font-semibold ${getStatusBadge(entry.status)}`}>
                         {entry.status.replace('_', ' ').toUpperCase()}
                       </span>
@@ -1482,189 +1497,6 @@ export default function TaggingPage() {
             </div>
           )}
 
-          {/* QA CHECK TAB */}
-          {activeTab === 'qa' && (
-            <div className="space-y-6">
-              <div className="pl-card p-6 border border-pl-border space-y-4">
-                <h3 className="text-xl font-bold text-pl-gold">Tagging Entries QA Audit</h3>
-                <p className="text-pl-muted text-sm">Scans <strong className="text-pl-text-dim">initial_done</strong> and <strong className="text-pl-text-dim">validated</strong> entries for wrong or missing labels.</p>
-
-                {/* Scan size selector */}
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-pl-muted font-medium">Scan size:</span>
-                  {([
-                    { id: '50', label: '⚡ Quick (50)' },
-                    { id: '300', label: '📊 Normal (300)' },
-                    { id: 'full', label: '📍 900+ Max Scan' },
-                  ] as const).map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => setQaScanSize(s.id)}
-                      className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
-                        qaScanSize === s.id
-                          ? 'bg-pl-gold text-black'
-                          : 'bg-pl-navy border border-pl-border text-pl-muted hover:text-pl-text-dim'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Mode selector */}
-                <div className="flex gap-2 flex-wrap">
-                  {([
-                    { id: 'both', label: '⚡ Both' },
-                    { id: 'categories', label: '⚠ Categories' },
-                    { id: 'tags', label: '🏷 Tags' },
-                    { id: 'no-tags', label: '🚫 No Tags' },
-                  ] as const).map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setQaMode(m.id)}
-                      className={`px-4 py-2 rounded font-semibold text-sm transition ${
-                        qaMode === m.id
-                          ? 'bg-pl-gold text-black'
-                          : 'bg-pl-navy border border-pl-border text-pl-muted hover:text-pl-text-dim'
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={async () => {
-                    setQaScanning(true);
-                    setQaError(null);
-                    setQaIssues([]);
-                    setQaHasScanned(false);
-                    try {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      const authToken = session?.access_token;
-                      if (!authToken) throw new Error('Not authenticated');
-                      const qaParams = new URLSearchParams({ mode: qaMode });
-                      if (qaScanSize === 'full') { qaParams.set('full', 'true'); } else { qaParams.set('max', qaScanSize); }
-                      const res = await fetch(`/api/qa/tagging-entries?${qaParams}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` },
-                      });
-                      const json = await res.json();
-                      if (!res.ok) throw new Error(json.error || 'Scan failed');
-                      setQaIssues(json.issues || []);
-                      setQaScanned(json.scanned || 0);
-                      setQaHasScanned(true);
-                    } catch (e: any) {
-                      setQaError(e.message || 'Unknown error');
-                    } finally {
-                      setQaScanning(false);
-                    }
-                  }}
-                  disabled={qaScanning}
-                  className="pl-btn-primary disabled:opacity-50"
-                >
-                  {qaScanning ? 'Scanning…' : 'Run QA Scan'}
-                </button>
-              </div>
-
-              {qaError && (
-                <div className="pl-card p-4 border border-red-500/40 text-red-400 text-sm">
-                  ⚠ {qaError}
-                </div>
-              )}
-
-              {qaHasScanned && (
-                <div className="pl-card p-6 border border-pl-border space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-pl-gold">
-                      {qaMode === 'no-tags'
-                        ? `Entries without tags: ${qaIssues.length} of ${qaScanned} scanned`
-                        : `Issues found: ${qaIssues.length} of ${qaScanned} scanned`}
-                    </h4>
-                    {qaIssues.length === 0 && (
-                      <span className="text-green-400 text-sm font-semibold">✓ All clean</span>
-                    )}
-                  </div>
-
-                  {qaIssues.length > 0 && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-pl-border text-pl-muted text-left">
-                            <th className="pb-2 pr-4">Title</th>
-                            <th className="pb-2 pr-4">Status</th>
-                            {qaMode !== 'no-tags' && qaMode !== 'tags' && (
-                              <th className="pb-2 pr-4">Applied Categories</th>
-                            )}
-                            {qaMode !== 'no-tags' && qaMode !== 'categories' && (
-                              <th className="pb-2 pr-4">Applied Tags</th>
-                            )}
-                            {qaMode === 'no-tags' && (
-                              <th className="pb-2 pr-4">Applied Categories</th>
-                            )}
-                            {qaMode !== 'no-tags' && qaMode !== 'tags' && (
-                              <th className="pb-2 pr-4 text-red-400">Wrong Categories</th>
-                            )}
-                            {qaMode !== 'no-tags' && qaMode !== 'categories' && (
-                              <th className="pb-2 text-red-400">Wrong Tags</th>
-                            )}
-                            {qaMode === 'no-tags' && (
-                              <th className="pb-2 text-red-400">Issue</th>
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {qaIssues.map((issue: any, idx: number) => (
-                            <tr key={idx} className="border-b border-pl-border/40 hover:bg-pl-dark transition">
-                              <td className="py-3 pr-4 text-white font-medium max-w-xs truncate">{issue.title}</td>
-                              <td className="py-3 pr-4">
-                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                  issue.status === 'validated' ? 'bg-green-900/50 text-green-400' : 'bg-yellow-900/50 text-yellow-400'
-                                }`}>
-                                  {issue.status?.replace('_', ' ').toUpperCase()}
-                                </span>
-                              </td>
-                              {qaMode !== 'no-tags' && qaMode !== 'tags' && (
-                                <td className="py-3 pr-4 text-pl-muted text-xs max-w-xs">
-                                  {(issue.applied_categories || []).join(', ') || '—'}
-                                </td>
-                              )}
-                              {qaMode !== 'no-tags' && qaMode !== 'categories' && (
-                                <td className="py-3 pr-4 text-pl-muted text-xs max-w-xs">
-                                  {(issue.applied_tags || []).join(', ') || '—'}
-                                </td>
-                              )}
-                              {qaMode === 'no-tags' && (
-                                <td className="py-3 pr-4 text-pl-muted text-xs max-w-xs">
-                                  {(issue.applied_categories || []).join(', ') || '—'}
-                                </td>
-                              )}
-                              {qaMode !== 'no-tags' && qaMode !== 'tags' && (
-                                <td className="py-3 pr-4 text-xs">
-                                  {(issue.wrong_categories || []).map((c: string, i: number) => (
-                                    <span key={i} className="inline-block bg-red-900/40 text-red-400 px-2 py-0.5 rounded mr-1 mb-1">{c}</span>
-                                  ))}
-                                </td>
-                              )}
-                              {qaMode !== 'no-tags' && qaMode !== 'categories' && (
-                                <td className="py-3 text-xs">
-                                  {(issue.wrong_tags || []).map((t: string, i: number) => (
-                                    <span key={i} className="inline-block bg-red-900/40 text-red-400 px-2 py-0.5 rounded mr-1 mb-1">{t}</span>
-                                  ))}
-                                </td>
-                              )}
-                              {qaMode === 'no-tags' && (
-                                <td className="py-3 text-red-400 text-xs font-semibold">No tags assigned</td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </>
       )}
 
