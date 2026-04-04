@@ -1,5 +1,5 @@
-'use client'
 // @ts-nocheck
+'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
