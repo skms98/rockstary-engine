@@ -42,7 +42,7 @@ export default function AIRunnerPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Welcome to the Rockstary AI Runner. Ask me about any workflow, and I will guide you through the steps. I can help with events pipeline, attractions pipeline, mini tools, B2B/B2C tone of voice, categories and tags, setup, troubleshooting, and more.\n\nTry asking things like:\n- \"How do I process a new event?\"\n- \"What are the steps for attractions mode?\"\n- \"How do I use Mini Tools?\"\n- \"What is B2B TOV?\"\n- \"How does the Block Tagger work?\"\n- \"How do I add categories and tags?\"'
+      content: 'Welcome to the Rockstary AI Runner. Ask me about any workflow, and I will guide you through the steps. I can help with events pipeline, attractions pipeline, Events DB, mini tools, Optimiser, B2B/B2C tone of voice, QA Tagging, categories and tags, setup, troubleshooting, and more.\n\nTry asking things like:\n- \"How do I process a new event?\"\n- \"What are the steps for attractions mode?\"\n- \"How do I use Mini Tools?\"\n- \"What is B2B TOV?\"\n- \"How do I browse and filter events in Events DB?\"\n- \"How does the Optimiser rewrite content?\"\n- \"What is QA Tagging and how do I run a scan?\"\n- \"How does the Block Tagger work?\"\n- \"How do I use B2C TOV for event descriptions?\"\n- \"How do I add categories and tags?\"'
     }
   ])
   const [input, setInput] = useState('')
@@ -316,7 +316,7 @@ export default function AIRunnerPage() {
                   }`}
                 >
                   <div className="whitespace-pre-wrap">
-                    {msg.content.split(/\*\*(.+?)\*\*/g).map((part, j) =>
+                    {msg.content.split(/\*\(.+?)\*\*/g).map((part, j) =>
                       j % 2 === 1 ? (
                         <strong key={j} className="text-pl-gold">{part}</strong>
                       ) : (
@@ -365,7 +365,7 @@ export default function AIRunnerPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                placeholder="Ask about any Rockstary workflow..."
+                placeholder="Ask about any Rocksary workflow..."
                 className="flex-1 bg-pl-card border border-pl-border rounded-lg px-4 py-3 text-sm text-pl-text placeholder-pl-muted focus:outline-none focus:border-pl-gold/50 transition-colors"
               />
               <button
@@ -473,8 +473,13 @@ export default function AIRunnerPage() {
                   >
                     <option value="general">General</option>
                     <option value="events">Events</option>
+                    <option value="events-db">Events DB</option>
                     <option value="attractions">Attractions</option>
                     <option value="tools">Tools</option>
+                    <option value="optimiser">Optimiser</option>
+                    <option value="qa-tagging">QA Tagging</option>
+                    <option value="b2b-tov">B2B TOV</option>
+                    <option value="b2c-tov">B2C TOV</option>
                   </select>
                 </div>
               </div>
