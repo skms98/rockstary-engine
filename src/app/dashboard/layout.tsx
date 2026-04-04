@@ -20,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isB2BTOV = pathname.startsWith('/dashboard/b2b-tov')
   const isB2CTOV = pathname.startsWith('/dashboard/b2c-tov')
   const isOptimiser = pathname.startsWith('/dashboard/optimiser')
+  const isQATagging = pathname.startsWith('/dashboard/qa-tagging')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -69,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Mode Selector */}
-        <div className="p-4 space-y-1">
+        <div className="p-4 space-y-1 overflow-y-auto flex-1">
           {sidebarOpen && (
             <p className="text-[10px] text-pl-muted uppercase tracking-wider px-3 mb-3">Mode</p>
           )}
@@ -212,10 +213,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </svg>
             {sidebarOpen && <span className="font-medium">B2C TOV</span>}
           </button>
-        </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+          {/* QA Section */}
+          {sidebarOpen && (
+            <div className="pt-4 pb-2">
+              <p className="text-[10px] text-pl-muted uppercase tracking-wider px-3 mb-3">QA</p>
+            </div>
+          )}
+
+          <button
+            onClick={() => router.push('/dashboard/qa-tagging')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isQATagging
+                ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400'
+                : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {sidebarOpen && <span className="font-medium">QA: Tags &amp; Cats</span>}
+          </button>
+        </div>
 
         {/* Toggle sidebar */}
         <button
