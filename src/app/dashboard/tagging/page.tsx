@@ -59,6 +59,7 @@ export default function TaggingPage() {
 
   // QA tab state
   const [qaMode, setQaMode] = useState<'categories' | 'tags' | 'both' | 'no-tags'>('both');
+  const [qaScanSize, setQaScanSize] = useState<'50' | '300' | 'full'>('300');
   const [qaScanning, setQaScanning] = useState(false);
   const [qaIssues, setQaIssues] = useState<any[]>([]);
   const [qaScanned, setQaScanned] = useState(0);
@@ -1488,6 +1489,28 @@ export default function TaggingPage() {
                 <h3 className="text-xl font-bold text-pl-gold">Tagging Entries QA Audit</h3>
                 <p className="text-pl-muted text-sm">Scans <strong className="text-pl-text-dim">initial_done</strong> and <strong className="text-pl-text-dim">validated</strong> entries for wrong or missing labels.</p>
 
+                {/* Scan size selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-pl-muted font-medium">Scan size:</span>
+                  {([
+                    { id: '50', label: '⚡ Quick (50)' },
+                    { id: '300', label: '📊 Normal (300)' },
+                    { id: 'full', label: '🔍 Full Scan' },
+                  ] as const).map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => setQaScanSize(s.id)}
+                      className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
+                        qaScanSize === s.id
+                          ? 'bg-pl-gold text-black'
+                          : 'bg-pl-navy border border-pl-border text-pl-muted hover:text-pl-text-dim'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Mode selector */}
                 <div className="flex gap-2 flex-wrap">
                   {([
@@ -1520,7 +1543,9 @@ export default function TaggingPage() {
                       const { data: { session } } = await supabase.auth.getSession();
                       const authToken = session?.access_token;
                       if (!authToken) throw new Error('Not authenticated');
-                      const res = await fetch(`/api/qa/tagging-entries?mode=${qaMode}`, {
+                      const qaParams = new URLSearchParams({ mode: qaMode });
+                      if (qaScanSize === 'full') { qaParams.set('full', 'true'); } else { qaParams.set('max', qaScanSize); }
+                      const res = await fetch(`/api/qa/tagging-entries?${qaParams}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` },
                       });
                       const json = await res.json();
