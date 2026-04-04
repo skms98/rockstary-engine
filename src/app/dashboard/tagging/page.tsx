@@ -995,6 +995,13 @@ export default function TaggingPage() {
 
           {/* TAXONOMY TAB */}
           {activeTab === 'taxonomy' && (
+            <div className="space-y-6">
+              {/* Live integration notice */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block" />
+                <span className="text-green-400 text-sm font-semibold">Live</span>
+                <span className="text-pl-muted text-sm">Every change to categories and tags is picked up by the AI on the next run — no restart needed.</span>
+              </div>
             <div className="grid grid-cols-2 gap-8">
               {/* Categories */}
               <div>
@@ -1394,10 +1401,18 @@ export default function TaggingPage() {
                 </div>
               </div>
             </div>
+            </div>
           )}
 
           {/* PROMPTS TAB */}
           {activeTab === 'prompts' && (
+            <div className="space-y-6">
+              {/* Live integration notice */}
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-green-900/20 border border-green-500/30 rounded-lg">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block" />
+                <span className="text-green-400 text-sm font-semibold">Live</span>
+                <span className="text-pl-muted text-sm">The AI reads these prompts fresh from the database on every run. Save a change here and it takes effect immediately — no code deploy needed.</span>
+              </div>
             <div className="grid grid-cols-2 gap-8">
               {/* Tagging Beast Prompt */}
               <div className="pl-card p-6 border border-pl-border space-y-4">
