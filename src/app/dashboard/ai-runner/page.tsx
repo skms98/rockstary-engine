@@ -42,7 +42,7 @@ export default function AIRunnerPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: 'Welcome to the Rockstary AI Runner. Ask me about any workflow, and I will guide you through the steps. I can help with events pipeline, attractions pipeline, Events DB, mini tools, Optimiser, B2B/B2C tone of voice, QA Tagging, categories and tags, setup, troubleshooting, and more.\n\nTry asking things like:\n- \"How do I process a new event?\"\n- \"What are the steps for attractions mode?\"\n- \"How do I use Mini Tools?\"\n- \"What is B2B TOV?\"\n- \"How do I browse and filter events in Events DB?\"\n- \"How does the Optimiser rewrite content?\"\n- \"What is QA Tagging and how do I run a scan?\"\n- \"How does the Block Tagger work?\"\n- \"How do I use B2C TOV for event descriptions?\"\n- \"How do I add categories and tags?\"'
+      content: 'Welcome to the Rockstary AI Runner. Ask me about any workflow, and I will guide you through the steps. I can help with events pipeline, attractions pipeline, Events DB, mini tools, Optimiser, B2B/B2C tone of voice, QA Tagging, categories and tags, troubleshooting, and more.\n\nTry asking things like:\n- \"How do I process a new event?\"\n- \"What are the steps for attractions mode?\"\n- \"How do I use Mini Tools?\"\n- \"What is B2B TOV?\"\n- \"How do I browse and filter events in Events DB?\"\n- \"How does the Optimiser rewrite content?\"\n- \"What is QA Tagging and how do I run a scan?\"\n- \"How does the Block Tagger work?\"\n- \"How do I use B2C TOV for event descriptions?\"\n- \"How do I add categories and tags?\"'
     }
   ])
   const [input, setInput] = useState('')
@@ -286,7 +286,7 @@ export default function AIRunnerPage() {
         {/* Category chips - only in chat mode */}
         {activeTab === 'chat' && categories.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-4">
-            {categories.map(cat => (
+            {categories.filter(cat => cat.toLowerCase() !== 'setup').map(cat => (
               <button
                 key={cat}
                 onClick={() => handleCategoryClick(cat)}
