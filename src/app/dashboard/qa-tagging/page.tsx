@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 const RS_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const RS_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-type Mode = 'categories' | 'tags' | 'both'
+type Mode = 'categories' | 'tags' | 'both' | 'no-tags'
 
 interface QAEvent {
   event_id: number
@@ -28,6 +28,7 @@ const LS_TAGS = 'qa_excluded_tags'
 
 export default function QATaggingPage() {
   const [mode, setMode] = useState<Mode>('both')
+  const [scanSize, setScanSize] = useState<'50' | '300' | 'full'>('300')
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState('')
   const [events, setEvents] = useState<QAEvent[]>([])
@@ -87,7 +88,8 @@ export default function QATaggingPage() {
     setProgress('Running AI scan on events… this may take up to 60s')
 
     const allExcluded = [...new Set([...excludedCats, ...excludedTags])].join(',')
-    const params = new URLSearchParams({ mode, search, excluded: allExcluded, max: '150' })
+    const params = new URLSearchParams({ mode, search, excluded: allExcluded })
+    if (scanSize === 'full') { params.set('full', 'true') } else { params.set('max', scanSize) }
 
     try {
       const res = await fetch(`/api/qa/categories-tags?${params}`, {
@@ -115,7 +117,14 @@ export default function QATaggingPage() {
     categories: { label: 'Categories', color: 'orange', icon: '⚠' },
     tags: { label: 'Tags', color: 'red', icon: '🏷' },
     both: { label: 'Both', color: 'yellow', icon: '⚡' },
+    'no-tags': { label: 'No Tags', color: 'red', icon: '🚫' },
   }
+
+  const scanSizeConfig = [
+    { id: '50' as const, label: '⚡ Quick (50)' },
+    { id: '300' as const, label: '📊 Normal (300)' },
+    { id: 'full' as const, label: '🔍 Full Scan' },
+  ]
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -127,11 +136,29 @@ export default function QATaggingPage() {
         </p>
       </div>
 
+      {/* Scan Size selector */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-pl-text-dim font-medium">Scan size:</span>
+        {scanSizeConfig.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setScanSize(s.id)}
+            className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
+              scanSize === s.id
+                ? 'bg-pl-gold text-black'
+                : 'bg-pl-card border border-pl-border text-pl-text-dim hover:text-pl-text'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {/* Mode selector + Search + Scan */}
       <div className="flex items-center gap-3 flex-wrap">
         {/* Mode tabs */}
         <div className="flex rounded-lg overflow-hidden border border-pl-border">
-          {(['categories', 'tags', 'both'] as Mode[]).map((m) => {
+          {(['categories', 'tags', 'both', 'no-tags'] as Mode[]).map((m) => {
             const cfg = modeConfig[m]
             const active = mode === m
             const activeClass =
@@ -139,6 +166,8 @@ export default function QATaggingPage() {
                 ? 'bg-orange-500/15 text-orange-400 border-r border-orange-500/30'
                 : m === 'tags'
                 ? 'bg-red-500/15 text-red-400 border-r border-red-500/30'
+                : m === 'no-tags'
+                ? 'bg-red-900/30 text-red-300'
                 : 'bg-yellow-500/15 text-yellow-400'
             return (
               <button
@@ -177,6 +206,7 @@ export default function QATaggingPage() {
         {mode === 'categories' && '⚠ Scanning for wrong categories only — tags are ignored'}
         {mode === 'tags' && '🏷 Scanning for wrong tags only — categories are ignored'}
         {mode === 'both' && '⚡ Scanning both categories and tags for mismatches — issues in either will surface the event'}
+        {mode === 'no-tags' && '🚫 Finding events with no marketing tags assigned — no AI needed, instant results'}
       </div>
 
       {/* Progress */}
