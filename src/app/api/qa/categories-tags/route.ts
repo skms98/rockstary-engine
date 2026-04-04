@@ -31,7 +31,7 @@ interface AIResult {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const mode = (searchParams.get('mode') || 'both') as 'categories' | 'tags' | 'both'
+  const mode = (searchParams.get('mode') || 'both') as 'categories' | 'tags' | 'both' | 'no-tags'
   const search = searchParams.get('search') || ''
   const excluded = searchParams.get('excluded')?.split(',').filter(Boolean) ?? []
   const max = Math.min(parseInt(searchParams.get('max') || '100'), 300)
@@ -64,28 +64,48 @@ export async function GET(req: NextRequest) {
     )
 
     // Parse categories and tags per event
-    const parsed: ParsedEvent[] = rows
-      .map((ev) => {
-        const cats =
-          ev.all_categories
-            ?.split(';')
-            .map((s) => s.trim())
-            .filter(Boolean) ?? []
+    const allParsed = rows.map((ev) => {
+      const cats =
+        ev.all_categories
+          ?.split(';')
+          .map((s) => s.trim())
+          .filter(Boolean) ?? []
 
-        let tags: string[] = []
-        if (Array.isArray(ev.marketing_tags)) {
-          tags = (ev.marketing_tags as string[]).map((s) => String(s).trim()).filter(Boolean)
-        } else if (typeof ev.marketing_tags === 'string') {
-          tags = ev.marketing_tags.split(',').map((s) => s.trim()).filter(Boolean)
-        }
+      let tags: string[] = []
+      if (Array.isArray(ev.marketing_tags)) {
+        tags = (ev.marketing_tags as string[]).map((s) => String(s).trim()).filter(Boolean)
+      } else if (typeof ev.marketing_tags === 'string') {
+        tags = ev.marketing_tags.split(',').map((s) => s.trim()).filter(Boolean)
+      }
 
-        return { ev, cats, tags }
-      })
-      .filter((r) => {
-        if (mode === 'categories') return r.cats.length > 0
-        if (mode === 'tags') return r.tags.length > 0
-        return r.cats.length > 0 || r.tags.length > 0
-      })
+      return { ev, cats, tags }
+    })
+
+    // --- no-tags mode: no AI needed ---
+    if (mode === 'no-tags') {
+      const noTags = allParsed
+        .filter((r) => r.tags.length === 0)
+        .map((r) => ({
+          event_id: r.ev.event_id,
+          event_name: r.ev.event_name_en,
+          status: r.ev.status,
+          url: r.ev.url,
+          country: r.ev.country,
+          city: r.ev.city,
+          start_date: r.ev.event_start_datetime,
+          is_attraction: r.ev.is_attraction,
+          applied_categories: r.cats,
+          applied_tags: [],
+          missing_tags: true,
+        }))
+      return NextResponse.json({ events: noTags, total: noTags.length, scanned: rows.length })
+    }
+
+    const parsed: ParsedEvent[] = allParsed.filter((r) => {
+      if (mode === 'categories') return r.cats.length > 0
+      if (mode === 'tags') return r.tags.length > 0
+      return r.cats.length > 0 || r.tags.length > 0
+    })
 
     // AI batch evaluation — 25 events per call
     const BATCH = 25
