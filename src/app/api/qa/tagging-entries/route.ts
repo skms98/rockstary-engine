@@ -13,7 +13,6 @@ interface AIResult {
 function parseTaggingResult(result: string | null): { cats: string[]; tags: string[] } {
   if (!result) return { cats: [], tags: [] }
   try {
-    // Strip markdown code fences if present
     const cleaned = result.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return { cats: [], tags: [] }
@@ -25,16 +24,14 @@ function parseTaggingResult(result: string | null): { cats: string[]; tags: stri
       .map((t: any) => String(t).trim())
       .filter(Boolean)
     return { cats, tags }
-  } catch {
-    return { cats: [], tags: [] }
-  }
+  } catch { return { cats: [], tags: [] } }
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const mode = (searchParams.get('mode') || 'both') as 'categories' | 'tags' | 'both' | 'no-tags'
-  const fullScan = searchParams.get('full') === 'true'
-  const maxParam = fullScan ? 9999 : Math.min(parseInt(searchParams.get('max') || '300'), 2000)
+  const full = searchParams.get('full') === 'true'
+  const max = full ? 99999 : Math.min(parseInt(searchParams.get('max') || '200'), 99999)
   const authToken = req.headers.get('Authorization')?.replace('Bearer ', '')
   if (!authToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -58,14 +55,32 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { data, error } = await rsAuth
+    let query = rsAuth
       .from('tagging_entries')
       .select('id,title,initial_result,validated_result,status')
       .in('status', ['initial_done', 'validated'])
       .order('created_at', { ascending: false })
-      .limit(maxParam)
 
+    if (!full) query = (query as any).limit(max)
+
+    const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // --- no-tags mode: no AI needed ---
+    if (mode === 'no-tags') {
+      const noTags = (data || []).filter((entry: any) => {
+        const { tags } = parseTaggingResult(entry.validated_result || entry.initial_result)
+        return tags.length === 0
+      }).map((entry: any) => ({
+        entry_id: entry.id,
+        title: entry.title,
+        status: entry.status,
+        applied_categories: parseTaggingResult(entry.validated_result || entry.initial_result).cats,
+        applied_tags: [],
+        missing_tags: true,
+      }))
+      return NextResponse.json({ issues: noTags, scanned: (data || []).length })
+    }
 
     const entries = (data || [])
       .map((entry: any) => {
@@ -83,7 +98,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ issues: [], scanned: 0 })
     }
 
-    const BATCH = 150
+    const BATCH = 25
     const issues: object[] = []
 
     for (let i = 0; i < entries.length; i += BATCH) {
