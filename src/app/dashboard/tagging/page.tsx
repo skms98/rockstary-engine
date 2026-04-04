@@ -1511,6 +1511,7 @@ export default function TaggingPage() {
                 )}
               </div>
             </div>
+            </div>
           )}
 
         </>
