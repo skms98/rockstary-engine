@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { createPLClient } from '@/lib/pl-supabase'
 
 export const maxDuration = 60
 
@@ -40,7 +40,13 @@ export async function GET(req: NextRequest) {
     process.env.PL_SUPABASE_URL!,
     process.env.PL_SUPABASE_SERVICE_KEY!
   )
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
+  let plClient: ReturnType<typeof createPLClient>
+  try {
+    plClient = createPLClient()
+  } catch (e: any) {
+    return NextResponse.json({ error: 'PL Supabase not configured: ' + e.message }, { status: 500 })
+  }
 
   try {
     let query = pl
@@ -119,13 +125,13 @@ Response format (only events with issues, empty array [] if none):
 [{"index":0,"wrong_categories":["Wrong Cat"],"wrong_tags":["wrong-tag"]}]`
 
       try {
-        const res = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }],
+        const { data: aiData, error: aiError } = await plClient.functions.invoke('ai-process', {
+          body: { prompt, stepField: 'qa-categories-tags', eventTitle: '' },
         })
 
-        const rawText = res.content[0].type === 'text' ? res.content[0].text.trim() : '[]'
+        if (aiError) throw new Error(aiError.message || JSON.stringify(aiError))
+
+        const rawText = (aiData?.result || aiData?.text || aiData?.content || '') as string
         const jsonMatch = rawText.match(/\[[\s\S]*\]/)
         if (!jsonMatch) continue
 
@@ -153,8 +159,11 @@ Response format (only events with issues, empty array [] if none):
             })
           }
         }
-      } catch {
-        // skip bad AI batch, continue
+      } catch (batchErr: any) {
+        return NextResponse.json(
+          { error: `AI batch ${Math.floor(i / BATCH) + 1} failed: ${batchErr?.message || 'Unknown error'}` },
+          { status: 500 }
+        )
       }
     }
 
