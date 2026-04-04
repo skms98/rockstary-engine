@@ -1,127 +1,170 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
 
-function createPLClient() {
-  return createClient(
-    process.env.PL_SUPABASE_URL!,
-    process.env.PL_SUPABASE_SERVICE_KEY!
-  )
+export const maxDuration = 60
+
+interface EventRow {
+  event_id: number
+  event_name_en: string
+  all_categories: string | null
+  marketing_tags: string[] | string | null
+  status: string | null
+  url: string | null
+  country: string | null
+  city: string | null
+  event_start_datetime: string | null
+  is_attraction: boolean | null
 }
 
-function getRSClient(token: string) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  )
+interface ParsedEvent {
+  ev: EventRow
+  cats: string[]
+  tags: string[]
+}
+
+interface AIResult {
+  index: number
+  wrong_categories?: string[]
+  wrong_tags?: string[]
 }
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const mode = (searchParams.get('mode') || 'both') as 'categories' | 'tags' | 'both'
+  const search = searchParams.get('search') || ''
+  const excluded = searchParams.get('excluded')?.split(',').filter(Boolean) ?? []
+  const max = Math.min(parseInt(searchParams.get('max') || '100'), 300)
+
+  const pl = createClient(
+    process.env.PL_SUPABASE_URL!,
+    process.env.PL_SUPABASE_SERVICE_KEY!
+  )
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
+
   try {
-    const token = req.headers.get('authorization')?.replace('Bearer ', '') || ''
-    const rs = getRSClient(token)
-    const pl = createPLClient()
-    const sp = req.nextUrl.searchParams
-    const page = parseInt(sp.get('page') || '1', 10)
-    const perPage = 50
-    const search = sp.get('search') || ''
-    const filterType = sp.get('filter') || '' // 'categories' | 'tags' | ''
-    const excludedRaw = sp.get('excluded') || ''
-    const excluded = new Set(excludedRaw ? excludedRaw.split(',').map(s => s.trim()).filter(Boolean) : [])
+    let query = pl
+      .from('hourly_sql_export')
+      .select('event_id,event_name_en,all_categories,marketing_tags,status,url,country,city,event_start_datetime,is_attraction')
+      .limit(max)
 
-    // ── Load authorized taxonomy ──────────────────────────────
-    const { data: taxonomy, error: taxErr } = await rs
-      .from('tagging_taxonomy')
-      .select('type, name, is_selectable')
+    if (search) query = (query as any).ilike('event_name_en', `%${search}%`)
 
-    if (taxErr) return NextResponse.json({ error: taxErr.message }, { status: 500 })
+    const { data, error } = await query
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const authCats = new Set<string>(
-      (taxonomy || [])
-        .filter(t => t.type === 'category' && t.is_selectable !== false)
-        .map(t => (t.name as string).trim())
-    )
-    const authTags = new Set<string>(
-      (taxonomy || [])
-        .filter(t => t.type === 'tag')
-        .map(t => (t.name as string).trim())
+    const rows = (data as EventRow[]).filter(
+      (ev) => !excluded.includes(String(ev.event_id))
     )
 
-    // ── Scan events in batches ────────────────────────────────
-    const BATCH = 1000
-    const allIssues: object[] = []
-    let from = 0
+    // Parse categories and tags per event
+    const parsed: ParsedEvent[] = rows
+      .map((ev) => {
+        const cats =
+          ev.all_categories
+            ?.split(';')
+            .map((s) => s.trim())
+            .filter(Boolean) ?? []
 
-    while (true) {
-      let q = pl
-        .from('hourly_sql_export')
-        .select(
-          'event_id, event_name_en, event_name_ar, all_categories, marketing_tags, ' +
-          'status, url, country, city, event_start_datetime, event_end_datetime, is_attraction'
-        )
-        .range(from, from + BATCH - 1)
-        .order('added_datetime', { ascending: false })
-
-      if (search) q = q.ilike('event_name_en', `%${search}%`)
-
-      const { data: batch, error } = await q
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-      if (!batch || batch.length === 0) break
-
-      for (const ev of batch) {
-        if (excluded.has(String(ev.event_id))) continue
-
-        const catIssues: string[] = []
-        const tagIssues: string[] = []
-
-        // Check categories — all_categories is semicolon-separated
-        if (ev.all_categories) {
-          String(ev.all_categories)
-            .split(';')
-            .map(s => s.trim())
-            .filter(Boolean)
-            .forEach(c => { if (!authCats.has(c)) catIssues.push(c) })
+        let tags: string[] = []
+        if (Array.isArray(ev.marketing_tags)) {
+          tags = (ev.marketing_tags as string[]).map((s) => String(s).trim()).filter(Boolean)
+        } else if (typeof ev.marketing_tags === 'string') {
+          tags = ev.marketing_tags.split(',').map((s) => s.trim()).filter(Boolean)
         }
 
-        // Check marketing tags — array or comma-separated
-        if (ev.marketing_tags) {
-          const tags: string[] = Array.isArray(ev.marketing_tags)
-            ? ev.marketing_tags
-            : String(ev.marketing_tags).split(',').map(s => s.trim()).filter(Boolean)
-          tags.forEach(t => { if (!authTags.has(t)) tagIssues.push(t) })
-        }
+        return { ev, cats, tags }
+      })
+      .filter((r) => {
+        if (mode === 'categories') return r.cats.length > 0
+        if (mode === 'tags') return r.tags.length > 0
+        return r.cats.length > 0 || r.tags.length > 0
+      })
 
-        const hasCatIssue = catIssues.length > 0
-        const hasTagIssue = tagIssues.length > 0
-        const shouldInclude =
-          (filterType === 'categories' && hasCatIssue) ||
-          (filterType === 'tags' && hasTagIssue) ||
-          (!filterType && (hasCatIssue || hasTagIssue))
+    // AI batch evaluation — 25 events per call
+    const BATCH = 25
+    const issues: object[] = []
 
-        if (shouldInclude) {
-          allIssues.push({ ...ev, cat_issues: catIssues, tag_issues: tagIssues })
+    for (let i = 0; i < parsed.length; i += BATCH) {
+      const batch = parsed.slice(i, i + BATCH)
+
+      const lines = batch
+        .map((r, idx) => {
+          const label = `${idx}. "${r.ev.event_name_en}" (${r.ev.is_attraction ? 'Attraction' : 'Event'}, ${r.ev.country ?? ''})`
+          const catPart = mode !== 'tags' ? `Categories: [${r.cats.join('; ')}]` : ''
+          const tagPart = mode !== 'categories' ? `Tags: [${r.tags.join(', ')}]` : ''
+          return [label, catPart, tagPart].filter(Boolean).join(' | ')
+        })
+        .join('\n')
+
+      const checkWhat =
+        mode === 'categories' ? 'categories' : mode === 'tags' ? 'tags' : 'categories and tags'
+
+      const prompt = `You are a QA auditor for a UAE event ticketing platform. Review these events/attractions and their applied ${checkWhat}.
+
+Your job: identify labels that are CLEARLY WRONG or MISLEADING for the event type.
+
+Rules:
+- Flag only obvious semantic mismatches. Example: "Comedy Shows" on Swan Lake (a ballet) is WRONG. "Music" on a marathon race is WRONG.
+- A label is wrong if it describes a fundamentally different type of activity or genre.
+- If a label could plausibly apply, do NOT flag it.
+- Wrong categories go in "wrong_categories", wrong tags in "wrong_tags".
+- Only include an entry in your response if there is at least one wrong label.
+- Return ONLY a valid JSON array, no explanation, no markdown.
+
+Events:
+${lines}
+
+Response format (only events with issues, empty array [] if none):
+[{"index":0,"wrong_categories":["Wrong Cat"],"wrong_tags":["wrong-tag"]}]`
+
+      try {
+        const res = await anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }],
+        })
+
+        const rawText = res.content[0].type === 'text' ? res.content[0].text.trim() : '[]'
+        const jsonMatch = rawText.match(/\[[\s\S]*\]/)
+        if (!jsonMatch) continue
+
+        const results: AIResult[] = JSON.parse(jsonMatch[0])
+
+        for (const r of results) {
+          const item = batch[r.index]
+          if (!item) continue
+          const wrongCats = r.wrong_categories ?? []
+          const wrongTags = r.wrong_tags ?? []
+          if (wrongCats.length || wrongTags.length) {
+            issues.push({
+              event_id: item.ev.event_id,
+              event_name: item.ev.event_name_en,
+              status: item.ev.status,
+              url: item.ev.url,
+              country: item.ev.country,
+              city: item.ev.city,
+              start_date: item.ev.event_start_datetime,
+              is_attraction: item.ev.is_attraction,
+              applied_categories: item.cats,
+              applied_tags: item.tags,
+              wrong_categories: wrongCats,
+              wrong_tags: wrongTags,
+            })
+          }
         }
+      } catch {
+        // skip bad AI batch, continue
       }
-
-      // Stop after 5000 events to keep response time reasonable
-      from += BATCH
-      if (from >= 5000) break
     }
 
-    const start = (page - 1) * perPage
-    const pageItems = allIssues.slice(start, start + perPage)
-
     return NextResponse.json({
-      events: pageItems,
-      total: allIssues.length,
-      page,
-      pages: Math.ceil(allIssues.length / perPage),
-      taxonomy: { categories: authCats.size, tags: authTags.size },
+      events: issues,
+      total: issues.length,
+      scanned: parsed.length,
     })
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    )
+    const msg = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
