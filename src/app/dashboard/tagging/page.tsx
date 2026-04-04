@@ -1495,7 +1495,7 @@ export default function TaggingPage() {
                   {([
                     { id: '50', label: '⚡ Quick (50)' },
                     { id: '300', label: '📊 Normal (300)' },
-                    { id: 'full', label: '🔍 Full Scan' },
+                    { id: 'full', label: '📍 900+ Max Scan' },
                   ] as const).map(s => (
                     <button
                       key={s.id}
