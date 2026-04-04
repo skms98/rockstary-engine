@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
   const mode = (searchParams.get('mode') || 'both') as 'categories' | 'tags' | 'both' | 'no-tags'
   const search = searchParams.get('search') || ''
   const excluded = searchParams.get('excluded')?.split(',').filter(Boolean) ?? []
-  const max = Math.min(parseInt(searchParams.get('max') || '100'), 300)
+  const fullScan = searchParams.get('full') === 'true'
+  const max = fullScan ? 9999 : Math.min(parseInt(searchParams.get('max') || '300'), 2000)
 
   const pl = createClient(
     process.env.PL_SUPABASE_URL!,
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
     })
 
     // AI batch evaluation — 25 events per call
-    const BATCH = 25
+    const BATCH = 150
     const issues: object[] = []
 
     for (let i = 0; i < parsed.length; i += BATCH) {
