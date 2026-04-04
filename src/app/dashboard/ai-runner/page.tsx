@@ -316,7 +316,7 @@ export default function AIRunnerPage() {
                   }`}
                 >
                   <div className="whitespace-pre-wrap">
-                    {msg.content.split(/\*\(.+?)\*\*/g).map((part, j) =>
+                    {msg.content.split(/\*\*(.+?)\*\*/g).map((part, j) =>
                       j % 2 === 1 ? (
                         <strong key={j} className="text-pl-gold">{part}</strong>
                       ) : (
