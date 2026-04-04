@@ -1,394 +1,394 @@
-// @ts-nocheck
 'use client'
+// @ts-nocheck
+import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
-import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+const RS_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const RS_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-const INP = 'bg-[#0f1a2e] border border-[#1e3a5f] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#c9a84c]'
-const EXCL_KEY_CATS = 'qa_excluded_categories'
-const EXCL_KEY_TAGS = 'qa_excluded_tags'
+type Mode = 'categories' | 'tags' | 'both'
 
-function fmt(d) {
-  return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+interface QAEvent {
+  event_id: number
+  event_name: string
+  status: string
+  url: string
+  country: string
+  city: string
+  start_date: string
+  is_attraction: boolean
+  applied_categories: string[]
+  applied_tags: string[]
+  wrong_categories: string[]
+  wrong_tags: string[]
 }
 
-function loadExcluded(key: string): Set<string> {
-  try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')) } catch { return new Set() }
-}
-function saveExcluded(key: string, set: Set<string>) {
-  localStorage.setItem(key, JSON.stringify([...set]))
-}
-
-function IssueBadge({ label, type }: { label: string; type: 'cat' | 'tag' }) {
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${
-      type === 'cat'
-        ? 'bg-orange-900/40 text-orange-300 border-orange-700/40'
-        : 'bg-red-900/40 text-red-300 border-red-700/40'
-    }`}>
-      {type === 'cat' ? '📁' : '🏷'} {label}
-    </span>
-  )
-}
+const LS_CATS = 'qa_excluded_categories'
+const LS_TAGS = 'qa_excluded_tags'
 
 export default function QATaggingPage() {
-  const [events, setEvents] = useState([])
-  const [total, setTotal] = useState(0)
-  const [pages, setPages] = useState(1)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [mode, setMode] = useState<Mode>('both')
+  const [scanning, setScanning] = useState(false)
+  const [progress, setProgress] = useState('')
+  const [events, setEvents] = useState<QAEvent[]>([])
+  const [scanned, setScanned] = useState(0)
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('') // '' | 'categories' | 'tags'
-  const [taxInfo, setTaxInfo] = useState<{ categories: number; tags: number } | null>(null)
-
-  // Exclusions are stored separately per type so excluding from cats scan ≠ excluding from tags scan
   const [excludedCats, setExcludedCats] = useState<Set<string>>(new Set())
   const [excludedTags, setExcludedTags] = useState<Set<string>>(new Set())
-  const [justExcluded, setJustExcluded] = useState<Set<string>>(new Set())
+  const [token, setToken] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const [hasScanned, setHasScanned] = useState(false)
 
   useEffect(() => {
-    setExcludedCats(loadExcluded(EXCL_KEY_CATS))
-    setExcludedTags(loadExcluded(EXCL_KEY_TAGS))
+    try {
+      setExcludedCats(new Set(JSON.parse(localStorage.getItem(LS_CATS) || '[]')))
+      setExcludedTags(new Set(JSON.parse(localStorage.getItem(LS_TAGS) || '[]')))
+    } catch {}
+    const rs = createClient(RS_URL, RS_ANON)
+    rs.auth.getSession().then(({ data }) => {
+      if (data.session) setToken(data.session.access_token)
+    })
   }, [])
 
-  const combinedExcluded = new Set([...excludedCats, ...excludedTags])
+  const persist = (cats: Set<string>, tags: Set<string>) => {
+    localStorage.setItem(LS_CATS, JSON.stringify([...cats]))
+    localStorage.setItem(LS_TAGS, JSON.stringify([...tags]))
+  }
 
-  const fetchIssues = useCallback(async (pg: number) => {
-    setLoading(true)
-    setError('')
+  const skipCats = (id: number) => {
+    const next = new Set(excludedCats).add(String(id))
+    setExcludedCats(next); persist(next, excludedTags)
+  }
+  const skipTags = (id: number) => {
+    const next = new Set(excludedTags).add(String(id))
+    setExcludedTags(next); persist(excludedCats, next)
+  }
+  const skipAll = (id: number) => {
+    const nc = new Set(excludedCats).add(String(id))
+    const nt = new Set(excludedTags).add(String(id))
+    setExcludedCats(nc); setExcludedTags(nt); persist(nc, nt)
+  }
+  const restore = (id: number) => {
+    const nc = new Set(excludedCats); nc.delete(String(id))
+    const nt = new Set(excludedTags); nt.delete(String(id))
+    setExcludedCats(nc); setExcludedTags(nt); persist(nc, nt)
+  }
+
+  const isExcluded = (id: number) => {
+    const s = String(id)
+    if (mode === 'categories') return excludedCats.has(s)
+    if (mode === 'tags') return excludedTags.has(s)
+    return excludedCats.has(s) && excludedTags.has(s)
+  }
+
+  const scan = async () => {
+    if (!token) { setError('Not authenticated'); return }
+    setScanning(true); setError(''); setEvents([]); setHasScanned(false)
+    setProgress('Running AI scan on events… this may take up to 60s')
+
+    const allExcluded = [...new Set([...excludedCats, ...excludedTags])].join(',')
+    const params = new URLSearchParams({ mode, search, excluded: allExcluded, max: '150' })
+
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token || ''
-
-      // Build excluded list based on current filter
-      const excSet = filter === 'categories' ? excludedCats : filter === 'tags' ? excludedTags : combinedExcluded
-      const excParam = [...excSet].join(',')
-
-      const params = new URLSearchParams({
-        page: String(pg),
-        ...(search && { search }),
-        ...(filter && { filter }),
-        ...(excParam && { excluded: excParam }),
-      })
-
       const res = await fetch(`/api/qa/categories-tags?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+      if (!res.ok) {
+        const j = await res.json()
+        throw new Error(j.error || 'Scan failed')
+      }
       const data = await res.json()
-      if (data.error) { setError(data.error); return }
       setEvents(data.events || [])
-      setTotal(data.total || 0)
-      setPages(data.pages || 1)
-      if (data.taxonomy) setTaxInfo(data.taxonomy)
-    } catch {
-      setError('Failed to load QA data')
+      setScanned(data.scanned || 0)
+      setHasScanned(true)
+    } catch (e: any) {
+      setError(e.message)
     } finally {
-      setLoading(false)
+      setScanning(false); setProgress('')
     }
-  }, [search, filter, excludedCats, excludedTags])
-
-  useEffect(() => { setPage(1); fetchIssues(1) }, [fetchIssues])
-
-  const go = (p: number) => { setPage(p); fetchIssues(p) }
-
-  function excludeFromCats(eventId: string) {
-    const next = new Set(excludedCats)
-    next.add(eventId)
-    setExcludedCats(next)
-    saveExcluded(EXCL_KEY_CATS, next)
-    setJustExcluded(prev => new Set([...prev, `cat-${eventId}`]))
   }
 
-  function excludeFromTags(eventId: string) {
-    const next = new Set(excludedTags)
-    next.add(eventId)
-    setExcludedTags(next)
-    saveExcluded(EXCL_KEY_TAGS, next)
-    setJustExcluded(prev => new Set([...prev, `tag-${eventId}`]))
-  }
+  const visible = events.filter((ev) => !isExcluded(ev.event_id))
+  const allExcludedIds = [...new Set([...excludedCats, ...excludedTags])]
 
-  function excludeAll(eventId: string) {
-    excludeFromCats(eventId)
-    excludeFromTags(eventId)
+  const modeConfig = {
+    categories: { label: 'Categories', color: 'orange', icon: '⚠' },
+    tags: { label: 'Tags', color: 'red', icon: '🏷' },
+    both: { label: 'Both', color: 'yellow', icon: '⚡' },
   }
-
-  function restoreEvent(eventId: string) {
-    const nc = new Set(excludedCats); nc.delete(eventId)
-    const nt = new Set(excludedTags); nt.delete(eventId)
-    setExcludedCats(nc); setExcludedTags(nt)
-    saveExcluded(EXCL_KEY_CATS, nc); saveExcluded(EXCL_KEY_TAGS, nt)
-  }
-
-  const totalExcluded = combinedExcluded.size
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span className="text-yellow-400">⚠</span> QA: Categories &amp; Tags
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Events with categories or tags not found in the authorized taxonomy
-          </p>
-        </div>
-        {taxInfo && (
-          <div className="flex gap-3 text-xs text-zinc-500">
-            <span className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-lg px-3 py-1.5">
-              📁 {taxInfo.categories} authorized categories
-            </span>
-            <span className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-lg px-3 py-1.5">
-              🏷 {taxInfo.tags} authorized tags
-            </span>
-          </div>
-        )}
+      <div>
+        <h1 className="text-2xl font-semibold text-pl-text">QA: Tags &amp; Categories</h1>
+        <p className="text-sm text-pl-text-dim mt-1">
+          AI-powered audit — detects misapplied categories and tags on events and attractions
+        </p>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[#0f1a2e] border border-orange-700/30 rounded-xl p-4">
-          <div className="text-2xl font-bold text-orange-300">{total}</div>
-          <div className="text-xs text-zinc-500 mt-1">Issues found</div>
-        </div>
-        <div className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-xl p-4">
-          <div className="text-2xl font-bold text-zinc-300">{totalExcluded}</div>
-          <div className="text-xs text-zinc-500 mt-1">
-            Excluded from scan
-            {totalExcluded > 0 && (
+      {/* Mode selector + Search + Scan */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Mode tabs */}
+        <div className="flex rounded-lg overflow-hidden border border-pl-border">
+          {(['categories', 'tags', 'both'] as Mode[]).map((m) => {
+            const cfg = modeConfig[m]
+            const active = mode === m
+            const activeClass =
+              m === 'categories'
+                ? 'bg-orange-500/15 text-orange-400 border-r border-orange-500/30'
+                : m === 'tags'
+                ? 'bg-red-500/15 text-red-400 border-r border-red-500/30'
+                : 'bg-yellow-500/15 text-yellow-400'
+            return (
               <button
-                onClick={() => {
-                  setExcludedCats(new Set()); setExcludedTags(new Set())
-                  saveExcluded(EXCL_KEY_CATS, new Set()); saveExcluded(EXCL_KEY_TAGS, new Set())
-                }}
-                className="ml-2 text-red-400 hover:text-red-300 underline"
-              >clear all</button>
-            )}
-          </div>
+                key={m}
+                onClick={() => setMode(m)}
+                className={`px-4 py-2 text-sm font-medium transition-all ${
+                  active ? activeClass : 'bg-pl-card text-pl-text-dim hover:text-pl-text border-r border-pl-border last:border-r-0'
+                }`}
+              >
+                {cfg.icon} {cfg.label}
+              </button>
+            )
+          })}
         </div>
-        <div className="bg-[#0f1a2e] border border-[#1e3a5f] rounded-xl p-4">
-          <div className="text-2xl font-bold text-zinc-300">{total + totalExcluded}</div>
-          <div className="text-xs text-zinc-500 mt-1">Total scanned (approx)</div>
-        </div>
+
+        <input
+          type="text"
+          placeholder="Filter by event name…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && scan()}
+          className="flex-1 min-w-[200px] bg-pl-card border border-pl-border rounded-lg px-3 py-2 text-sm text-pl-text placeholder-pl-text-dim focus:outline-none focus:border-yellow-500/50"
+        />
+
+        <button
+          onClick={scan}
+          disabled={scanning}
+          className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-semibold rounded-lg text-sm transition-colors"
+        >
+          {scanning ? 'Scanning…' : 'Scan'}
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-4">
-        <div className="flex gap-3 flex-wrap items-center">
-          <input
-            className={`${INP} flex-1 min-w-[200px]`}
-            placeholder="Search event name…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <select className={INP} value={filter} onChange={e => setFilter(e.target.value)}>
-            <option value="">All issues</option>
-            <option value="categories">Category issues only</option>
-            <option value="tags">Tag issues only</option>
-          </select>
-          <button
-            onClick={() => fetchIssues(page)}
-            className="px-4 py-2 rounded-lg bg-[#c9a84c] text-black font-medium text-sm hover:bg-yellow-400 transition"
-          >
-            Rescan
-          </button>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-xs text-zinc-500">
-            Page {page} of {pages} · {events.length} rows shown · {total} total issues
-          </span>
-          {filter !== '' && (
-            <button onClick={() => setFilter('')} className="text-xs text-zinc-500 hover:text-white">
-              ✕ Clear filter
-            </button>
-          )}
-        </div>
+      {/* Mode description */}
+      <div className="text-xs text-pl-text-dim bg-pl-card border border-pl-border rounded-lg px-4 py-2">
+        {mode === 'categories' && '⚠ Scanning for wrong categories only — tags are ignored'}
+        {mode === 'tags' && '🏷 Scanning for wrong tags only — categories are ignored'}
+        {mode === 'both' && '⚡ Scanning both categories and tags for mismatches — issues in either will surface the event'}
       </div>
 
-      {error && (
-        <div className="text-red-400 text-sm bg-red-900/20 border border-red-700/30 rounded-lg px-4 py-2">{error}</div>
+      {/* Progress */}
+      {progress && (
+        <div className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-sm text-yellow-400">
+          <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          {progress}
+        </div>
       )}
 
-      {/* Issues table */}
-      <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Error */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
+          ✕ {error}
+        </div>
+      )}
+
+      {/* Stats bar */}
+      {hasScanned && (
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: 'Events scanned', value: scanned, color: 'text-pl-text' },
+            { label: 'Issues found', value: events.length, color: 'text-yellow-400' },
+            { label: 'Visible now', value: visible.length, color: 'text-pl-text' },
+            { label: 'Skipped', value: allExcludedIds.length, color: 'text-zinc-400' },
+          ].map((s) => (
+            <div key={s.label} className="bg-pl-card border border-pl-border rounded-xl px-4 py-3">
+              <div className="text-xs text-pl-text-dim mb-1">{s.label}</div>
+              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Results table */}
+      {visible.length > 0 && (
+        <div className="bg-pl-card border border-pl-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#1e3a5f]">
-                {['Event', 'Date', 'Location', 'Status', '⚠ Category Issues', '⚠ Tag Issues', 'Actions'].map((h, i) => (
-                  <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">
-                    {h}
-                  </th>
-                ))}
+              <tr className="border-b border-pl-border text-[10px] uppercase tracking-wider text-pl-text-dim">
+                <th className="px-4 py-3 text-left">Event / Attraction</th>
+                <th className="px-4 py-3 text-left">Location</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                {mode !== 'tags' && <th className="px-4 py-3 text-left">⚠ Wrong Categories</th>}
+                {mode !== 'categories' && <th className="px-4 py-3 text-left">⚠ Wrong Tags</th>}
+                <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500">Scanning…</td></tr>
-              ) : events.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                  {total === 0 && !loading ? '✅ No issues found — taxonomy looks clean' : 'No results'}
-                </td></tr>
-              ) : events.map(row => {
-                const isAttr = row.is_attraction === true
-                const catExcluded = excludedCats.has(String(row.event_id))
-                const tagExcluded = excludedTags.has(String(row.event_id))
-                const catJustDone = justExcluded.has(`cat-${row.event_id}`)
-                const tagJustDone = justExcluded.has(`tag-${row.event_id}`)
+              {visible.map((ev, i) => (
+                <tr
+                  key={ev.event_id}
+                  className={`border-b border-pl-border/40 ${i % 2 === 1 ? 'bg-white/[0.015]' : ''}`}
+                >
+                  {/* Event name */}
+                  <td className="px-4 py-3 max-w-[260px]">
+                    <div className="font-medium text-pl-text leading-snug">{ev.event_name}</div>
+                    <div className="text-[11px] text-pl-text-dim mt-0.5">
+                      {ev.is_attraction ? '🏛 Attraction' : '🎭 Event'} · #{ev.event_id}
+                    </div>
+                    {ev.url && (
+                      <a
+                        href={ev.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] text-yellow-400/80 hover:text-yellow-400 hover:underline"
+                      >
+                        View on site →
+                      </a>
+                    )}
+                  </td>
 
-                return (
-                  <tr key={String(row.event_id)} className="border-b border-[#0f1a2e] hover:bg-[#0d1f3a] transition-colors">
-                    {/* Event name */}
-                    <td className="px-4 py-3 min-w-[220px]">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded border ${isAttr ? 'bg-teal-900/50 text-teal-300 border-teal-700/40' : 'bg-violet-900/50 text-violet-300 border-violet-700/40'}`}>
-                          {isAttr ? '🏛' : '🎭'}
-                        </span>
+                  {/* Location */}
+                  <td className="px-4 py-3 text-pl-text-dim text-xs">
+                    {[ev.city, ev.country].filter(Boolean).join(', ') || '—'}
+                  </td>
+
+                  {/* Status */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                        ev.status === 'active'
+                          ? 'bg-green-500/15 text-green-400'
+                          : 'bg-zinc-500/15 text-zinc-400'
+                      }`}
+                    >
+                      {ev.status || '—'}
+                    </span>
+                  </td>
+
+                  {/* Wrong categories */}
+                  {mode !== 'tags' && (
+                    <td className="px-4 py-3">
+                      {ev.wrong_categories?.length > 0 ? (
                         <div>
-                          <div className="text-white font-medium leading-snug">{row.event_name_en}</div>
-                          <div className="text-zinc-600 text-xs font-mono">#{row.event_id}</div>
-                        </div>
-                      </div>
-                      {row.url && (
-                        <a href={row.url} target="_blank" rel="noopener noreferrer"
-                          className="text-[10px] text-[#c9a84c] hover:text-yellow-300 underline mt-0.5 block truncate max-w-[200px]">
-                          {row.url}
-                        </a>
-                      )}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-300">
-                      {fmt(row.event_start_datetime)}
-                      {row.event_end_datetime && row.event_end_datetime !== row.event_start_datetime && (
-                        <div className="text-zinc-500">→ {fmt(row.event_end_datetime)}</div>
-                      )}
-                    </td>
-
-                    {/* Location */}
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-300">
-                      <div>{row.city || '—'}</div>
-                      {row.country && <div className="text-zinc-500">{row.country}</div>}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-xs px-2 py-0.5 rounded-full border bg-zinc-800/60 text-zinc-400 border-zinc-700/40">
-                        {row.status || '—'}
-                      </span>
-                    </td>
-
-                    {/* Category issues */}
-                    <td className="px-4 py-3 max-w-[260px]">
-                      {catExcluded ? (
-                        <span className="text-xs text-zinc-600 italic">excluded from scan</span>
-                      ) : catJustDone ? (
-                        <span className="text-xs text-emerald-400">✓ excluded</span>
-                      ) : row.cat_issues?.length > 0 ? (
-                        <div className="space-y-1">
-                          {row.cat_issues.map((c, i) => <IssueBadge key={i} label={c} type="cat" />)}
-                          {row.all_categories && (
-                            <div className="text-[10px] text-zinc-600 mt-1">
-                              Full: {row.all_categories}
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {ev.wrong_categories.map((c) => (
+                              <span
+                                key={c}
+                                className="px-2 py-0.5 bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs rounded"
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-pl-text-dim">
+                            All: {ev.applied_categories.join(' · ')}
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-emerald-400">✓ OK</span>
+                        <span className="text-pl-text-dim text-xs">—</span>
                       )}
                     </td>
+                  )}
 
-                    {/* Tag issues */}
-                    <td className="px-4 py-3 max-w-[260px]">
-                      {tagExcluded ? (
-                        <span className="text-xs text-zinc-600 italic">excluded from scan</span>
-                      ) : tagJustDone ? (
-                        <span className="text-xs text-emerald-400">✓ excluded</span>
-                      ) : row.tag_issues?.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {row.tag_issues.map((t, i) => <IssueBadge key={i} label={t} type="tag" />)}
+                  {/* Wrong tags */}
+                  {mode !== 'categories' && (
+                    <td className="px-4 py-3">
+                      {ev.wrong_tags?.length > 0 ? (
+                        <div>
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {ev.wrong_tags.map((t) => (
+                              <span
+                                key={t}
+                                className="px-2 py-0.5 bg-red-500/20 border border-red-500/30 text-red-400 text-xs rounded"
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-pl-text-dim">
+                            All: {ev.applied_tags.join(' · ')}
+                          </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-emerald-400">✓ OK</span>
+                        <span className="text-pl-text-dim text-xs">—</span>
                       )}
                     </td>
+                  )}
 
-                    {/* Actions */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex flex-col gap-1.5">
-                        {row.cat_issues?.length > 0 && !catExcluded && !catJustDone && (
-                          <button
-                            onClick={() => excludeFromCats(String(row.event_id))}
-                            className="text-xs px-2 py-1 rounded bg-orange-900/30 border border-orange-700/40 text-orange-300 hover:bg-orange-900/50 transition whitespace-nowrap"
-                          >
-                            Skip categories
-                          </button>
-                        )}
-                        {row.tag_issues?.length > 0 && !tagExcluded && !tagJustDone && (
-                          <button
-                            onClick={() => excludeFromTags(String(row.event_id))}
-                            className="text-xs px-2 py-1 rounded bg-red-900/30 border border-red-700/40 text-red-300 hover:bg-red-900/50 transition whitespace-nowrap"
-                          >
-                            Skip tags
-                          </button>
-                        )}
-                        {(row.cat_issues?.length > 0 || row.tag_issues?.length > 0) && !catExcluded && !tagExcluded && (
-                          <button
-                            onClick={() => excludeAll(String(row.event_id))}
-                            className="text-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-700/40 text-zinc-400 hover:text-white transition whitespace-nowrap"
-                          >
-                            Skip all
-                          </button>
-                        )}
-                        {(catExcluded || tagExcluded) && (
-                          <button
-                            onClick={() => restoreEvent(String(row.event_id))}
-                            className="text-xs px-2 py-1 rounded bg-zinc-800 border border-zinc-700/40 text-zinc-500 hover:text-white transition"
-                          >
-                            Restore
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      {mode !== 'tags' && (ev.wrong_categories?.length ?? 0) > 0 && (
+                        <button
+                          onClick={() => skipCats(ev.event_id)}
+                          className="text-[11px] px-2 py-1 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 rounded transition-colors text-left"
+                        >
+                          Skip categories
+                        </button>
+                      )}
+                      {mode !== 'categories' && (ev.wrong_tags?.length ?? 0) > 0 && (
+                        <button
+                          onClick={() => skipTags(ev.event_id)}
+                          className="text-[11px] px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded transition-colors text-left"
+                        >
+                          Skip tags
+                        </button>
+                      )}
+                      <button
+                        onClick={() => skipAll(ev.event_id)}
+                        className="text-[11px] px-2 py-1 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-400 rounded transition-colors text-left"
+                      >
+                        Skip all
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
 
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <button disabled={page <= 1} onClick={() => go(page - 1)}
-            className="px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-gray-300 text-sm disabled:opacity-40 hover:bg-[#2a4d7a] transition">
-            ← Prev
-          </button>
-          <span className="text-sm text-gray-400">Page {page} / {pages}</span>
-          <button disabled={page >= pages} onClick={() => go(page + 1)}
-            className="px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-gray-300 text-sm disabled:opacity-40 hover:bg-[#2a4d7a] transition">
-            Next →
-          </button>
+      {/* Empty state after scan */}
+      {hasScanned && !scanning && visible.length === 0 && (
+        <div className="text-center py-16 bg-pl-card border border-pl-border rounded-xl text-pl-text-dim">
+          <div className="text-4xl mb-3">✅</div>
+          <div className="font-medium text-pl-text">No issues found</div>
+          <div className="text-sm mt-1">
+            {scanned} events scanned — all {mode === 'both' ? 'categories and tags' : mode} look correct
+          </div>
         </div>
       )}
 
       {/* Exclusions manager */}
-      {totalExcluded > 0 && (
-        <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-4">
-          <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">
-            Excluded events ({totalExcluded}) — these are treated as correct and skipped in scans
-          </h3>
+      {allExcludedIds.length > 0 && (
+        <div className="bg-pl-card border border-pl-border rounded-xl p-4">
+          <div className="text-xs font-medium text-pl-text-dim uppercase tracking-wider mb-3">
+            Skipped events ({allExcludedIds.length})
+          </div>
           <div className="flex flex-wrap gap-2">
-            {[...combinedExcluded].map(id => (
-              <span key={id} className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg bg-zinc-800 border border-zinc-700/40 text-zinc-400">
-                #{id}
-                <span className="text-zinc-600">
-                  {excludedCats.has(id) && excludedTags.has(id) ? '(all)' : excludedCats.has(id) ? '(cats)' : '(tags)'}
+            {allExcludedIds.map((id) => (
+              <div
+                key={id}
+                className="flex items-center gap-2 bg-zinc-800/50 border border-zinc-700/50 rounded-md px-2 py-1 text-xs"
+              >
+                <span className="text-zinc-400">#{id}</span>
+                <span className="text-zinc-600 text-[10px]">
+                  {excludedCats.has(id) && excludedTags.has(id)
+                    ? 'all'
+                    : excludedCats.has(id)
+                    ? 'cats'
+                    : 'tags'}
                 </span>
-                <button onClick={() => restoreEvent(id)} className="text-zinc-600 hover:text-red-400 ml-0.5">✕</button>
-              </span>
+                <button
+                  onClick={() => restore(Number(id))}
+                  className="text-zinc-600 hover:text-zinc-300 transition-colors ml-1"
+                >
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
         </div>
