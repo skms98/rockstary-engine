@@ -43,14 +43,22 @@ TOV DON'Ts:
 - HARDWIRED RULE: Never use em dashes (the — character is completely banned everywhere)
 - No robotic or corporate phrasing ("We are pleased to announce", "Don't miss out")
 - No passive constructions where active works
-- No empty adjectives (amazing, incredible, unforgettable, spectacular, must-see, extraordinary)
+- Avoid overused adjectives by default (amazing, incredible, unforgettable, spectacular, must-see, extraordinary) — use only if genuinely the best fit and justified
 - No press-release tone or billboard speak
 - No filler phrases ("In today's world", "Whether you're looking for")
 - No guilt or FOMO pressure ("You won't want to miss this")
 - Sentences max 22-24 words
 
-FULLY BANNED WORDS/PHRASES (any of these in output = FAIL):
-unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+CAUTION WORDS — USE SPARINGLY WITH JUSTIFICATION:
+These words are overused in event copy and should be avoided by default. They are NOT a hard block — they CAN appear if all three conditions are met:
+  (1) No equally vivid or specific alternative exists for THIS event
+  (2) The word appears at most ONCE in the full text
+  (3) You state your justification inline: [JUSTIFIED: reason]
+If used without justification, or used more than once, it is a FAIL.
+Caution list: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+
+HARD-BLOCKED PHRASES (these are NEVER allowed, no exceptions):
+we are pleased to announce, we are delighted, we are thrilled, join us as, in today's world, whether you're looking for
 `
 
 export const STEP_PROMPTS: Record<string, (ctx: StepContext) => string> = {
@@ -226,8 +234,10 @@ SELF-CHECK BEFORE FINISHING: Literally count your words. If your version is shor
 PRE-SUBMISSION QUALITY CHECKLIST (complete before finalising):
 All facts preserved / All prestige titles intact / Legal disclaimers verbatim / No setlist implication / No interpretive language / Opener structure rotated / CTA unique across versions / Variation under 50% / Word count within 80-120% of original / 3 rewrites delivered / 20 teasers delivered / No banned words
 
-BANNED WORDS CHECK — search output before submitting. If ANY appear, rewrite that sentence:
-unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, promises to be, memorable moments, an evening to remember, immerse yourself
+CAUTION WORD CHECK — search output before submitting:
+Hard-blocked (always rewrite): we are pleased to announce, we are delighted, we are thrilled, join us as, whether you're looking for, in today's world.
+Caution words (allowed at most once, if genuinely the best fit — state justification inline as [JUSTIFIED: reason]): unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, prepare for, get ready to, promises to be, memorable moments, an evening to remember, immerse yourself.
+If used without justification → rewrite. If used more than once → rewrite all but the best instance.
 
 VOICE CHECK per sentence:
 1. Does it sound like a friend telling you about something cool? Not a brochure? Not a press release?
@@ -705,8 +715,9 @@ YOUR TASKS:
 
 1. COMPOSITE SCORING — for each S2 version:
    Weighted composite: TOV 30% + Fact Check 25% + Organiser Safety 20% + Grammar 10% + A/B Conversion 10% + SEO Uniqueness 5%
-   Show: [Version Name] — Composite Score: XX/100 | TOV: XX | Fact: XX | Organiser: XX | Grammar: XX | Conversion: XX | SEO: XX
-   MINIMUM TOV GATE: Any version scoring below 65/100 on TOV must be flagged "BELOW BRAND STANDARD" in the output, regardless of composite score. Still rank it, but carry the flag visibly.
+   NOTE ON TOV SCALE: S7 scores TOV out of 70 (7 criteria × 10). To normalize to /100, multiply by (100/70). Example: 46/70 × (100/70) = 65.7/100. Always use the normalized score when applying the gate below.
+   Show: [Version Name] — Composite Score: XX/100 | TOV (normalized): XX/100 | Fact: XX | Organiser: XX | Grammar: XX | Conversion: XX | SEO: XX
+   MINIMUM TOV GATE: Any version with normalized TOV below 65/100 must be flagged "BELOW BRAND STANDARD" in the output, regardless of composite score. Still rank it, but carry the flag visibly.
 
 2. PER-VERSION ASSESSMENT:
    For each rewrite:
@@ -741,7 +752,8 @@ YOUR TASKS:
    - Specific fixes the resolver MUST apply
 
 7. TOV ENFORCEMENT CHECK — final sweep:
-   List every phrase across ALL versions that violates TOV 2.4, with the specific rule violated and a compliant replacement suggestion.`,
+   List every phrase across ALL versions that violates TOV 2.4, with the specific rule violated and a compliant replacement suggestion.
+   CRITICAL: Your replacement suggestions in this section must themselves pass the caution word check. Do NOT suggest "creates unforgettable moments", "memorable moments", "incredible experience", or any other caution word as a replacement. Apply the same standard to your own output as you apply to the versions under review.`,
 
   // ═══════════════════════════════════════════════════════════════
   // Step S10: Resolver
@@ -811,7 +823,15 @@ Self-scores:
 - TOV Compliance: X/10
 - SEO Uniqueness: X/10
 - Grammar: X/10
-- Composite Score: XX/100
+- A/B Conversion: X/10
+Composite Score (weighted /100):
+  TOV (30%): [TOV/10 × 30] = XX
+  Fact (25%): [Fact/10 × 25] = XX
+  Organiser Safety (20%): [Organiser/10 × 20] = XX
+  Grammar (10%): [Grammar/10 × 10] = XX
+  Conversion (10%): [Conversion/10 × 10] = XX
+  SEO (5%): [SEO/10 × 5] = XX
+  TOTAL: XX/100
 
 Reviewer edits applied: [which specific instructions from S9 were implemented]
 Key differences from S2 versions: [what changed and why]
@@ -832,6 +852,14 @@ EM DASH ZERO TOLERANCE: Before outputting ANY variant, scan the full text for th
 - COUNT THE FULL ORIGINAL: Split S1 text by spaces across ALL paragraphs. A 2–3 paragraph description is typically 70–200 words. If you count below 70 words, you are only reading one paragraph — recount the complete text.
 - If shorter than 80% of original = FAILURE. Do not output as-is — ENHANCE. Add sensory detail, venue atmosphere, production elements, audience experience, emotional specificity until length reaches 80% minimum. Enhance, do not truncate.
 
+CTA REQUIREMENT (MANDATORY FOR ALL 4 VARIANTS):
+Every variant MUST end with a clear, warm call-to-action sentence as its final sentence. The CTA must be present in all 4 variants — no variant may end on a descriptive sentence. Use a different verb across variants to maintain structural variety:
+- Variant 1 example endings: "Grab your tickets now." / "Book your visit at platinumlist.net."
+- Variant 2 example endings: "Secure your spot at platinumlist.net." / "Find tickets on Platinumlist."
+- Variant 3 example endings: "Reserve your place today." / "See it for yourself — tickets on Platinumlist."
+- Variant 4 example endings: "Be there." / "Tickets available now on Platinumlist."
+The CTA must feel warm and inviting, not pushy. Never use: "Don't miss out", "You won't want to miss this", "Hurry", "Limited tickets remaining" (unless confirmed in original).
+
 ORIGINALITY RULE (ANTI-PLAGIARISM — APPLIES TO ALL 4 VARIANTS):
 No phrase of 5 or more consecutive words from the original description (S1) may appear verbatim in any resolved variant.
 You are producing original writing from factual source material — not editing the original text.
@@ -839,23 +867,27 @@ ONLY these elements may be preserved verbatim: proper nouns (venue names, artist
 Everything else — descriptive phrases, experiential language, emotional framing, sensory imagery — must be written from scratch using new vocabulary and sentence structures.
 SELF-CHECK: Before outputting each variant, scan for any 5-word sequence copied from S1. If found, rephrase before submitting.
 
-BANNED WORD ZERO-TOLERANCE SCAN (MANDATORY BEFORE OUTPUTTING ANY VARIANT):
-Read every sentence of every variant. Search for each word/phrase below — including partial matches (e.g. "unforgettable" inside "unforgettable adventure" or "unforgettable experience").
-If ANY banned word/phrase is found, you MUST rewrite that sentence BEFORE outputting.
-DO NOT output any variant containing a banned word. That is a pipeline failure.
+CAUTION WORD SCAN (MANDATORY BEFORE OUTPUTTING ANY VARIANT):
+Read every sentence of every variant. Search for each caution word/phrase below.
+These words are allowed ONLY if all three conditions are met: (1) no equally vivid alternative exists for this specific event, (2) the word appears at most once in the full text, (3) justification is stated inline as [JUSTIFIED: reason].
+If found without justification → rewrite that sentence.
+If found more than once → rewrite all instances but one (or all, if none warrant justification).
 
-Banned list: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, we are pleased to announce, we are delighted, we are thrilled, join us as, prepare for, get ready to, whether you're looking for, in today's world, promises to be, memorable moments, an evening to remember, immerse yourself
+HARD-BLOCKED phrases (no exceptions, always rewrite): we are pleased to announce, we are delighted, we are thrilled, join us as, in today's world, whether you're looking for.
 
-Approved replacements to use instead:
-- "unforgettable" (standalone, event-level) → "one worth your evening" / "a night worth circling" / "genuinely special" / "well worth it"
-- "unforgettable memories" / "memorable moments" (describing what visitors take away) → "memories worth carrying" / "moments that stay with you" / "experiences that linger long after you leave" / "something you'll want to come back to"
-- "incredible" → "exceptional" / "striking" / "impressive" / "remarkable"
+Caution list: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, you won't want to miss, prepare for, get ready to, promises to be, memorable moments, an evening to remember, immerse yourself
+
+Default replacements if the word doesn't warrant justification:
+- "unforgettable" → "one worth your evening" / "genuinely special" / "well worth it" / "stays with you"
+- "unforgettable memories" / "memorable moments" → "memories worth carrying" / "moments that stay with you" / "experiences that linger"
+- "incredible" → "exceptional" / "striking" / "impressive"
 - "amazing" → "exceptional" / "impressive" / "brilliant"
 - "spectacular" → "striking" / "sweeping" / "impressive"
 - "immerse yourself" → "step into" / "spend time in" / "explore"
-- "once-in-a-lifetime" → "rare" / "a distinctive evening" / "not something that comes around often"
+- "once-in-a-lifetime" → "rare" / "not something that comes around often"
+- "memorable moments" → "moments that stay with you" / "experiences worth carrying"
 
-After scanning, state: "Banned word scan: CLEAR" or list what was found and fixed.
+After scanning, state: "Caution word scan: CLEAR" or list each word found with disposition (JUSTIFIED / replaced with [X]).
 
 TEASERS — CURATE AND ENHANCE FROM S2:
 Review all teasers generated in S2 (Recommended Versions step).
@@ -1029,10 +1061,11 @@ MINIMUM TOV GATE: Any version with TOV self-score below 7/10 from S10 is flagged
 
 DISCARD RULES (apply before ranking — check in this exact order):
 
-STEP 1 — BANNED WORD SCAN (apply first, before anything else):
-Search every candidate version for these banned words/phrases: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, memorable moments, an evening to remember, immerse yourself, promises to be, we are pleased to announce, we are delighted, we are thrilled.
-- 1 banned word found: FLAG as "BANNED WORD — micro-edit required". Apply micro-edit (single word swap). Use: "unforgettable" → "well worth it" / "genuinely special"; "incredible" → "exceptional"; "amazing" → "impressive"; "immerse yourself" → "step into". Then continue to ranking.
-- 2+ banned words found: DISCARD entirely (too many violations to micro-edit safely). Cannot be ranked.
+STEP 1 — CAUTION WORD SCAN (apply first, before anything else):
+Search every candidate version for these words/phrases: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, memorable moments, an evening to remember, immerse yourself, promises to be, we are pleased to announce, we are delighted, we are thrilled.
+HARD-BLOCKED (always rewrite, no exceptions): we are pleased to announce, we are delighted, we are thrilled. Any of these found = micro-edit required.
+CAUTION WORDS (allow if justified): For all other words on the list — check whether S10 included a [JUSTIFIED: reason] tag. If yes and it appears only once → carry it through unchanged. If found without justification → micro-edit (single word swap). If found 2+ times without justification → DISCARD.
+Micro-edit replacements: "unforgettable" → "well worth it" / "genuinely special"; "incredible" → "exceptional"; "amazing" → "impressive"; "immerse yourself" → "step into"; "memorable moments" → "moments that stay with you".
 
 STEP 2 — SCORE DISCARD (these are HARD rules — no exceptions, no overrides):
 - Any version with S12 Fact Check score below 7.0/10: DISCARD (too risky to publish)
