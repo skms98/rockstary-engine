@@ -28,7 +28,7 @@ const LS_TAGS = 'qa_excluded_tags'
 
 export default function QATaggingPage() {
   const [mode, setMode] = useState<Mode>('both')
-  const [scanSize, setScanSize] = useState<'50' | '300' | 'full'>('300')
+  const [scanSize, setScanSize] = useState<'50' | '300' | 'full' | 'targeted'>('300')
   const [scanning, setScanning] = useState(false)
   const [progress, setProgress] = useState('')
   const [events, setEvents] = useState<QAEvent[]>([])
@@ -39,6 +39,7 @@ export default function QATaggingPage() {
   const [token, setToken] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [hasScanned, setHasScanned] = useState(false)
+  const [targetedIds, setTargetedIds] = useState('')
 
   useEffect(() => {
     try {
@@ -84,12 +85,29 @@ export default function QATaggingPage() {
 
   const scan = async () => {
     if (!token) { setError('Not authenticated'); return }
+
+    // Validate targeted mode has IDs
+    if (scanSize === 'targeted') {
+      const ids = targetedIds.split('\n').map(s => s.trim()).filter(Boolean)
+      if (ids.length === 0) { setError('Please enter at least one event ID'); return }
+      const invalid = ids.filter(id => isNaN(Number(id)))
+      if (invalid.length > 0) { setError(`Invalid IDs: ${invalid.join(', ')}`); return }
+    }
+
     setScanning(true); setError(''); setEvents([]); setHasScanned(false)
-    setProgress('Running AI scan on events… this may take up to 60s')
+    setProgress('Running AI scan on events\u2026 this may take up to 60s')
 
     const allExcluded = [...new Set([...excludedCats, ...excludedTags])].join(',')
     const params = new URLSearchParams({ mode, search, excluded: allExcluded })
-    if (scanSize === 'full') { params.set('full', 'true') } else { params.set('max', scanSize) }
+
+    if (scanSize === 'targeted') {
+      const ids = targetedIds.split('\n').map(s => s.trim()).filter(Boolean)
+      params.set('ids', ids.join(','))
+    } else if (scanSize === 'full') {
+      params.set('full', 'true')
+    } else {
+      params.set('max', scanSize)
+    }
 
     try {
       const res = await fetch(`/api/qa/categories-tags?${params}`, {
@@ -114,17 +132,20 @@ export default function QATaggingPage() {
   const allExcludedIds = [...new Set([...excludedCats, ...excludedTags])]
 
   const modeConfig = {
-    categories: { label: 'Categories', color: 'orange', icon: '⚠' },
-    tags: { label: 'Tags', color: 'red', icon: '🏷' },
-    both: { label: 'Both', color: 'yellow', icon: '⚡' },
-    'no-tags': { label: 'No Tags', color: 'red', icon: '🚫' },
+    categories: { label: 'Categories', color: 'orange', icon: '\u26a0' },
+    tags: { label: 'Tags', color: 'red', icon: '\ud83c\udff7' },
+    both: { label: 'Both', color: 'yellow', icon: '\u26a1' },
+    'no-tags': { label: 'No Tags', color: 'red', icon: '\ud83d\udeab' },
   }
 
   const scanSizeConfig = [
-    { id: '50' as const, label: '⚡ Quick (50)' },
-    { id: '300' as const, label: '📊 Normal (300)' },
-    { id: 'full' as const, label: '📍 900+ Max Scan' },
+    { id: '50' as const, label: '\u26a1 Quick (50)' },
+    { id: '300' as const, label: '\ud83d\udcca Normal (300)' },
+    { id: 'full' as const, label: '\ud83d\udccd 900+ Max Scan' },
+    { id: 'targeted' as const, label: '\ud83c\udfaf Targeted' },
   ]
+
+  const parsedIdCount = targetedIds.split('\n').map(s => s.trim()).filter(Boolean).length
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -132,12 +153,12 @@ export default function QATaggingPage() {
       <div>
         <h1 className="text-2xl font-semibold text-pl-text">QA: Tags &amp; Categories</h1>
         <p className="text-sm text-pl-text-dim mt-1">
-          AI-powered audit — detects misapplied categories and tags on events and attractions
+          AI-powered audit &mdash; detects misapplied categories and tags on events and attractions
         </p>
       </div>
 
       {/* Scan Size selector */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-pl-text-dim font-medium">Scan size:</span>
         {scanSizeConfig.map((s) => (
           <button
@@ -145,7 +166,7 @@ export default function QATaggingPage() {
             onClick={() => setScanSize(s.id)}
             className={`px-3 py-1.5 rounded text-xs font-semibold transition ${
               scanSize === s.id
-                ? 'bg-pl-gold text-black'
+                ? s.id === 'targeted' ? 'bg-cyan-500 text-black' : 'bg-pl-gold text-black'
                 : 'bg-pl-card border border-pl-border text-pl-text-dim hover:text-pl-text'
             }`}
           >
@@ -153,6 +174,30 @@ export default function QATaggingPage() {
           </button>
         ))}
       </div>
+
+      {/* Targeted IDs input */}
+      {scanSize === 'targeted' && (
+        <div className="bg-pl-card border border-cyan-500/30 rounded-xl p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-cyan-400">
+              Enter event IDs to scan (one per line)
+            </label>
+            {parsedIdCount > 0 && (
+              <span className="text-xs text-cyan-400/70">{parsedIdCount} ID{parsedIdCount !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          <textarea
+            value={targetedIds}
+            onChange={(e) => setTargetedIds(e.target.value)}
+            placeholder={"12345\n67890\n11111"}
+            rows={6}
+            className="w-full bg-pl-navy/50 border border-pl-border rounded-lg px-3 py-2 text-sm text-pl-text placeholder-pl-text-dim/40 focus:outline-none focus:border-cyan-500/50 font-mono resize-y"
+          />
+          <p className="text-[11px] text-pl-text-dim">
+            Paste event IDs from the Events DB. Each ID on a separate line. These will be fetched directly from the database.
+          </p>
+        </div>
+      )}
 
       {/* Mode selector + Search + Scan */}
       <div className="flex items-center gap-3 flex-wrap">
@@ -185,7 +230,7 @@ export default function QATaggingPage() {
 
         <input
           type="text"
-          placeholder="Filter by event name…"
+          placeholder="Filter by event name\u2026"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && scan()}
@@ -197,16 +242,16 @@ export default function QATaggingPage() {
           disabled={scanning}
           className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-black font-semibold rounded-lg text-sm transition-colors"
         >
-          {scanning ? 'Scanning…' : 'Scan'}
+          {scanning ? 'Scanning\u2026' : 'Scan'}
         </button>
       </div>
 
       {/* Mode description */}
       <div className="text-xs text-pl-text-dim bg-pl-card border border-pl-border rounded-lg px-4 py-2">
-        {mode === 'categories' && '⚠ Scanning for wrong categories only — tags are ignored'}
-        {mode === 'tags' && '🏷 Scanning for wrong tags only — categories are ignored'}
-        {mode === 'both' && '⚡ Scanning both categories and tags for mismatches — issues in either will surface the event'}
-        {mode === 'no-tags' && '🚫 Finding events with no marketing tags assigned — no AI needed, instant results'}
+        {mode === 'categories' && '\u26a0 Scanning for wrong categories only \u2014 tags are ignored'}
+        {mode === 'tags' && '\ud83c\udff7 Scanning for wrong tags only \u2014 categories are ignored'}
+        {mode === 'both' && '\u26a1 Scanning both categories and tags for mismatches \u2014 issues in either will surface the event'}
+        {mode === 'no-tags' && '\ud83d\udeab Finding events with no marketing tags assigned \u2014 no AI needed, instant results'}
       </div>
 
       {/* Progress */}
@@ -220,7 +265,7 @@ export default function QATaggingPage() {
       {/* Error */}
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
-          ✕ {error}
+          \u2715 {error}
         </div>
       )}
 
@@ -250,8 +295,8 @@ export default function QATaggingPage() {
                 <th className="px-4 py-3 text-left">Event / Attraction</th>
                 <th className="px-4 py-3 text-left">Location</th>
                 <th className="px-4 py-3 text-left">Status</th>
-                {mode !== 'tags' && <th className="px-4 py-3 text-left">⚠ Wrong Categories</th>}
-                {mode !== 'categories' && <th className="px-4 py-3 text-left">⚠ Wrong Tags</th>}
+                {mode !== 'tags' && <th className="px-4 py-3 text-left">{'\u26a0'} Wrong Categories</th>}
+                {mode !== 'categories' && <th className="px-4 py-3 text-left">{'\u26a0'} Wrong Tags</th>}
                 <th className="px-4 py-3 text-left">Actions</th>
               </tr>
             </thead>
@@ -265,7 +310,7 @@ export default function QATaggingPage() {
                   <td className="px-4 py-3 max-w-[260px]">
                     <div className="font-medium text-pl-text leading-snug">{ev.event_name}</div>
                     <div className="text-[11px] text-pl-text-dim mt-0.5">
-                      {ev.is_attraction ? '🏛 Attraction' : '🎭 Event'} · #{ev.event_id}
+                      {ev.is_attraction ? '\ud83c\udfdb Attraction' : '\ud83c\udfad Event'} &middot; #{ev.event_id}
                     </div>
                     {ev.url && (
                       <a
@@ -274,14 +319,14 @@ export default function QATaggingPage() {
                         rel="noreferrer"
                         className="text-[11px] text-yellow-400/80 hover:text-yellow-400 hover:underline"
                       >
-                        View on site →
+                        View on site &rarr;
                       </a>
                     )}
                   </td>
 
                   {/* Location */}
                   <td className="px-4 py-3 text-pl-text-dim text-xs">
-                    {[ev.city, ev.country].filter(Boolean).join(', ') || '—'}
+                    {[ev.city, ev.country].filter(Boolean).join(', ') || '\u2014'}
                   </td>
 
                   {/* Status */}
@@ -293,7 +338,7 @@ export default function QATaggingPage() {
                           : 'bg-zinc-500/15 text-zinc-400'
                       }`}
                     >
-                      {ev.status || '—'}
+                      {ev.status || '\u2014'}
                     </span>
                   </td>
 
@@ -313,11 +358,11 @@ export default function QATaggingPage() {
                             ))}
                           </div>
                           <div className="text-[10px] text-pl-text-dim">
-                            All: {ev.applied_categories.join(' · ')}
+                            All: {ev.applied_categories.join(' \u00b7 ')}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-pl-text-dim text-xs">—</span>
+                        <span className="text-pl-text-dim text-xs">{'\u2014'}</span>
                       )}
                     </td>
                   )}
@@ -338,11 +383,11 @@ export default function QATaggingPage() {
                             ))}
                           </div>
                           <div className="text-[10px] text-pl-text-dim">
-                            All: {ev.applied_tags.join(' · ')}
+                            All: {ev.applied_tags.join(' \u00b7 ')}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-pl-text-dim text-xs">—</span>
+                        <span className="text-pl-text-dim text-xs">{'\u2014'}</span>
                       )}
                     </td>
                   )}
@@ -384,10 +429,10 @@ export default function QATaggingPage() {
       {/* Empty state after scan */}
       {hasScanned && !scanning && visible.length === 0 && (
         <div className="text-center py-16 bg-pl-card border border-pl-border rounded-xl text-pl-text-dim">
-          <div className="text-4xl mb-3">✅</div>
+          <div className="text-4xl mb-3">{'\u2705'}</div>
           <div className="font-medium text-pl-text">No issues found</div>
           <div className="text-sm mt-1">
-            {scanned} events scanned — all {mode === 'both' ? 'categories and tags' : mode} look correct
+            {scanned} events scanned &mdash; all {mode === 'both' ? 'categories and tags' : mode} look correct
           </div>
         </div>
       )}
@@ -416,7 +461,7 @@ export default function QATaggingPage() {
                   onClick={() => restore(Number(id))}
                   className="text-zinc-600 hover:text-zinc-300 transition-colors ml-1"
                 >
-                  ✕
+                  {'\u2715'}
                 </button>
               </div>
             ))}
