@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
   const excluded = searchParams.get('excluded')?.split(',').filter(Boolean) ?? []
   const full = searchParams.get('full') === 'true'
   const max = full ? 99999 : Math.min(parseInt(searchParams.get('max') || '100'), 99999)
+  const targetIds = searchParams.get('ids')?.split(',').map(s => s.trim()).filter(Boolean).map(Number).filter(n => !isNaN(n)) ?? []
 
   const pl = createClient(
     process.env.PL_SUPABASE_URL!,
@@ -54,8 +55,13 @@ export async function GET(req: NextRequest) {
       .from('hourly_sql_export')
       .select('event_id,event_name_en,all_categories,marketing_tags,status,url,country,city,event_start_datetime,is_attraction')
 
-    if (!full) query = (query as any).limit(max)
-    if (search) query = (query as any).ilike('event_name_en', `%${search}%`)
+    if (targetIds.length > 0) {
+      // Targeted scan: fetch only specific event IDs
+      query = (query as any).in('event_id', targetIds)
+    } else {
+      if (!full) query = (query as any).limit(max)
+      if (search) query = (query as any).ilike('event_name_en', `%${search}%`)
+    }
 
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
