@@ -4,16 +4,160 @@
 import { useState, useEffect } from 'react'
 import type { AttractionEntry } from './page'
 
+// ── Inline Field Note (per-section comment box) ───────────────────────────────
+function InlineFieldNote({
+  entry,
+  fieldKey,
+}: {
+  entry: AttractionEntry
+  fieldKey: string
+}) {
+  const existing = (entry.field_notes as Record<string, string> | null)?.[fieldKey] || ''
+  const [text, setText] = useState(existing)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
+  useEffect(() => {
+    setText((entry.field_notes as Record<string, string> | null)?.[fieldKey] || '')
+  }, [entry.field_notes, fieldKey])
+
+  const postNote = async () => {
+    if (!text.trim()) return
+    setSaving(true)
+    setStatus('idle')
+    try {
+      const res = await fetch('/api/attractions/post-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attractionId: entry.id,
+          type: 'field_note',
+          fieldKey,
+          note: text.trim(),
+          authorName: 'Marketing',
+          attractionTitle: entry.title,
+        }),
+      })
+      if (res.ok) {
+        setStatus('saved')
+        setTimeout(() => setStatus('idle'), 3000)
+      } else {
+        setStatus('error')
+      }
+    } catch {
+      setStatus('error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="px-4 pb-3 pt-2 bg-gray-900/50 border-t border-gray-700/30">
+      <textarea
+        value={text}
+        onChange={(e) => { setText(e.target.value); setStatus('idle') }}
+        placeholder={`Notes for ${fieldKey.replace(/_/g, ' ')}…`}
+        rows={2}
+        className="w-full bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+      />
+      <div className="flex items-center justify-end gap-2 mt-1.5">
+        {status === 'saved' && <span className="text-emerald-400 text-xs">✓ Saved &amp; notified</span>}
+        {status === 'error' && <span className="text-red-400 text-xs">Error saving</span>}
+        <button
+          onClick={postNote}
+          disabled={saving || !text.trim()}
+          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded transition-colors"
+        >
+          {saving ? 'Saving…' : 'Post'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Overall Notes Box (SEO-level or Attraction-level) ─────────────────────────
+function NotesBox({
+  entry,
+  type,
+  label,
+  placeholder,
+}: {
+  entry: AttractionEntry
+  type: 'seo' | 'attraction'
+  label: string
+  placeholder: string
+}) {
+  const existingNote = type === 'seo' ? entry.seo_notes : entry.attraction_notes
+  const [text, setText] = useState(existingNote || '')
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
+  useEffect(() => {
+    setText(type === 'seo' ? (entry.seo_notes || '') : (entry.attraction_notes || ''))
+  }, [entry.seo_notes, entry.attraction_notes, type])
+
+  const postNote = async () => {
+    if (!text.trim()) return
+    setSaving(true)
+    setStatus('idle')
+    try {
+      const res = await fetch('/api/attractions/post-comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attractionId: entry.id,
+          type,
+          note: text.trim(),
+          authorName: 'Marketing',
+          attractionTitle: entry.title,
+        }),
+      })
+      if (res.ok) {
+        setStatus('saved')
+        setTimeout(() => setStatus('idle'), 3000)
+      } else {
+        setStatus('error')
+      }
+    } catch {
+      setStatus('error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-800/40 p-4">
+      <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide mb-2">{label}</h4>
+      <textarea
+        value={text}
+        onChange={(e) => { setText(e.target.value); setStatus('idle') }}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full bg-gray-900/60 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed"
+      />
+      <div className="flex items-center justify-end mt-2 gap-2">
+        {status === 'saved' && <span className="text-emerald-400 text-xs">✓ Saved &amp; notified</span>}
+        {status === 'error' && <span className="text-red-400 text-xs">Error saving</span>}
+        <button
+          onClick={postNote}
+          disabled={saving || !text.trim()}
+          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
+        >
+          {saving ? 'Posting…' : 'Post Note'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // Helper: render keyword annotations like (keyword) [1], (merged) [1, 2], (synonym) [3*] with highlights
 function HighlightedText({ text }: { text: string }) {
   if (!text) return null
-  // Split on all annotation patterns: (text) [N], (text) [N1, N2], (text) [N*]
   const parts = text.split(/(\([^)]+\)\s*\[[^\]]+\])/)
   return (
     <span>
       {parts.map((part, i) => {
         if (/^\([^)]+\)\s*\[[^\]]+\]$/.test(part)) {
-          // Determine annotation type for styling
           const isSynonym = /\[\d+\*\]$/.test(part)
           const isMerged = /\[\d+\s*,\s*\d+/.test(part)
           const colorClass = isSynonym
@@ -29,13 +173,43 @@ function HighlightedText({ text }: { text: string }) {
   )
 }
 
-// Section card for SEO content display
-function SeoSection({ label, content, isTitle }: { label: string; content: string; isTitle?: boolean }) {
+// Section card for SEO content — with inline per-field note toggle
+function SeoSection({
+  label,
+  content,
+  isTitle,
+  entry,
+  fieldKey,
+}: {
+  label: string
+  content: string
+  isTitle?: boolean
+  entry?: AttractionEntry
+  fieldKey?: string
+}) {
+  const [showNote, setShowNote] = useState(false)
   if (!content || content.trim() === '') return null
+
+  const hasNote = entry && fieldKey && !!(entry.field_notes as any)?.[fieldKey]
+
   return (
     <div className="border border-gray-700/40 rounded-lg overflow-hidden">
-      <div className="px-4 py-2 bg-gray-700/30 border-b border-gray-700/40">
+      <div className="px-4 py-2 bg-gray-700/30 border-b border-gray-700/40 flex items-center justify-between">
         <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</span>
+        {entry && fieldKey && (
+          <button
+            onClick={() => setShowNote(!showNote)}
+            className={`text-xs flex items-center gap-1 px-2 py-0.5 rounded transition-colors ${
+              showNote
+                ? 'bg-blue-500/20 text-blue-400'
+                : hasNote
+                ? 'text-amber-400 hover:text-amber-300'
+                : 'text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            💬 {hasNote && !showNote ? 'Edit Note' : showNote ? 'Hide' : 'Add Note'}
+          </button>
+        )}
       </div>
       <div className={`px-4 py-3 ${isTitle ? 'text-white text-base font-semibold' : 'text-gray-300 text-sm'}`}>
         {content.split('\n').map((line, i) => (
@@ -44,31 +218,50 @@ function SeoSection({ label, content, isTitle }: { label: string; content: strin
           </p>
         ))}
       </div>
+      {showNote && entry && fieldKey && (
+        <InlineFieldNote entry={entry} fieldKey={fieldKey} />
+      )}
     </div>
   )
 }
 
-// ── SEO Tab ──────────────────────────────────────────────────────────────────
+// ── SEO Tab ───────────────────────────────────────────────────────────────────
 export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean }) {
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
   const [kwFilter, setKwFilter] = useState<'all' | 'used' | 'merged' | 'synonym'>('all')
+  const [editWriter, setEditWriter] = useState(entry.assigned_writer || '')
+  const [editTranslator, setEditTranslator] = useState(entry.assigned_translator || '')
+  const [savingAssignment, setSavingAssignment] = useState(false)
+
+  useEffect(() => {
+    setEditWriter(entry.assigned_writer || '')
+    setEditTranslator(entry.assigned_translator || '')
+  }, [entry.assigned_writer, entry.assigned_translator])
+
+  const saveAssignment = async () => {
+    setSavingAssignment(true)
+    await save({
+      assigned_writer: editWriter || null,
+      assigned_translator: editTranslator || null,
+    } as Partial<AttractionEntry>)
+    setSavingAssignment(false)
+  }
 
   const seo = entry.seo_content || {}
   const hasSeoCont = Object.keys(seo).length > 0 && Object.values(seo).some(v => v && String(v).trim() !== '')
 
-  // Group sections into logical blocks for cleaner display
   const mainSections = [
-    { label: 'H1 Headline', keys: ['h1'], isTitle: true },
-    { label: 'Teaser', keys: ['teaser'] },
-    { label: 'What To Expect', keys: ['what_to_expect'] },
-    { label: 'Highlights', keys: ['highlights'] },
-    { label: "What's Included", keys: ['inclusions'] },
-    { label: 'Exclusions', keys: ['exclusions'] },
-    { label: 'Ticket Information', keys: ['ticket_info'] },
-    { label: 'Important Info', keys: ['important_info'] },
-    { label: 'Cancellation Policy', keys: ['cancellation'] },
-    { label: 'Location & Directions', keys: ['by_car', 'by_public_transport', 'by_taxi'] },
+    { label: 'H1 Headline', keys: ['h1'], fieldKey: 'h1', isTitle: true },
+    { label: 'Teaser', keys: ['teaser'], fieldKey: 'teaser' },
+    { label: 'What To Expect', keys: ['what_to_expect'], fieldKey: 'what_to_expect' },
+    { label: 'Highlights', keys: ['highlights'], fieldKey: 'highlights' },
+    { label: "What's Included", keys: ['inclusions'], fieldKey: 'inclusions' },
+    { label: 'Exclusions', keys: ['exclusions'], fieldKey: 'exclusions' },
+    { label: 'Ticket Information', keys: ['ticket_info'], fieldKey: 'ticket_info' },
+    { label: 'Important Info', keys: ['important_info'], fieldKey: 'important_info' },
+    { label: 'Cancellation Policy', keys: ['cancellation'], fieldKey: 'cancellation' },
+    { label: 'Location & Directions', keys: ['by_car', 'by_public_transport', 'by_taxi'], fieldKey: 'location' },
   ]
 
   const generateSeoContent = async () => {
@@ -84,7 +277,6 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
       if (!res.ok) {
         setGenerateError(data.error || 'Failed to generate SEO content')
       } else {
-        // Reload the entry to reflect new seo_content + seo_status
         await save({})
       }
     } catch (err: any) {
@@ -100,6 +292,40 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
 
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-6">
+
+      {/* ── Writer / Translator Assignment ── */}
+      <div className="flex items-center gap-3 mb-5 p-3 bg-gray-700/20 rounded-lg border border-gray-700/40">
+        <span className="text-xs text-gray-400 font-medium shrink-0">Assigned to:</span>
+        <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="text-xs text-gray-500 shrink-0">✍️ Writer</span>
+            <input
+              value={editWriter}
+              onChange={e => setEditWriter(e.target.value)}
+              placeholder="Assign writer…"
+              className="flex-1 min-w-0 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="text-xs text-gray-500 shrink-0">🌐 Translator</span>
+            <input
+              value={editTranslator}
+              onChange={e => setEditTranslator(e.target.value)}
+              placeholder="Assign translator…"
+              className="flex-1 min-w-0 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <button
+            onClick={saveAssignment}
+            disabled={savingAssignment}
+            className="px-3 py-1 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white text-xs rounded transition-colors shrink-0"
+          >
+            {savingAssignment ? '…' : 'Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Header ── */}
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-white font-semibold">SEO Optimization — Column D Rewrite</h3>
         <div className="flex items-center gap-3">
@@ -133,16 +359,26 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
         </div>
       </div>
 
+      {/* ── Two-column content view ── */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Column C: Original */}
+
+        {/* Column C: Original Content */}
         <div>
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">Original Content (Column C)</h4>
           <div className="bg-gray-900/50 rounded-lg p-4 text-gray-300 text-sm whitespace-pre-wrap max-h-[700px] overflow-y-auto leading-relaxed">
             {entry.raw_text || 'No content yet'}
           </div>
+          <div className="mt-3">
+            <NotesBox
+              entry={entry}
+              type="attraction"
+              label="Attraction Notes"
+              placeholder="Notes about the original content or attraction details…"
+            />
+          </div>
         </div>
 
-        {/* Column D: SEO Optimised — segmented */}
+        {/* Column D: SEO Optimised */}
         <div>
           <h4 className="text-gray-400 text-xs font-medium mb-2 uppercase tracking-wide">SEO Optimised (Column D)</h4>
           {hasSeoCont ? (
@@ -157,6 +393,8 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
                     label={section.label}
                     content={combined}
                     isTitle={section.isTitle}
+                    entry={entry}
+                    fieldKey={section.fieldKey}
                   />
                 )
               })}
@@ -170,8 +408,18 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
                   key={k}
                   label={k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   content={String(v)}
+                  entry={entry}
+                  fieldKey={k}
                 />
               ))}
+              <div className="mt-3">
+                <NotesBox
+                  entry={entry}
+                  type="seo"
+                  label="SEO Notes (Overall)"
+                  placeholder="Overall feedback on the SEO content quality…"
+                />
+              </div>
             </div>
           ) : (
             <div className="bg-gray-900/50 rounded-lg p-6 flex flex-col items-center justify-center gap-4 min-h-[200px]">
@@ -205,11 +453,11 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
         </div>
       </div>
 
+      {/* ── Keywords section ── */}
       {entry.keywords_list && (
         <div className="mt-5 pt-5 border-t border-gray-700/50">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-gray-400 text-xs font-medium uppercase tracking-wide">Keywords ({entry.keywords_used ?? 0}/{entry.keywords_total ?? 0} used)</h4>
-            {/* Filter buttons matching the legend */}
             {hasSeoCont && (
               <div className="flex items-center gap-1">
                 {(['all', 'used', 'merged', 'synonym'] as const).map((filter) => {
@@ -232,18 +480,15 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
           </div>
           <div className="flex flex-wrap gap-2">
             {entry.keywords_list.split('\n').filter(Boolean).map((kw, i) => {
-              // Check if this keyword has mapping data
               const mapping = Array.isArray(entry.keywords_mapping)
                 ? entry.keywords_mapping.find((m: any) => m.id === i + 1)
                 : null
-              // Determine keyword type for filtering
               const kwType = mapping
                 ? mapping.action === 'used' ? 'used'
                 : mapping.action?.startsWith('merged') ? 'merged'
                 : mapping.action === 'synonym' ? 'synonym'
                 : 'used'
                 : 'used'
-              // Apply filter
               if (kwFilter !== 'all' && kwType !== kwFilter) return null
               const actionColor = mapping
                 ? mapping.action === 'used' ? 'border-emerald-500/40 bg-emerald-500/5'
@@ -257,12 +502,12 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
                   <span className="text-blue-300">{kw.trim()}</span>
                   {mapping && mapping.action?.startsWith('merged') && mapping.merged_ids && (
                     <span className="text-cyan-400 text-[10px] font-medium ml-1">
-                      ⇢ merged [{mapping.merged_ids.join(', ')}]
+                      ⇒ merged [{mapping.merged_ids.join(', ')}]
                     </span>
                   )}
                   {mapping && mapping.action === 'synonym' && (
                     <span className="text-purple-400 text-[10px] font-medium ml-1">
-                      ⇢ "{mapping.as_written}" [{mapping.id}*]
+                      ⇒ "{mapping.as_written}" [{mapping.id}*]
                     </span>
                   )}
                   {mapping && <span className="text-gray-500 text-[10px] ml-0.5">×{mapping.times ?? 0}</span>}
@@ -270,7 +515,6 @@ export function SeoTab({ entry, save, saving }: { entry: AttractionEntry; save: 
               )
             })}
           </div>
-          {/* Legend for annotation colors */}
           {hasSeoCont && (
             <div className="flex items-center gap-4 mt-3 text-[10px] text-gray-500">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" /> Standard</span>
@@ -411,7 +655,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   )
 }
 
-// ── Review Tab ───────────────────────────────────────────────────────────────
+// ── Review Tab ────────────────────────────────────────────────────────────────
 export function ReviewTab({ entry, save, saving, advanceStage }: { entry: AttractionEntry; save: (u: Partial<AttractionEntry>) => Promise<void>; saving: boolean; advanceStage: () => Promise<void> }) {
   const [reviewNotes, setReviewNotes] = useState(entry.review_notes || '')
 
@@ -419,7 +663,7 @@ export function ReviewTab({ entry, save, saving, advanceStage }: { entry: Attrac
 
   return (
     <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-6">
-      <h3 className="text-white font-semibold mb-4">Review & Approval</h3>
+      <h3 className="text-white font-semibold mb-4">Review &amp; Approval</h3>
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-900/50 rounded-lg p-4">
           <p className="text-gray-400 text-xs mb-1">Domain</p>
@@ -434,6 +678,12 @@ export function ReviewTab({ entry, save, saving, advanceStage }: { entry: Attrac
           <p className={`font-medium ${entry.validation_gates_passed === 6 ? 'text-emerald-400' : 'text-amber-400'}`}>{entry.validation_gates_passed}/6 gates passed</p>
         </div>
       </div>
+      {(entry.assigned_writer || entry.assigned_translator) && (
+        <div className="flex items-center gap-4 mb-4 text-xs text-gray-400">
+          {entry.assigned_writer && <span>✍️ Writer: <strong className="text-white">{entry.assigned_writer}</strong></span>}
+          {entry.assigned_translator && <span>🌐 Translator: <strong className="text-white">{entry.assigned_translator}</strong></span>}
+        </div>
+      )}
       <div className="mb-4">
         <label className="block text-xs text-gray-400 mb-1">Review Notes</label>
         <textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} rows={4} placeholder="Add notes, flag issues, or approve..." className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none" />
@@ -441,7 +691,7 @@ export function ReviewTab({ entry, save, saving, advanceStage }: { entry: Attrac
       <div className="flex items-center gap-3">
         <button onClick={() => save({ review_notes: reviewNotes || null })} disabled={saving} className="px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-500 disabled:opacity-50 transition-colors">Save Notes</button>
         {entry.stage === 'review' && (
-          <button onClick={advanceStage} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">Approve & Export ➔</button>
+          <button onClick={advanceStage} className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">Approve &amp; Export ⚡</button>
         )}
       </div>
       {entry.reviewed_at && (
