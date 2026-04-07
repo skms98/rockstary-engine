@@ -55,6 +55,10 @@ export interface AttractionEntry {
   // Notes / comments
   seo_notes: string | null
   attraction_notes: string | null
+  field_notes: Record<string, string> | null
+  // Assignment
+  assigned_writer: string | null
+  assigned_translator: string | null
   // Fact check fields
   fact_check_score: number | null
   fact_check_tov_score: number | null
