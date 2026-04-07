@@ -52,6 +52,9 @@ export interface AttractionEntry {
   created_by: string | null
   created_at: string
   updated_at: string
+  // Notes / comments
+  seo_notes: string | null
+  attraction_notes: string | null
   // Fact check fields
   fact_check_score: number | null
   fact_check_tov_score: number | null
@@ -186,7 +189,7 @@ export default function AttractionDetailPage() {
           <h1 className="text-2xl font-bold text-white">{entry.title}</h1>
           <div className="flex items-center gap-3 mt-2">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${meta.bgColor} ${meta.color} border ${meta.borderColor}`}>
-              {meta.icon} {meta.label}
+              <span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{meta.icon}</span> {meta.label}
             </span>
             {entry.batch_name && (
               <span className="text-gray-500 text-xs bg-gray-700/50 px-2 py-1 rounded">{entry.batch_name}</span>
@@ -224,7 +227,7 @@ export default function AttractionDetailPage() {
       <div className="flex justify-between text-[10px] text-gray-500 -mt-6 mb-8 px-1">
         {STAGE_ORDER.map((stage) => (
           <span key={stage} className={stage === entry.stage ? STAGE_META[stage].color + ' font-medium' : ''}>
-            {STAGE_META[stage].icon} {STAGE_META[stage].label}
+            <span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{STAGE_META[stage].icon}</span> {STAGE_META[stage].label}
           </span>
         ))}
       </div>
