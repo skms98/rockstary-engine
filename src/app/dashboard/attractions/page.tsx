@@ -9,8 +9,6 @@ import { AttractionModal } from './attraction-modal'
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
 type SeoStatus = 'pending' | 'processing' | 'completed' | 'failed'
 type TaggingStatus = 'pending' | 'gathering' | 'classifying' | 'validating' | 'completed' | 'failed' | 'unclassifiable'
-type SortField = 'title' | 'stage' | 'seo_status' | 'tagging_status' | 'batch_name' | 'updated_at'
-type SortDir = 'asc' | 'desc'
 
 interface AttractionEntry {
   id: string
@@ -39,16 +37,12 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: 'ð¥' },
-  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: 'âï¸' },
-  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: 'ð·ï¸' },
-  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: 'â' },
-  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: 'ð¤' },
+  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: '📥' },
+  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: '✍️' },
+  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: '🏷️' },
+  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: '✅' },
+  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: '📤' },
 ]
-
-const STAGE_ORDER: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
-const SEO_ORDER: SeoStatus[] = ['pending', 'processing', 'completed', 'failed']
-const TAG_ORDER: TaggingStatus[] = ['pending', 'gathering', 'classifying', 'validating', 'completed', 'failed', 'unclassifiable']
 
 async function downloadTemplate() {
   const XLSX = await import('xlsx')
@@ -62,13 +56,13 @@ async function downloadTemplate() {
     ['Keywords', 'dubai aquarium, underwater zoo, dubai mall aquarium, things to do in dubai'],
     ['Description', 'Explore one of the largest suspended aquariums in the world, home to hundreds of species of aquatic animals including sharks and rays. Located inside The Dubai Mall.'],
     [],
-    ['âââ Instructions âââ', ''],
-    ['â¢ Each sheet = one attraction', ''],
-    ['â¢ Column A = field label, Column B = value', ''],
-    ['â¢ Title is required, other fields are optional', ''],
-    ['â¢ Keywords field is optional (used for SEO)', ''],
-    ['â¢ Duplicate the sheet for multiple attractions', ''],
-    ['â¢ Delete this instructions section before submitting', ''],
+    ['─── Instructions ───', ''],
+    ['• Each sheet = one attraction', ''],
+    ['• Column A = field label, Column B = value', ''],
+    ['• Title is required, other fields are optional', ''],
+    ['• Keywords field is optional (used for SEO)', ''],
+    ['• Duplicate the sheet for multiple attractions', ''],
+    ['• Delete this instructions section before submitting', ''],
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData)
@@ -106,8 +100,6 @@ export default function AttractionsFunnel() {
   const [filterStage, setFilterStage] = useState<AttractionStage | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBatch, setSelectedBatch] = useState<string | 'all'>('all')
-  const [sortField, setSortField] = useState<SortField>('updated_at')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   const fetchEntries = useCallback(async () => {
     setLoading(true)
@@ -117,20 +109,6 @@ export default function AttractionsFunnel() {
   }, [])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDir('asc')
-    }
-  }
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <span className="text-gray-600 ml-1">â</span>
-    return <span className="text-blue-400 ml-1">{sortDir === 'asc' ? 'â' : 'â'}</span>
-  }
 
   const advanceStage = async (id: string, currentStage: AttractionStage) => {
     const order: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
@@ -191,31 +169,6 @@ export default function AttractionsFunnel() {
     return true
   })
 
-  const sorted = [...filtered].sort((a, b) => {
-    let cmp = 0
-    switch (sortField) {
-      case 'title':
-        cmp = a.title.localeCompare(b.title)
-        break
-      case 'stage':
-        cmp = STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage)
-        break
-      case 'seo_status':
-        cmp = SEO_ORDER.indexOf(a.seo_status) - SEO_ORDER.indexOf(b.seo_status)
-        break
-      case 'tagging_status':
-        cmp = TAG_ORDER.indexOf(a.tagging_status) - TAG_ORDER.indexOf(b.tagging_status)
-        break
-      case 'batch_name':
-        cmp = (a.batch_name || '').localeCompare(b.batch_name || '')
-        break
-      case 'updated_at':
-        cmp = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-        break
-    }
-    return sortDir === 'asc' ? cmp : -cmp
-  })
-
   const entriesByStage = (stage: AttractionStage) => filtered.filter(e => e.stage === stage)
   const stageCounts = STAGES.map(s => ({ ...s, count: entries.filter(e => e.stage === s.key).length }))
 
@@ -236,7 +189,7 @@ export default function AttractionsFunnel() {
             </button>
           </div>
           <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
-            â Template
+            ↓ Template
           </button>
           <button onClick={() => setShowNewForm(true)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             + Add
@@ -248,7 +201,7 @@ export default function AttractionsFunnel() {
         {stageCounts.map((s) => (
           <button key={s.key} onClick={() => setFilterStage(filterStage === s.key ? 'all' : s.key)} className={`p-3 rounded-xl border transition-all ${filterStage === s.key ? `${s.bgColor} ${s.borderColor}` : 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600'}`}>
             <div className="flex items-center justify-between">
-              <span className="text-lg">{s.icon}</span>
+              <span className="text-lg" style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{s.icon}</span>
               <span className={`text-2xl font-bold ${s.color}`}>{s.count}</span>
             </div>
             <p className={`text-xs font-medium mt-1 ${s.color}`}>{s.label}</p>
@@ -277,7 +230,7 @@ export default function AttractionsFunnel() {
               <div key={stage.key} className={`rounded-xl border ${stage.borderColor} ${stage.bgColor} p-3 min-h[300px]`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span>{stage.icon}</span>
+                    <span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{stage.icon}</span>
                     <h3 className={`text-sm font-semibold ${stage.color}`}>{stage.label}</h3>
                   </div>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stage.bgColor} ${stage.color}`}>{items.length}</span>
@@ -299,49 +252,25 @@ export default function AttractionsFunnel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700">
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('title')} className="flex items-center hover:text-white transition-colors">
-                    Title<SortIcon field="title" />
-                  </button>
-                </th>
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('stage')} className="flex items-center hover:text-white transition-colors">
-                    Stage<SortIcon field="stage" />
-                  </button>
-                </th>
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('seo_status')} className="flex items-center hover:text-white transition-colors">
-                    SEO<SortIcon field="seo_status" />
-                  </button>
-                </th>
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('tagging_status')} className="flex items-center hover:text-white transition-colors">
-                    Tag<SortIcon field="tagging_status" />
-                  </button>
-                </th>
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('batch_name')} className="flex items-center hover:text-white transition-colors">
-                    Batch<SortIcon field="batch_name" />
-                  </button>
-                </th>
-                <th className="text-left p-3 text-gray-400 font-medium">
-                  <button onClick={() => handleSort('updated_at')} className="flex items-center hover:text-white transition-colors">
-                    Updated<SortIcon field="updated_at" />
-                  </button>
-                </th>
+                <th className="text-left p-3 text-gray-400 font-medium">Title</th>
+                <th className="text-left p-3 text-gray-400 font-medium">Stage</th>
+                <th className="text-left p-3 text-gray-400 font-medium">SEO</th>
+                <th className="text-left p-3 text-gray-400 font-medium">Tag</th>
+                <th className="text-left p-3 text-gray-400 font-medium">Batch</th>
+                <th className="text-left p-3 text-gray-400 font-medium">Updated</th>
                 <th className="text-right p-3 text-gray-400 font-medium">Act</th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map((entry) => {
+              {filtered.map((entry) => {
                 const stageConf = STAGES.find(s => s.key === entry.stage)!
                 return (
                   <tr key={entry.id} className="border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors">
                     <td className="p-3"><Link href={`/dashboard/attractions/${entry.id}`} className="text-white hover:text-blue-400 font-medium">{entry.title}</Link>{entry.city && <span className="text-gray-500 text-xs ml-2">{entry.city}{entry.country ? `, ${entry.country}` : ''}</span>}</td>
-                    <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}>{stageConf.icon} {stageConf.label}</span></td>
+                    <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}><span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{stageConf.icon}</span> {stageConf.label}</span></td>
                     <td className="p-3"><SeoStatusBadge status={entry.seo_status} used={entry.keywords_used} total={entry.keywords_total} /></td>
                     <td className="p-3"><TaggingStatusBadge status={entry.tagging_status} gates={entry.validation_gates_passed} /></td>
-                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || 'â'}</td>
+                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || '—'}</td>
                     <td className="p-3 text-gray-500 text-xs">{new Date(entry.updated_at).toLocaleDateString()}</td>
                     <td className="p-3 text-right"><div className="flex items-center justify-end gap-2"><Link href={`/dashboard/attractions/${entry.id}`} className="text-blue-400 hover:text-blue-300 text-xs">Open</Link>{entry.stage !== 'exported' && <button onClick={() => advanceStage(entry.id, entry.stage)} className="text-emerald-400 hover:text-emerald-300 text-xs">Adv</button>}</div></td>
                   </tr>
@@ -349,7 +278,7 @@ export default function AttractionsFunnel() {
               })}
             </tbody>
           </table>
-          {sorted.length === 0 && <p className="text-gray-500 text-center py-12">No attractions</p>}
+          {filtered.length === 0 && <p className="text-gray-500 text-center py-12">No attractions</p>}
         </div>
       )}
 
