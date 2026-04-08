@@ -26,11 +26,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pinInput, setPinInput] = useState('')
   const [pinError, setPinError] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
-  const [customKey, setCustomKey] = useState('')
-  const [savedKey, setSavedKey] = useState('')
-  const [showKey, setShowKey] = useState(false)
-  const [keySaved, setKeySaved] = useState(false)
-  const [editMode, setEditMode] = useState(false)
   const [aiMode, setAiMode] = useState<'regular' | 'pro'>('regular')
   const [recoveredPin, setRecoveredPin] = useState('')
   const [pinRecoveryStep, setPinRecoveryStep] = useState<'idle' | 'otp_sent'>('idle')
@@ -38,10 +33,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [otpSending, setOtpSending] = useState(false)
   const [otpVerifying, setOtpVerifying] = useState(false)
   const [otpError, setOtpError] = useState('')
-  const [testKeyStatus, setTestKeyStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const [lastAiMode, setLastAiMode] = useState<'pro' | 'regular' | null>(null)
   const pinRef = useRef<HTMLInputElement>(null)
-  const keyRef = useRef<string>('')
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
   const isEventsDB = pathname.startsWith('/dashboard/events-db')
@@ -54,38 +47,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isOptimiser = pathname.startsWith('/dashboard/optimiser')
   const isQATagging = pathname.startsWith('/dashboard/qa-tagging')
 
-  // Load saved key from server and mode from localStorage on mount
+  // Load mode from localStorage on mount
   useEffect(() => {
     const storedMode = (localStorage.getItem('rs_ai_mode') as 'regular' | 'pro') || 'regular'
     setAiMode(storedMode)
-    fetch('/api/settings/load-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      .then(r => r.json())
-      .then(data => {
-        const k = data.key || ''
-        setSavedKey(k)
-        setCustomKey(k)
-        keyRef.current = k
-      })
-      .catch(() => {})
   }, [])
 
-  // Global fetch interceptor — injects x-openai-key and x-ai-mode on every AI API call
+  // Global fetch interceptor — injects x-ai-mode on every AI API call
   // Also captures aiMode from responses to show which path actually ran
   useEffect(() => {
     const origFetch = window.fetch.bind(window)
     window.fetch = function (input: RequestInfo | URL, init: RequestInit = {}) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url
-      const key = keyRef.current
       const mode = localStorage.getItem('rs_ai_mode') || 'regular'
       const isAIPath = AI_API_PATHS.some(p => url.includes(p))
       if (isAIPath) {
-        // Pro mode with no key → reject immediately, never fall through to PL
-        if (mode === 'pro' && !key) {
-          return Promise.reject(new Error('Pro mode requires an OpenAI API key. Please add your key in Settings.'))
-        }
         const extraHeaders: Record<string, string> = {}
-        if (mode === 'pro' && key) extraHeaders['x-openai-key'] = key
-        if (mode === 'pro' && key) extraHeaders['x-ai-mode'] = 'pro'
+        if (mode === 'pro') extraHeaders['x-ai-mode'] = 'pro'
         init = {
           ...init,
           headers: { ...(init.headers as Record<string, string> || {}), ...extraHeaders },
@@ -157,79 +135,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const handleSaveKey = async () => {
-    const trimmed = customKey.trim()
-    try {
-      await fetch('/api/settings/save-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: trimmed }),
-      })
-    } catch {}
-    setSavedKey(trimmed)
-    keyRef.current = trimmed
-    setKeySaved(true)
-    setEditMode(false)
-    setTimeout(() => setKeySaved(false), 2000)
-  }
-
-  const handleEditKey = () => {
-    setCustomKey(savedKey)
-    setEditMode(true)
-    setShowKey(false)
-  }
-
-  const handleDeleteKey = async () => {
-    try {
-      await fetch('/api/settings/delete-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-    } catch {}
-    setSavedKey('')
-    setCustomKey('')
-    keyRef.current = ''
-    setEditMode(false)
-    setShowKey(false)
-  }
-
-  const handleCancelEdit = () => {
-    setCustomKey(savedKey)
-    setEditMode(false)
-    setShowKey(false)
-  }
-
   const handleCloseSettings = () => {
     setSettingsOpen(false)
     setPinUnlocked(false)
     setPinInput('')
     setPinError('')
-    setShowKey(false)
-    setEditMode(false)
     setRecoveredPin('')
   }
 
   const handleSetMode = (mode: 'regular' | 'pro') => {
     setAiMode(mode)
     localStorage.setItem('rs_ai_mode', mode)
-    if (mode === 'regular') {
-      // Clear stored key when switching back to regular
-      fetch('/api/settings/delete-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => {})
-      setSavedKey('')
-      setCustomKey('')
-      keyRef.current = ''
-    } else if (mode === 'pro') {
-      // Reload key from server when switching to pro
-      fetch('/api/settings/load-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-        .then(r => r.json())
-        .then(data => {
-          const k = data.key || ''
-          setSavedKey(k)
-          setCustomKey(k)
-          keyRef.current = k
-        })
-        .catch(() => {})
-    }
   }
 
   const handleSendOtp = async () => {
@@ -279,19 +195,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const handleTestKey = async () => {
-    setTestKeyStatus('loading')
-    try {
-      const res = await fetch('https://api.openai.com/v1/models', {
-        headers: { 'Authorization': `Bearer ${savedKey}` },
-      })
-      setTestKeyStatus(res.ok ? 'ok' : 'fail')
-    } catch {
-      setTestKeyStatus('fail')
-    }
-  }
-
-  const keyIsActive = savedKey.startsWith('sk-')
   const canAccessSettings = user?.email === 'samir.badawy@platinumlist.net'
 
   if (!user) return (
@@ -550,9 +453,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                {keyIsActive && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full" />
-                )}
               </button>
             )}
           </div>
@@ -674,133 +574,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <p className="text-emerald-400 text-xs font-medium">Settings unlocked for this session</p>
                   </div>
 
-                  <div>
-                    <label className="block text-xs text-pl-muted mb-2 uppercase tracking-wider">Pro Mode — OpenAI API Key</label>
-                    <p className="text-xs text-pl-muted mb-3">
-                      Required for Pro mode only. Uses your key with gpt-4o directly. Regular mode always uses the built-in service key — no key needed.
-                    </p>
-
-                    {/* State 2: Key saved and not editing — show masked key + Test + Edit + Delete */}
-                    {savedKey && !editMode ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-pl-card border border-pl-border rounded-lg">
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-                          <p className="text-sm text-emerald-400 font-mono flex-1 truncate">
-                            {savedKey.slice(0, 7)}••••••••••••{savedKey.slice(-4)}
-                          </p>
-                          {keySaved && (
-                            <span className="text-xs text-emerald-400 font-medium">✓ Saved</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={handleTestKey}
-                          disabled={testKeyStatus === 'loading'}
-                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm border transition-colors ${
-                            testKeyStatus === 'ok'
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                              : testKeyStatus === 'fail'
-                              ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                              : 'border-pl-border text-pl-muted hover:border-pl-gold/40 hover:text-pl-gold'
-                          }`}
-                        >
-                          {testKeyStatus === 'loading' ? (
-                            <>
-                              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                              Testing key...
-                            </>
-                          ) : testKeyStatus === 'ok' ? (
-                            <>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Key is valid - Pro mode active
-                            </>
-                          ) : testKeyStatus === 'fail' ? (
-                            <>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Invalid key - check and re-enter
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              Test Key
-                            </>
-                          )}
-                        </button>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleEditKey}
-                            className="flex-1 flex items-center justify-center gap-2 border border-pl-border text-pl-text hover:bg-pl-card hover:border-pl-gold/40 hover:text-pl-gold py-2.5 rounded-lg text-sm transition-colors"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </button>
-                          <button
-                            onClick={handleDeleteKey}
-                            className="flex-1 flex items-center justify-center gap-2 border border-red-500/30 text-red-400 hover:bg-red-500/10 py-2.5 rounded-lg text-sm transition-colors"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      /* State 1 & 3: No key saved OR editing — show input */
-                      <div className="space-y-3">
-                        <div className="relative">
-                          <input
-                            type={showKey ? 'text' : 'password'}
-                            value={customKey}
-                            onChange={e => setCustomKey(e.target.value)}
-                            placeholder="sk-..."
-                            className="w-full bg-pl-card border border-pl-border rounded-lg px-4 py-3 pr-10 text-white text-sm font-mono placeholder:text-pl-muted focus:outline-none focus:border-pl-gold/50 transition-colors"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowKey(v => !v)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-pl-muted hover:text-pl-text transition-colors"
-                          >
-                            {showKey ? (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleSaveKey}
-                            disabled={!customKey.trim() || customKey.trim() === savedKey}
-                            className="flex-1 bg-pl-gold hover:bg-pl-gold-dark disabled:opacity-40 text-pl-dark font-semibold py-2.5 rounded-lg text-sm transition-colors"
-                          >
-                            {editMode ? 'Update Key' : 'Add Key'}
-                          </button>
-                          {editMode && (
-                            <button
-                              onClick={handleCancelEdit}
-                              className="px-4 py-2.5 border border-pl-border text-pl-muted hover:text-pl-text hover:bg-pl-card rounded-lg text-sm transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-pl-card border border-pl-border">
+                    <svg className="w-4 h-4 text-pl-gold flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <p className="text-xs text-pl-muted">AI runs on the built-in service key. No personal key needed.</p>
                   </div>
 
                   {/* AI Mode Toggle */}
