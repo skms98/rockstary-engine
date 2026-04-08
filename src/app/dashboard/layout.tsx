@@ -41,6 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [testKeyStatus, setTestKeyStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const [lastAiMode, setLastAiMode] = useState<'pro' | 'regular' | null>(null)
   const pinRef = useRef<HTMLInputElement>(null)
+  const keyRef = useRef<string>('')
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
   const isEventsDB = pathname.startsWith('/dashboard/events-db')
@@ -53,13 +54,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isOptimiser = pathname.startsWith('/dashboard/optimiser')
   const isQATagging = pathname.startsWith('/dashboard/qa-tagging')
 
-  // Load saved key and mode from localStorage on mount
+  // Load saved key from server and mode from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem('rs_custom_ai_key') || ''
-    setSavedKey(stored)
-    setCustomKey(stored)
     const storedMode = (localStorage.getItem('rs_ai_mode') as 'regular' | 'pro') || 'regular'
     setAiMode(storedMode)
+    fetch('/api/settings/load-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      .then(r => r.json())
+      .then(data => {
+        const k = data.key || ''
+        setSavedKey(k)
+        setCustomKey(k)
+        keyRef.current = k
+      })
+      .catch(() => {})
   }, [])
 
   // Global fetch interceptor — injects x-openai-key and x-ai-mode on every AI API call
@@ -68,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const origFetch = window.fetch.bind(window)
     window.fetch = function (input: RequestInfo | URL, init: RequestInit = {}) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url
-      const key = localStorage.getItem('rs_custom_ai_key')
+      const key = keyRef.current
       const mode = localStorage.getItem('rs_ai_mode') || 'regular'
       const isAIPath = AI_API_PATHS.some(p => url.includes(p))
       if (isAIPath) {
@@ -146,10 +153,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const handleSaveKey = () => {
+  const handleSaveKey = async () => {
     const trimmed = customKey.trim()
-    localStorage.setItem('rs_custom_ai_key', trimmed)
+    try {
+      await fetch('/api/settings/save-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: trimmed }),
+      })
+    } catch {}
     setSavedKey(trimmed)
+    keyRef.current = trimmed
     setKeySaved(true)
     setEditMode(false)
     setTimeout(() => setKeySaved(false), 2000)
@@ -161,10 +175,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setShowKey(false)
   }
 
-  const handleDeleteKey = () => {
-    localStorage.removeItem('rs_custom_ai_key')
+  const handleDeleteKey = async () => {
+    try {
+      await fetch('/api/settings/delete-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+    } catch {}
     setSavedKey('')
     setCustomKey('')
+    keyRef.current = ''
     setEditMode(false)
     setShowKey(false)
   }
@@ -189,10 +209,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setAiMode(mode)
     localStorage.setItem('rs_ai_mode', mode)
     if (mode === 'regular') {
-      // Reverse the save: clear stored key when switching back to regular
-      localStorage.removeItem('rs_custom_ai_key')
+      // Clear stored key when switching back to regular
+      fetch('/api/settings/delete-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } }).catch(() => {})
       setSavedKey('')
       setCustomKey('')
+      keyRef.current = ''
     }
   }
 
