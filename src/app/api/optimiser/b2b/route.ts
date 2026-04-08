@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (constraints?.maxWords) constraintRules.push(`Maximum ${constraints.maxWords} words total`)
     if (constraints?.minWords) constraintRules.push(`Minimum ${constraints.minWords} words total`)
     const constraintBlock = constraintRules.length > 0
-      ? `\n\nTEXT CONSTRAINTS (MUST respect these limits):\n${constraintRules.map(r => `- ${r}`).join('\n')}`
+      ? `\n\nHEXT CONSTRAINTS (MUST respect these limits):\n${constraintRules.map(r => `- ${r}`).join('\n')}`
       : ''
 
     // Audience modifiers for B2B
@@ -202,29 +202,15 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: gpt-4o-mini via server key
-      const apiKey = process.env.OPENAI_API_KEY
-      if (!apiKey) {
-        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
-      }
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
+      // Regular mode: PL edge function
+      const plClient = createPLClient()
+      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
+        body: { prompt: `[INSTRUCTIONS]\n${systemMessage}\n\n[TASK]\n${prompt}`, stepField: 'optimiser-b2b', eventTitle: '' },
       })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      if (plError) {
+        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
       }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
     }
 
     // Parse JSON response
