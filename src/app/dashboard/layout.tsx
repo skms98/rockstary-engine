@@ -35,6 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [recoveredPin, setRecoveredPin] = useState('')
   const [recoverLoading, setRecoverLoading] = useState(false)
   const [testKeyStatus, setTestKeyStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
+  const [lastAiMode, setLastAiMode] = useState<'pro' | 'regular' | null>(null)
   const pinRef = useRef<HTMLInputElement>(null)
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
@@ -58,13 +59,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   // Global fetch interceptor — injects x-openai-key and x-ai-mode on every AI API call
+  // Also captures aiMode from responses to show which path actually ran
   useEffect(() => {
     const origFetch = window.fetch.bind(window)
     window.fetch = function (input: RequestInfo | URL, init: RequestInit = {}) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url
       const key = localStorage.getItem('rs_custom_ai_key')
       const mode = localStorage.getItem('rs_ai_mode') || 'regular'
-      if (AI_API_PATHS.some(p => url.includes(p))) {
+      const isAIPath = AI_API_PATHS.some(p => url.includes(p))
+      if (isAIPath) {
         const extraHeaders: Record<string, string> = {}
         if (key) extraHeaders['x-openai-key'] = key
         if (mode === 'pro' && key) extraHeaders['x-ai-mode'] = 'pro'
@@ -72,6 +75,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ...init,
           headers: { ...(init.headers as Record<string, string> || {}), ...extraHeaders },
         }
+        return origFetch(input as RequestInfo, init).then(response => {
+          response.clone().json().then((data: any) => {
+            if (data?.aiMode === 'pro' || data?.aiMode === 'regular') {
+              setLastAiMode(data.aiMode)
+            }
+          }).catch(() => {})
+          return response
+        })
       }
       return origFetch(input as RequestInfo, init)
     }
@@ -377,6 +388,56 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {sidebarOpen && <span className="font-medium">QA: Tags &amp; Cats</span>}
           </button>
         </div>
+
+        {/* AI Mode Quick Toggle — always visible for samir, no PIN needed */}
+        {canAccessSettings && (
+          <div className={`border-t border-pl-border ${sidebarOpen ? 'px-4 py-3' : 'px-2 py-3'}`}>
+            {sidebarOpen ? (
+              <div>
+                <div className="flex items-center gap-1 p-1 bg-pl-card rounded-lg border border-pl-border">
+                  <button
+                    onClick={() => handleSetMode('regular')}
+                    className={`flex-1 text-[11px] py-1.5 rounded-md transition-all font-medium ${
+                      aiMode === 'regular' ? 'bg-pl-gold text-pl-dark' : 'text-pl-muted hover:text-pl-text'
+                    }`}
+                  >
+                    Regular
+                  </button>
+                  <button
+                    onClick={() => handleSetMode('pro')}
+                    className={`flex-1 text-[11px] py-1.5 rounded-md transition-all font-medium ${
+                      aiMode === 'pro' ? 'bg-purple-500 text-white' : 'text-pl-muted hover:text-pl-text'
+                    }`}
+                  >
+                    ⚡ Pro
+                  </button>
+                </div>
+                {lastAiMode && (
+                  <p className={`text-[10px] text-center mt-1.5 ${
+                    lastAiMode === 'pro' ? 'text-purple-400' : 'text-pl-muted'
+                  }`}>
+                    last call: {lastAiMode === 'pro' ? '⚡ pro key' : '✦ regular'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div
+                onClick={() => handleSetMode(aiMode === 'pro' ? 'regular' : 'pro')}
+                title={`AI: ${aiMode} — click to toggle`}
+                className="cursor-pointer"
+              >
+                <div className={`w-3 h-3 rounded-full mx-auto ${
+                  aiMode === 'pro' ? 'bg-purple-400' : 'bg-pl-gold/60'
+                }`} />
+                {lastAiMode && (
+                  <div className={`w-1.5 h-1.5 rounded-full mx-auto mt-1 ${
+                    lastAiMode === 'pro' ? 'bg-purple-400/50' : 'bg-pl-muted/50'
+                  }`} />
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Toggle sidebar */}
         <button
