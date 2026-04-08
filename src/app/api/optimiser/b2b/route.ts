@@ -173,35 +173,34 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
   "tone_notes": "Brief note on which vibe pillars were emphasised"${keywordsTotal > 0 ? ',\n  "_keywords_mapping": [array of keyword mapping objects as described above]' : ''}
 }`
 
-    // Custom key from frontend settings
-    const customApiKey = request.headers.get('x-openai-key')
+        // Both modes use server OPENAI_API_KEY. Pro = gpt-4o, Regular = gpt-4o-mini.
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
+    }
     const proMode = request.headers.get('x-ai-mode') === 'pro'
-
+    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
+    let usedProMode = proMode
     let aiResult: string
-    let usedProMode = false
 
-    // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
-    if (proMode && customApiKey) {
-      usedProMode = true
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customApiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
-      })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
-      }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
-    } else {
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    })
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text()
+      return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+    }
+    const aiData = await aiResponse.json()
+    aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI' else {
       // Regular mode: gpt-4o-mini via server key
       const apiKey = process.env.OPENAI_API_KEY
       if (!apiKey) {
