@@ -34,6 +34,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [aiMode, setAiMode] = useState<'regular' | 'pro'>('regular')
   const [recoveredPin, setRecoveredPin] = useState('')
   const [recoverLoading, setRecoverLoading] = useState(false)
+  const [testKeyStatus, setTestKeyStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const pinRef = useRef<HTMLInputElement>(null)
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
@@ -188,6 +189,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setRecoveredPin('Connection error.')
     } finally {
       setRecoverLoading(false)
+    }
+  }
+
+  const handleTestKey = async () => {
+    setTestKeyStatus('loading')
+    try {
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${savedKey}` },
+      })
+      setTestKeyStatus(res.ok ? 'ok' : 'fail')
+    } catch {
+      setTestKeyStatus('fail')
     }
   }
 
@@ -502,7 +515,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       Your personal key. Used as a backup when the primary AI service fails. Stored locally in your browser — not shared with anyone.
                     </p>
 
-                    {/* State 2: Key saved and not editing — show masked key + Edit + Delete */}
+                    {/* State 2: Key saved and not editing — show masked key + Test + Edit + Delete */}
                     {savedKey && !editMode ? (
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 p-3 bg-pl-card border border-pl-border rounded-lg">
@@ -514,6 +527,47 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <span className="text-xs text-emerald-400 font-medium">✓ Saved</span>
                           )}
                         </div>
+                        <button
+                          onClick={handleTestKey}
+                          disabled={testKeyStatus === 'loading'}
+                          className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm border transition-colors ${
+                            testKeyStatus === 'ok'
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                              : testKeyStatus === 'fail'
+                              ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                              : 'border-pl-border text-pl-muted hover:border-pl-gold/40 hover:text-pl-gold'
+                          }`}
+                        >
+                          {testKeyStatus === 'loading' ? (
+                            <>
+                              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Testing key...
+                            </>
+                          ) : testKeyStatus === 'ok' ? (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Key is valid - Pro mode active
+                            </>
+                          ) : testKeyStatus === 'fail' ? (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Invalid key - check and re-enter
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              Test Key
+                            </>
+                          )}
+                        </button>
                         <div className="flex gap-2">
                           <button
                             onClick={handleEditKey}
