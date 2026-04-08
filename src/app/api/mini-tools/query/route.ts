@@ -102,7 +102,15 @@ export async function POST(req: NextRequest) {
       if (plError) {
         return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
       }
-      result = (plData?.result || plData?.text || plData?.content || '') as string
+      let aiResult = (plData?.result || plData?.text || plData?.content || '') as string
+      // PL edge fn sometimes wraps the response: {"result":"...","provider":"make-openai-gpt4o",...}
+      if (typeof aiResult === 'string' && aiResult.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(aiResult)
+          if (parsed?.result) aiResult = parsed.result
+        } catch { /* keep as-is */ }
+      }
+      result = aiResult
     }
 
 
