@@ -180,6 +180,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleSetMode = (mode: 'regular' | 'pro') => {
     setAiMode(mode)
     localStorage.setItem('rs_ai_mode', mode)
+    if (mode === 'regular') {
+      // Reverse the save: clear stored key when switching back to regular
+      localStorage.removeItem('rs_custom_ai_key')
+      setSavedKey('')
+      setCustomKey('')
+    }
   }
 
   const handleRecoverPin = async () => {
@@ -571,9 +577,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
 
                   <div>
-                    <label className="block text-xs text-pl-muted mb-2 uppercase tracking-wider">Additional OpenAI API Key</label>
+                    <label className="block text-xs text-pl-muted mb-2 uppercase tracking-wider">Pro Mode — OpenAI API Key</label>
                     <p className="text-xs text-pl-muted mb-3">
-                      Your personal key. Used as a backup when the primary AI service fails. Stored locally in your browser — not shared with anyone.
+                      Required for Pro mode only. Uses your key with gpt-4o directly. Regular mode always uses the built-in service key — no key needed.
                     </p>
 
                     {/* State 2: Key saved and not editing — show masked key + Test + Edit + Delete */}
@@ -715,7 +721,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         <span className="font-medium">Regular</span>
-                        <span className="text-[10px] opacity-70">Standard flow</span>
+                        <span className="text-[10px] opacity-70">Built-in key</span>
                       </button>
                       <button
                         onClick={() => handleSetMode('pro')}
@@ -729,13 +735,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                         </svg>
                         <span className="font-medium">Pro</span>
-                        <span className="text-[10px] opacity-70">Direct via your key</span>
+                        <span className="text-[10px] opacity-70">Your key (gpt-4o)</span>
                       </button>
                     </div>
                     <p className="text-[11px] text-pl-muted text-center mt-2">
                       {aiMode === 'pro'
-                        ? 'Pro: skips standard routing, uses your key directly.'
-                        : 'Regular: uses standard AI routing with your key as backup.'}
+                        ? 'Pro: uses your API key with gpt-4o directly.'
+                        : 'Regular: uses the built-in service key with gpt-4o-mini. No personal key needed.'}
                     </p>
                   </div>
                 </div>
