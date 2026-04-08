@@ -107,10 +107,12 @@ export async function POST(request: NextRequest) {
 
     // Custom key from frontend settings (takes priority over PL edge function)
     const customApiKey = request.headers.get('x-openai-key')
+    const proMode = request.headers.get('x-ai-mode') === 'pro'
 
-    // Call AI — same 3-tier fallback as main pipeline
+    // Call AI — pro mode skips PL and uses custom key directly
     let aiResult: string
     try {
+      if (proMode && customApiKey) throw new Error('pro_mode')
       const plClient = createPLClient()
       const { data, error } = await plClient.functions.invoke('ai-process', {
         body: { prompt, stepField: `categories_${phase}`, eventTitle: entry.event_title || '' }
