@@ -60,10 +60,10 @@ export async function POST(req: NextRequest) {
       result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
-      // Pro mode: use custom key (required). Regular fallback: use custom key only — never env key
+      // Pro mode: use custom key. Regular mode: use env key. Keys never mixed.
       const apiKey = usedProMode
-        ? (customApiKey || process.env.OPENAI_API_KEY)
-        : customApiKey
+        ? customApiKey
+        : process.env.OPENAI_API_KEY
 
       if (!apiKey) {
         return NextResponse.json({
