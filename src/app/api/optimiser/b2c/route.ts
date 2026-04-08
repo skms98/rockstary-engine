@@ -177,11 +177,6 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
     let usedProMode = false
 
     // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
-    // Pro mode with no key → hard error, never fall through to PL
-    if (proMode && !customApiKey) {
-      return NextResponse.json({ error: 'Pro mode requires an OpenAI API key. Add your key in Settings.' }, { status: 401 })
-    }
-
     if (proMode && customApiKey) {
       usedProMode = true
       const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -203,15 +198,29 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: PL edge function
-      const plClient = createPLClient()
-      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
-        body: { prompt: `[INSTRUCTIONS]\n${systemMessage}\n\n[TASK]\n${prompt}`, stepField: 'optimiser-b2c', eventTitle: '' },
-      })
-      if (plError) {
-        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
+      // Regular mode: gpt-4o-mini via server key
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) {
+        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
       }
-      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: 4096,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      })
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text()
+        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      }
+      const aiData = await aiResponse.json()
+      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     }
 
     // Parse JSON response
