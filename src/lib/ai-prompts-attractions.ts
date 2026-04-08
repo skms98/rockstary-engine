@@ -25,6 +25,35 @@ export interface AttractionStepContext {
   rankedVersions: string
 }
 
+// ═══════════════════════════════════════════════════════════════
+// HUMANIZER RULES — Anti-AI Pattern Layer
+// Injected into all writing, rewriting, and editorial steps
+// ═══════════════════════════════════════════════════════════════
+const HUMANIZER_CONTEXT = `
+HUMANIZER RULES — STRIP AI PATTERNS FROM ALL OUTPUT:
+
+BANNED WORDS (never use, no exceptions):
+crucial, showcase, landscape, testament, delve, foster, navigate, leverage, unlock, elevate, streamline, pivotal, milestone, groundbreaking, game-changer, vibrant, nestled, thriving, dynamic, robust, holistic, seamless, cutting-edge, transformative, innovative
+
+BANNED OPENERS (never start a sentence with):
+Additionally, Furthermore, Moreover, It's worth noting that, It's important to note that, Notably,
+
+BANNED CONSTRUCTIONS:
+- "serves as" → use "is" instead
+- "functions as" → use "is" instead
+- Vague -ing modifiers: "showcasing how", "highlighting the importance of", "demonstrating that", "underscoring"
+- Stacked hedges: "somewhat possibly", "might potentially", "could perhaps", "it could be argued that"
+- Fake range statements: "from X to Y" that add no real information
+- Forced rule-of-three: three items chosen for rhythm, not relevance — cut to two or expand to four if needed
+- Generic conclusions: ending with a vague wrap-up instead of a specific point
+
+STYLE RULES:
+- Write with a clear point of view — human writing has an opinion
+- Be specific: if you can't name something concrete, cut the line
+- No passive voice stacking — two passive constructions in a row must be rewritten
+- End every piece on a specific, grounded note — not a vague aspiration
+`
+
 export const ATTRACTION_PROMPTS: Record<string, (ctx: AttractionStepContext) => string> = {
 
   // Step K: Keywords List (AI-generated from description)
@@ -49,7 +78,7 @@ Generate keywords in these categories:
 
 Format as a structured list with each category clearly labeled. Also provide a comma-separated flat list of ALL keywords at the end for easy copy-paste.`,
 
-  // Step S2: Keyword-Optimized Versions -- structured section output
+  // Step S2: Keyword-Optimized Versions â structured section output
   recommended_versions: (ctx) => `You are a professional content writer for Platinumlist.net, specializing in attraction and experience descriptions.
 
 Produce a STRUCTURED keyword-optimised attraction page. Each keyword from the list must be used EXACTLY ONCE, annotated as (keyword) [number].
@@ -57,7 +86,7 @@ Produce a STRUCTURED keyword-optimised attraction page. Each keyword from the li
 ATTRACTION: ${ctx.attractionName}
 URL: ${ctx.attractionUrl}
 
-ORIGINAL DESCRIPTION (source of truth -- do NOT invent facts beyond this):
+ORIGINAL DESCRIPTION (source of truth â do NOT invent facts beyond this):
 ${ctx.originalDescription}
 
 KEYWORDS LIST:
@@ -72,25 +101,25 @@ RULES:
 - No same keyword in consecutive sentences
 - No em dashes. Use commas, full stops, semicolons.
 - No hype or superlatives (amazing, incredible, best, unforgettable, must-see)
-- Platinumlist B2C TOV 2.4: warm, joyful, conversational. Use contractions (you're, it's, we've). Lead with experience and emotion, not logistics. Use rhythm and short punchy sentences alongside fuller ones. Sound like a trusted friend recommending the visit, not a corporate brochure. No passive voice. No robotic phrasing.
+- Platinumlist B2C TOV: warm, inviting, informative, action-oriented, experience-focused
 - Active voice preferred. Sentences max 22-24 words.
 - UK English. Metric measurements.
-- INFORMATION PRESERVATION: This is a surgical TOV and SEO optimisation, not a content reduction. ALL important facts, features, offerings, practical details, inclusions, exclusions, age/height restrictions, and visitor info from the original MUST appear in the output. Do not omit any substantive information. Every piece of info from the source belongs somewhere in the output.
-- CUSTOM BLOCKS: If the original contains sections or content that do not map to any standard section below, first check if they logically belong in an existing section. If yes, reformat them into that section. If they genuinely do not fit any standard section, preserve them verbatim at the end under their original heading.
+
+${HUMANIZER_CONTEXT}
 
 OUTPUT SECTIONS (use === SECTION NAME === delimiters):
 
 === TEASER ===
-Max 13 words. Starts with an action verb. Describes the core experience. No logistics, no dates.
+13 words max, starts with action verb, describes the experience.
 
 === WHAT TO EXPECT ===
-2-4 paragraphs. Full SEO rewrite with B2C TOV 2.4. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome. Any surplus highlights beyond 4 (see HIGHLIGHTS rule below) must be folded naturally into this section.
+2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
 
 === CTA ===
 One line: "Book your spot now and..."
 
 === HIGHLIGHTS ===
-Max 4 lines. Select the 4 most distinctive and unique highlights from the source. If the source has more than 4 highlights or standout features, pick the 4 most unique ones here and incorporate the remaining surplus into the WHAT TO EXPECT section above. Each line starts with a present-tense action verb. Under 12 words per line. No adjective hype. Line-break separated. No bullets.
+Exactly 4 lines. Each starts with present-tense action verb. Under 12 words. No adjective hype. Line-break separated. No bullets.
 
 === INCLUSIONS ===
 From source only. Line-break separated. No bullets. If unavailable: null
@@ -125,7 +154,6 @@ Check for:
 - Pricing references (if any)
 - Any fabricated features, experiences, or claims not in the original
 - Operating details accuracy
-- Information completeness: has any important fact from the original been omitted or distorted?
 
 ATTRACTION: ${ctx.attractionName}
 
@@ -138,8 +166,7 @@ ${ctx.recommendedVersions}
 For each version provide:
 1. Fact Check Score (0-100)
 2. Flagged issues (if any)
-3. Missing information from the original (if any content was dropped)
-4. Verdict: PASS / NEEDS REVIEW / FAIL`,
+3. Verdict: PASS / NEEDS REVIEW / FAIL`,
 
   // Step S4: Duplicate Analysis
   duplicate_analysis: (ctx) => `You are a content duplication analyst for Platinumlist.net.
@@ -161,21 +188,17 @@ For each version provide:
   // Step S5: TOV Score
   tov_score: (ctx) => `You are a brand voice analyst for Platinumlist.net.
 
-The Platinumlist B2C Tone of Voice 2.4 for attractions should be:
-- Warm, joyful, and conversational -- like a trusted friend inviting you to something worth doing
-- Uses contractions naturally (you're, it's, we've, they've)
-- Leads with emotion and experience, not logistics or dates
-- Uses rhythm: short punchy sentences mixed with fuller descriptive ones
-- Mirrors visitor emotion -- excitement, curiosity, discovery, anticipation
-- Confident but never arrogant -- authoritative about the experience
-- Informative and helpful -- practical details woven naturally into engaging copy
-- Action-oriented -- invites booking without sounding pushy
-- Evergreen -- not dated, works year-round (unless seasonal attraction)
-- Experience-focused -- emphasizes what you'll see, do, and feel
-- Never robotic, passive, or corporate ("The experience will be...", "Guests are invited to...")
-- Never overloads with empty adjectives (amazing, incredible, breathtaking) without substance
+The Platinumlist Tone of Voice (TOV) for attractions should be:
+- Warm and welcoming â like a local friend recommending a must-visit spot
+- Confident but not arrogant â authoritative about the experience
+- Informative and helpful â practical details woven naturally into engaging copy
+- Exciting without being over-the-top â builds genuine anticipation
+- Professional yet approachable â trustworthy platform voice
+- Action-oriented â encouraging ticket purchase / booking
+- Evergreen â not dated, works year-round (unless seasonal attraction)
+- Experience-focused â emphasizes what you'll see, do, and feel
 
-Evaluate each KEYWORD-OPTIMIZED version against the B2C TOV 2.4 guidelines above.
+Evaluate each KEYWORD-OPTIMIZED version against these attraction-specific TOV guidelines.
 
 ATTRACTION: ${ctx.attractionName}
 
@@ -185,12 +208,14 @@ ${ctx.recommendedVersions}
 For each version provide:
 1. TOV Score (0-100)
 2. TOV strengths (specific phrases that nail the voice)
-3. TOV weaknesses (where it falls flat, sounds generic, or too corporate)
+3. TOV weaknesses (where it falls flat or sounds generic)
 4. Keyword-TOV balance (do keywords feel natural or forced?)
 5. Overall verdict: ON-BRAND / MOSTLY ON-BRAND / OFF-BRAND`,
 
   // Step S6: Grammar & Style
   grammar_style: (ctx) => `You are a professional copy editor for Platinumlist.net attraction content.
+
+${HUMANIZER_CONTEXT}
 
 Review the KEYWORD-OPTIMIZED versions for grammar, spelling, punctuation, style, and readability.
 
@@ -208,6 +233,8 @@ For each version provide:
 
   // Step S7: Reviewer
   reviewer_output: (ctx) => `You are a senior content reviewer for Platinumlist.net attractions.
+
+${HUMANIZER_CONTEXT}
 
 Based on ALL previous analysis, review the keyword-optimized versions and provide editorial assessment.
 
@@ -237,7 +264,7 @@ ${ctx.grammarStyle}
 Provide:
 1. Overall assessment of each version (strengths, weaknesses)
 2. Keyword integration effectiveness per version
-3. Which version best balances SEO + readability + TOV 2.4
+3. Which version best balances SEO + readability + TOV
 4. Recommended edits for the top version(s)
 5. Final ranking
 6. Any versions to discard and why`,
@@ -245,14 +272,15 @@ Provide:
   // Step S8: Resolver
   resolver_output: (ctx) => `You are the final content resolver for Platinumlist.net attractions.
 
+${HUMANIZER_CONTEXT}
+
 Based on the reviewer's feedback, create the FINAL resolved attraction description that:
 - Incorporates all reviewer feedback
 - Fixes all identified issues
 - Maximizes keyword integration naturally
 - Maintains the best elements from each version
 - Is in proper attractions format (experience-focused, evergreen)
-- Follows Platinumlist B2C TOV 2.4 perfectly (warm, joyful, conversational, contractions, emotion-first)
-- Preserves ALL substantive information from the original -- nothing important is dropped
+- Follows Platinumlist TOV perfectly
 - Is ready for publication on Platinumlist.net
 
 ATTRACTION: ${ctx.attractionName}
@@ -270,9 +298,9 @@ KEYWORD-OPTIMIZED VERSIONS:
 ${ctx.recommendedVersions}
 
 Produce:
-1. FINAL VERSION -- The best resolved description ready for publication
-2. ALTERNATIVE VERSION -- A backup with a different keyword emphasis
-3. Changelog -- What was changed from the keyword-optimized versions and why`,
+1. FINAL VERSION â The best resolved description ready for publication
+2. ALTERNATIVE VERSION â A backup with a different keyword emphasis
+3. Changelog â What was changed from the keyword-optimized versions and why`,
 
   // Step S9: SEO Keyword Analysis
   seo_analysis: (ctx) => `You are an SEO specialist for Platinumlist.net attractions.
@@ -291,7 +319,7 @@ RESOLVED (NEW) VERSIONS:
 ${ctx.resolverOutput}
 
 Analyze:
-1. Keyword coverage -- which target keywords appear in old vs new
+1. Keyword coverage â which target keywords appear in old vs new
 2. Keyword density per version (should be 1-3% per primary keyword)
 3. Keyword placement quality (title, first paragraph, subheadings, body, CTA)
 4. Semantic keyword variations used
@@ -323,11 +351,10 @@ Verify:
 5. Pricing references accurate (if any)
 6. No misleading claims introduced during optimization
 7. Keywords haven't distorted factual content
-8. No important information from the original has been omitted
-9. Final Fact Check Score (0-100) for each resolved version
-10. APPROVED / NOT APPROVED verdict`,
+8. Final Fact Check Score (0-100) for each resolved version
+9. APPROVED / NOT APPROVED verdict`,
 
-  // Step S11: Optimized Final Description -- STRUCTURED SECTION OUTPUT
+  // Step S11: Optimized Final Description â STRUCTURED SECTION OUTPUT
   // This produces the master output matching the reference Excel format
   optimized_description: (ctx) => `You are the final production editor for Platinumlist.net attractions.
 
@@ -351,6 +378,8 @@ ${ctx.seoAnalysis}
 FACT CHECK RESULT:
 ${ctx.factCheckFinal}
 
+${HUMANIZER_CONTEXT}
+
 HARD RULES:
 - Every keyword from the list must be used EXACTLY ONCE in the output, annotated as (keyword) [number]. Example: (Burj Khalifa in Dubai) [1]
 - Keywords may have prepositions added inside brackets if needed for grammar: (snorkeling tour) [4] or (tickets) [6]
@@ -361,24 +390,23 @@ HARD RULES:
 - No hype, no superlatives (amazing, incredible, best, unforgettable)
 - No invented facts. Every claim must trace to the ORIGINAL DESCRIPTION
 - UK English. Metric measurements.
-- Platinumlist B2C TOV 2.4: warm, joyful, conversational. Use contractions (you're, it's, we've). Lead with experience and emotion, not logistics. Use rhythm and short punchy sentences mixed with fuller ones. Sound like a trusted friend recommending the visit, not a corporate brochure. No passive voice. No robotic phrasing.
+- Platinumlist B2C TOV: warm, inviting, informative, action-oriented, experience-focused
 - Sentence max: 22-24 words. Active voice preferred.
-- INFORMATION PRESERVATION: This is a surgical TOV and SEO optimisation, not a content reduction. ALL important facts, features, offerings, practical details, inclusions, exclusions, age/height restrictions, and visitor info from the original MUST appear in the output. Do not omit any substantive information.
-- CUSTOM BLOCKS: If the original contains sections or content not covered by the standard sections below, check if they logically map to an existing section. If yes, reformat into that section. If they do not fit any standard section, preserve them verbatim at the end under their original heading.
 
-OUTPUT FORMAT -- Produce each section below. Use === SECTION NAME === as delimiters:
+OUTPUT FORMAT â Produce each section below. Use === SECTION NAME === as delimiters:
 
 === TEASER ===
-One line, max 13 words, starting with an action verb. Describes the experience. Used for SEO meta. No logistics, no dates.
+One line, max 13 words, starting with an action verb. Describes the experience. Used for SEO meta.
 
 === WHAT TO EXPECT ===
-Full SEO-optimised rewrite of the description. 2-4 short paragraphs with B2C TOV 2.4. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome. Any surplus highlights beyond 4 (see HIGHLIGHTS below) must be folded naturally into this section.
+Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.
 
 === CTA ===
 One closing line starting with "Book your spot now and..."
 
 === HIGHLIGHTS ===
-Max 4 lines. Select the 4 most distinctive and unique highlights from the source. If the original has more than 4 highlights or standout features, choose the 4 most unique ones here and incorporate the rest into WHAT TO EXPECT above. Each line starts with a present-tense action verb (Explore, Discover, Access, View, etc.). Under 12 words per line. No value adjectives. No bullet characters. Line-break separated.
+Exactly 4 lines, each starting with a present-tense action verb (Explore, Discover, Access, View, etc.).
+Under 12 words per line. No value adjectives. No bullet characters. Line-break separated.
 
 === INCLUSIONS ===
 Clean list of what the ticket includes. No bullet characters. Line-break separated.
@@ -413,11 +441,8 @@ VALIDATION BEFORE OUTPUT:
 - All keywords used with correct [number] annotations? Check.
 - Zero stacked keywords? Check.
 - No em dashes? Check.
-- All original information preserved (nothing dropped)? Check.
-- Highlights: max 4, surplus folded into WHAT TO EXPECT? Check.
-- Custom blocks handled correctly? Check.
 - Fact check score 10/10 vs original? Check.
-- TOV 2.4 aligned (warm, joyful, conversational, contractions used)? Check.
+- TOV aligned? Check.
 If any check fails, revise before outputting.`,
 
   // Step S12: Ranked Top Versions
@@ -440,16 +465,16 @@ OPTIMIZED FINAL:
 ${ctx.optimizedDescription}
 
 Ranking criteria (in order of importance):
-1. Factual accuracy and information completeness (highest fact check score, nothing omitted)
+1. Factual accuracy (highest fact check score)
 2. SEO keyword optimization (best keyword coverage + natural integration)
-3. TOV 2.4 compliance (warm, joyful, conversational Platinumlist voice)
+3. TOV compliance (Platinumlist voice)
 4. Originality (lowest duplicate score)
 5. Grammar & readability
 6. Attraction format quality (experience-focused, evergreen, not event-like)
 
 Provide:
 1. RANKED LIST of all versions (best to worst) with scores
-2. WINNER -- The #1 version to publish with explanation
+2. WINNER â The #1 version to publish with explanation
 3. Keyword coverage summary for the winner
 4. Final publication-ready version with any last tweaks
 5. Recommended meta description (under 160 chars, includes primary keyword)`,
