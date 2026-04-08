@@ -80,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const isAIPath = AI_API_PATHS.some(p => url.includes(p))
       if (isAIPath) {
         const extraHeaders: Record<string, string> = {}
-        if (key) extraHeaders['x-openai-key'] = key
+        if (mode === 'pro' && key) extraHeaders['x-openai-key'] = key
         if (mode === 'pro' && key) extraHeaders['x-ai-mode'] = 'pro'
         init = {
           ...init,
@@ -214,6 +214,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setSavedKey('')
       setCustomKey('')
       keyRef.current = ''
+    } else if (mode === 'pro') {
+      // Reload key from server when switching to pro
+      fetch('/api/settings/load-key', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+          const k = data.key || ''
+          setSavedKey(k)
+          setCustomKey(k)
+          keyRef.current = k
+        })
+        .catch(() => {})
     }
   }
 
