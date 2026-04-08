@@ -150,68 +150,44 @@ Additional Rules:
 - If original content doesn't mention a section, write reasonable content or put "Information not available"
 `
 
-    // Custom key from frontend settings (takes priority over PL edge function)
+    // Custom key from frontend settings
     const customApiKey = request.headers.get('x-openai-key')
     const proMode = request.headers.get('x-ai-mode') === 'pro'
 
     let aiResult: string
     let usedProMode = false
 
-    // Primary: Supabase edge function — pro mode skips PL and uses custom key directly
-    try {
-      if (proMode && customApiKey) throw new Error('pro_mode')
-      const { data, error } = await plClient.functions.invoke('ai-process', {
-        body: { prompt, stepField: 'seo_content', eventTitle: title }
+    // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
+    if (proMode && customApiKey) {
+      usedProMode = true
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customApiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 4096,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt },
+          ],
+        }),
       })
-      if (error) throw error
-      aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
-    } catch (plError: any) {
-      if (plError?.message === 'pro_mode') usedProMode = true
-      // Pro mode: use custom key (required). Regular fallback: use custom key only — never env key
-      const openaiKey = usedProMode
-        ? (customApiKey || process.env.OPENAI_API_KEY)
-        : customApiKey
-      const anthropicKey = process.env.ANTHROPIC_API_KEY
-
-      if (openaiKey) {
-        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-          body: JSON.stringify({
-            model: usedProMode ? 'gpt-4o' : 'gpt-4o-mini',
-            max_tokens: 4096,
-            messages: [
-              { role: 'system', content: systemMessage },
-              { role: 'user', content: prompt },
-            ],
-          }),
-        })
-        if (!aiResponse.ok) {
-          const errText = await aiResponse.text()
-          return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
-        }
-        const aiData = await aiResponse.json()
-        aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
-      } else if (anthropicKey) {
-        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
-            messages: [{ role: 'user', content: prompt }],
-            system: systemMessage,
-          }),
-        })
-        if (!aiResponse.ok) {
-          const errText = await aiResponse.text()
-          return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
-        }
-        const aiData = await aiResponse.json()
-        aiResult = aiData.content?.[0]?.text || 'No response from AI'
-      } else {
-        return NextResponse.json({ error: 'No AI provider available. Set OPENAI_API_KEY or ANTHROPIC_API_KEY, or configure Supabase ai-process edge function.' }, { status: 500 })
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text()
+        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
       }
+      const aiData = await aiResponse.json()
+      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+    } else {
+      // Regular mode: PL edge function
+      const plClient = createPLClient()
+      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
+        body: { prompt: `[INSTRUCTIONS]\n${systemMessage}\n\n[TASK]\n${prompt}`, stepField: 'generate-seo', eventTitle: '' },
+      })
+      if (plError) {
+        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
+      }
+      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
     }
 
     // Parse the JSON result
