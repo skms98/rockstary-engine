@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
 
     // Primary: Use PL Supabase edge function — pro mode skips PL and uses custom key directly
     let result: string
+    let usedProMode = false
 
     try {
       if (proMode && customApiKey) throw new Error('pro_mode')
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
       if (error) throw error
       result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
+      if (plError?.message === 'pro_mode') usedProMode = true
       // Fallback: direct OpenAI call if edge function fails or custom key provided
       const apiKey = customApiKey || process.env.OPENAI_API_KEY
 
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
       result = data.choices?.[0]?.message?.content || 'No response generated.'
     }
 
-    return NextResponse.json({ result })
+    return NextResponse.json({ result, aiMode: usedProMode ? 'pro' : 'regular' })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
