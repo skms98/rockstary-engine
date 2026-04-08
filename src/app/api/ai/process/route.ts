@@ -231,31 +231,15 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: gpt-4o-mini via server key
-      const apiKey = process.env.OPENAI_API_KEY
-      if (!apiKey) {
-        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
-      }
-      const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
-      const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: maxTokens,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
+      // Regular mode: PL edge function
+      const plClient = createPLClient()
+      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
+        body: { prompt, stepField, eventTitle: entry.event_title || '' },
       })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      if (plError) {
+        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
       }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
     }
 
     // Save result to the entry
