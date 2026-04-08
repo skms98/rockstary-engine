@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
       userContent = contentParts
     }
 
+    // Custom key from frontend settings (takes priority over PL edge function)
+    const customApiKey = req.headers.get('x-openai-key')
+
     // Primary: Use PL Supabase edge function (same as event pipeline)
     // This avoids needing OPENAI_API_KEY as a Vercel env var
     let result: string
@@ -54,8 +57,8 @@ export async function POST(req: NextRequest) {
       if (error) throw error
       result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
-      // Fallback: direct OpenAI call if edge function fails and key is available
-      const apiKey = process.env.OPENAI_API_KEY
+      // Fallback: direct OpenAI call if edge function fails or custom key provided
+      const apiKey = customApiKey || process.env.OPENAI_API_KEY
 
       if (!apiKey) {
         return NextResponse.json({
