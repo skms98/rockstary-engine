@@ -60,8 +60,10 @@ export async function POST(req: NextRequest) {
       result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
-      // Fallback: direct OpenAI call if edge function fails or custom key provided
-      const apiKey = customApiKey || process.env.OPENAI_API_KEY
+      // Pro mode: use custom key (required). Regular fallback: use custom key only — never env key
+      const apiKey = usedProMode
+        ? (customApiKey || process.env.OPENAI_API_KEY)
+        : customApiKey
 
       if (!apiKey) {
         return NextResponse.json({
