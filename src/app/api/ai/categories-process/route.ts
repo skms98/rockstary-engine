@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
             model: usedProMode ? 'gpt-4o' : 'gpt-4o-mini',
-            max_completion_tokens: 4096,
+            max_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
               { role: 'user', content: prompt },
