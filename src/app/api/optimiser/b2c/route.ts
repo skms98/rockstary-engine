@@ -187,7 +187,9 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
-      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
+      const openaiKey = usedProMode
+        ? (customApiKey || process.env.OPENAI_API_KEY)
+        : customApiKey
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
@@ -195,7 +197,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
-            model: usedProMode ? 'gpt-5' : 'gpt-4o',
+            model: usedProMode ? 'gpt-5' : 'gpt-4o-mini',
             max_completion_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
