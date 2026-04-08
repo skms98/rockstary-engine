@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Call AI - pro mode skips PL and uses custom key directly
     let aiResult: string
+    let usedProMode = false
     try {
       if (proMode && customApiKey) throw new Error('pro_mode')
       const plClient = createPLClient()
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
+      if (plError?.message === 'pro_mode') usedProMode = true
       const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to save: ${updateError.message}` }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, result: aiResult, phase })
+    return NextResponse.json({ success: true, result: aiResult, phase, aiMode: usedProMode ? 'pro' : 'regular' })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
