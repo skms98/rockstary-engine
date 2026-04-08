@@ -46,6 +46,11 @@ export async function POST(req: NextRequest) {
     let usedProMode = false
     const hasImages = images && images.length > 0
 
+    // Pro mode with no key → hard error, never fall through to PL
+    if (proMode && !customApiKey) {
+      return NextResponse.json({ error: 'Pro mode requires an OpenAI API key. Add your key in Settings.' }, { status: 401 })
+    }
+
     if (proMode && customApiKey) {
       usedProMode = true
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
