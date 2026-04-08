@@ -188,8 +188,9 @@ export async function POST(request: NextRequest) {
 
     // Custom key from frontend settings (takes priority over PL edge function)
     const customApiKey = request.headers.get('x-openai-key')
+    const proMode = request.headers.get('x-ai-mode') === 'pro'
 
-    // Call AI via PL Supabase edge function (primary)
+    // Call AI via PL Supabase edge function (primary) — pro mode skips PL
     let aiResult: string
     const systemMessage = isAttraction
       ? 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
@@ -205,6 +206,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 - 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
     try {
+      if (proMode && customApiKey) throw new Error('pro_mode')
       const plClient = createPLClient()
       const { data, error } = await plClient.functions.invoke('ai-process', {
         body: { prompt, stepField, eventTitle: entry.event_title || '' }
