@@ -819,7 +819,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                         <span className="font-medium">Regular</span>
-                        <span className="text-[10px] opacity-70">Built-in key</span>
+                        <span className="text-[10px] opacity-70">gpt-4o-mini</span>
                       </button>
                       <button
                         onClick={() => handleSetMode('pro')}
