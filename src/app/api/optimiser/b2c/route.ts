@@ -196,31 +196,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
     }
     const aiData = await aiResponse.json()
-    aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI' else {
-      // Regular mode: gpt-4o-mini via server key
-      const apiKey = process.env.OPENAI_API_KEY
-      if (!apiKey) {
-        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
-      }
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
-      })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
-      }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
-    }
+    aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
 
     // Parse JSON response
     let parsed: Record<string, unknown>
