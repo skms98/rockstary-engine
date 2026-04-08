@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
       const openaiKey = usedProMode
-        ? (customApiKey || process.env.OPENAI_API_KEY)
-        : customApiKey
+        ? customApiKey
+        : process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
