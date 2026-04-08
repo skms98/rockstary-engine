@@ -32,6 +32,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [keySaved, setKeySaved] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [aiMode, setAiMode] = useState<'regular' | 'pro'>('regular')
+  const [recoveredPin, setRecoveredPin] = useState('')
+  const [recoverLoading, setRecoverLoading] = useState(false)
   const pinRef = useRef<HTMLInputElement>(null)
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
@@ -160,11 +162,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setPinError('')
     setShowKey(false)
     setEditMode(false)
+    setRecoveredPin('')
   }
 
   const handleSetMode = (mode: 'regular' | 'pro') => {
     setAiMode(mode)
     localStorage.setItem('rs_ai_mode', mode)
+  }
+
+  const handleRecoverPin = async () => {
+    setRecoverLoading(true)
+    setRecoveredPin('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) { setRecoveredPin('Not authenticated.'); return }
+      const res = await fetch('/api/settings/recover-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: session.access_token }),
+      })
+      const data = await res.json()
+      if (data.pin) setRecoveredPin(data.pin)
+      else setRecoveredPin(data.error || 'Could not retrieve PIN.')
+    } catch {
+      setRecoveredPin('Connection error.')
+    } finally {
+      setRecoverLoading(false)
+    }
   }
 
   const keyIsActive = savedKey.startsWith('sk-')
@@ -444,6 +468,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   >
                     {pinLoading ? 'Verifying...' : 'Unlock'}
                   </button>
+
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={handleRecoverPin}
+                      disabled={recoverLoading}
+                      className="text-xs text-pl-muted hover:text-pl-gold transition-colors disabled:opacity-50"
+                    >
+                      {recoverLoading ? 'Retrieving...' : 'Forgot PIN?'}
+                    </button>
+                    {recoveredPin && (
+                      <div className="mt-2 p-2 rounded-lg bg-pl-gold/10 border border-pl-gold/20">
+                        <p className="text-xs text-pl-muted mb-0.5">Your PIN is:</p>
+                        <p className="text-lg font-bold text-pl-gold tracking-[0.4em]">{recoveredPin}</p>
+                      </div>
+                    )}
+                  </div>
                 </form>
               ) : (
                 /* API key panel */
