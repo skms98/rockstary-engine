@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showKey, setShowKey] = useState(false)
   const [keySaved, setKeySaved] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [aiMode, setAiMode] = useState<'regular' | 'pro'>('regular')
   const pinRef = useRef<HTMLInputElement>(null)
 
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
@@ -44,23 +45,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isOptimiser = pathname.startsWith('/dashboard/optimiser')
   const isQATagging = pathname.startsWith('/dashboard/qa-tagging')
 
-  // Load saved key from localStorage on mount
+  // Load saved key and mode from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('rs_custom_ai_key') || ''
     setSavedKey(stored)
     setCustomKey(stored)
+    const storedMode = (localStorage.getItem('rs_ai_mode') as 'regular' | 'pro') || 'regular'
+    setAiMode(storedMode)
   }, [])
 
-  // Global fetch interceptor — injects x-openai-key on every AI API call
+  // Global fetch interceptor — injects x-openai-key and x-ai-mode on every AI API call
   useEffect(() => {
     const origFetch = window.fetch.bind(window)
     window.fetch = function (input: RequestInfo | URL, init: RequestInit = {}) {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url
       const key = localStorage.getItem('rs_custom_ai_key')
-      if (key && AI_API_PATHS.some(p => url.includes(p))) {
+      const mode = localStorage.getItem('rs_ai_mode') || 'regular'
+      if (AI_API_PATHS.some(p => url.includes(p))) {
+        const extraHeaders: Record<string, string> = {}
+        if (key) extraHeaders['x-openai-key'] = key
+        if (mode === 'pro' && key) extraHeaders['x-ai-mode'] = 'pro'
         init = {
           ...init,
-          headers: { ...(init.headers as Record<string, string> || {}), 'x-openai-key': key },
+          headers: { ...(init.headers as Record<string, string> || {}), ...extraHeaders },
         }
       }
       return origFetch(input as RequestInfo, init)
@@ -155,6 +162,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setEditMode(false)
   }
 
+  const handleSetMode = (mode: 'regular' | 'pro') => {
+    setAiMode(mode)
+    localStorage.setItem('rs_ai_mode', mode)
+  }
+
   const keyIsActive = savedKey.startsWith('sk-')
   const canAccessSettings = user?.email === 'samir.badawy@platinumlist.net'
 
@@ -167,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-pl-navy border-r border-pl-border flex flex-col transition-all duration-300`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} h-screen sticky top-0 bg-pl-navy border-r border-pl-border flex flex-col transition-all duration-300 flex-shrink-0`}>
         {/* Logo */}
         <div className="p-6 border-b border-pl-border">
           <div className="flex items-center gap-3">
@@ -531,9 +543,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                   </div>
 
-                  <p className="text-[11px] text-pl-muted text-center">
-                    Activates automatically as a backup when the primary AI service fails. No page refresh needed.
-                  </p>
+                  {/* AI Mode Toggle */}
+                  <div className="pt-2 border-t border-pl-border">
+                    <label className="block text-xs text-pl-muted mb-3 uppercase tracking-wider">AI Mode</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleSetMode('regular')}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm ${
+                          aiMode === 'regular'
+                            ? 'bg-pl-gold/10 border-pl-gold/40 text-pl-gold'
+                            : 'border-pl-border text-pl-muted hover:border-pl-border/60 hover:text-pl-text'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        <span className="font-medium">Regular</span>
+                        <span className="text-[10px] opacity-70">Standard flow</span>
+                      </button>
+                      <button
+                        onClick={() => handleSetMode('pro')}
+                        disabled={!savedKey}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed ${
+                          aiMode === 'pro'
+                            ? 'bg-purple-500/10 border-purple-500/40 text-purple-400'
+                            : 'border-pl-border text-pl-muted hover:border-pl-border/60 hover:text-pl-text'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        <span className="font-medium">Pro</span>
+                        <span className="text-[10px] opacity-70">Direct via your key</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-pl-muted text-center mt-2">
+                      {aiMode === 'pro'
+                        ? 'Pro: skips standard routing, uses your key directly.'
+                        : 'Regular: uses standard AI routing with your key as backup.'}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
