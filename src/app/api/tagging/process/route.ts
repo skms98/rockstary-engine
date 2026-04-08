@@ -87,6 +87,9 @@ export async function POST(request: NextRequest) {
 
     const systemMessage = 'You are TAGGING BEAST, a deterministic classification engine for Platinumlist.net. You execute rules. You never explain. You never guess. You output FINAL JSON ONLY.'
 
+    // Custom key from frontend settings (takes priority over PL edge function)
+    const customApiKey = request.headers.get('x-openai-key')
+
     // Call AI - same 3-tier fallback as main engine
     let aiResult: string
     try {
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
-      const openaiKey = process.env.OPENAI_API_KEY
+      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
