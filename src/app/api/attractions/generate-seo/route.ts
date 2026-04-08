@@ -176,7 +176,7 @@ Additional Rules:
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-5',
             max_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
