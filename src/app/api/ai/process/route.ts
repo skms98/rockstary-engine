@@ -206,11 +206,6 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 - BANNED WORDS: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, we are pleased to announce, we are delighted, we are thrilled, immerse yourself, promises to be, memorable moments, an evening to remember
 - 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
-    // Pro mode with no key → hard error, never fall through to PL
-    if (proMode && !customApiKey) {
-      return NextResponse.json({ error: 'Pro mode requires an OpenAI API key. Add your key in Settings.' }, { status: 401 })
-    }
-
     if (proMode && customApiKey) {
       usedProMode = true
       // Heavy steps need more tokens — 16384 for full 4-variant output
@@ -236,15 +231,31 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: PL edge function
-      const plClient = createPLClient()
-      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
-        body: { prompt, stepField, eventTitle: entry.event_title || '' },
-      })
-      if (plError) {
-        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
+      // Regular mode: gpt-4o-mini via server key
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) {
+        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
       }
-      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
+      const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
+      const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
+      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          max_tokens: maxTokens,
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      })
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text()
+        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      }
+      const aiData = await aiResponse.json()
+      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     }
 
     // Save result to the entry
