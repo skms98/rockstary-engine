@@ -155,6 +155,7 @@ Additional Rules:
     const proMode = request.headers.get('x-ai-mode') === 'pro'
 
     let aiResult: string
+    let usedProMode = false
 
     // Primary: Supabase edge function — pro mode skips PL and uses custom key directly
     try {
@@ -165,6 +166,7 @@ Additional Rules:
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
+      if (plError?.message === 'pro_mode') usedProMode = true
       // Fallback: direct OpenAI (uses custom key if provided)
       const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -298,7 +300,7 @@ Additional Rules:
       return NextResponse.json({ error: 'Failed to save SEO content: ' + updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, seoContent, keywordsUsed, keywordsTotal, keywordsMapping })
+    return NextResponse.json({ success: true, seoContent, keywordsUsed, keywordsTotal, keywordsMapping, aiMode: usedProMode ? 'pro' : 'regular' })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
   }
