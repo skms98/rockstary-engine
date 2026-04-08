@@ -61,6 +61,36 @@ HARD-BLOCKED PHRASES (these are NEVER allowed, no exceptions):
 we are pleased to announce, we are delighted, we are thrilled, join us as, in today's world, whether you're looking for
 `
 
+// ═══════════════════════════════════════════════════════════════
+// HUMANIZER RULES — Anti-AI Pattern Layer
+// Injected into all writing, rewriting, and editorial steps
+// Based on 29-pattern humanizer framework
+// ═══════════════════════════════════════════════════════════════
+const HUMANIZER_CONTEXT = `
+HUMANIZER RULES — STRIP AI PATTERNS FROM ALL OUTPUT:
+
+BANNED WORDS (never use, no exceptions):
+crucial, showcase, landscape, testament, delve, foster, navigate, leverage, unlock, elevate, streamline, pivotal, milestone, groundbreaking, game-changer, vibrant, nestled, thriving, dynamic, robust, holistic, seamless, cutting-edge, transformative, innovative
+
+BANNED OPENERS (never start a sentence with):
+Additionally, Furthermore, Moreover, It's worth noting that, It's important to note that, Notably,
+
+BANNED CONSTRUCTIONS:
+- "serves as" → use "is" instead
+- "functions as" → use "is" instead
+- Vague -ing modifiers: "showcasing how", "highlighting the importance of", "demonstrating that", "underscoring"
+- Stacked hedges: "somewhat possibly", "might potentially", "could perhaps", "it could be argued that"
+- Fake range statements: "from X to Y" that add no real information
+- Forced rule-of-three: three items chosen for rhythm, not relevance — cut to two or expand to four if needed
+- Generic conclusions: ending with a vague wrap-up instead of a specific point
+
+STYLE RULES:
+- Write with a clear point of view — human writing has an opinion
+- Be specific: if you can't name something concrete, cut the line
+- No passive voice stacking — two passive constructions in a row must be rewritten
+- End every piece on a specific, grounded note — not a vague aspiration
+`
+
 export const STEP_PROMPTS: Record<string, (ctx: StepContext) => string> = {
 
   // ═══════════════════════════════════════════════════════════════
@@ -159,6 +189,7 @@ PAGE QA CONTEXT (from Step A — use to understand page structure issues):
 ${ctx.pageQaComments || 'Not yet available.'}
 
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 NON-NEGOTIABLES — FACT LOCK LAYER (these cannot change):
 - Artist/performer/speaker names (exact spelling)
@@ -531,6 +562,7 @@ REWRITE [N] ORGANISER TRIGGER RISK:
   tov_score: (ctx) => `You are the Platinumlist B2C TOV 2.4 Audit Engine. You conduct a rigorous, line-by-line assessment of event descriptions against the Platinumlist voice standard, and produce an optimized rewrite for any version scoring below 55/70.
 
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 7-POINT AUDIT FRAMEWORK (apply to EACH version):
 
@@ -634,6 +666,7 @@ TOV 2.4 OPTIMIZED VERSION:
   grammar_style: (ctx) => `You are a professional copy editor for Platinumlist.net, specializing in event description quality. You review all versions for grammar, spelling, punctuation, style issues, and Platinumlist TOV 2.4 compliance.
 
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 ORIGINAL DESCRIPTION (S1):
 ${ctx.originalDescription}
@@ -682,6 +715,7 @@ PRIORITY CORRECTIONS SUMMARY (ranked by severity):
 
 All editorial decisions must respect Platinumlist B2C TOV 2.4:
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 EVENT: ${ctx.eventTitle}
 
@@ -764,6 +798,7 @@ YOUR TASKS:
 
 Every resolved variant MUST comply with Platinumlist B2C TOV 2.4:
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 EVENT: ${ctx.eventTitle}
 
@@ -1033,6 +1068,7 @@ CRITICAL RULE: DO NOT generate, rewrite, or create any new description text. You
 4. Reproduce the selected versions EXACTLY as they appear in S10
 
 ${TOV_CONTEXT}
+${HUMANIZER_CONTEXT}
 
 ORIGINAL DESCRIPTION (S1 — source of truth for length and content):
 ${ctx.originalDescription}
