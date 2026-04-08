@@ -216,8 +216,10 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
-      // If PL edge function fails, use custom key if available, then env key
-      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
+      // Pro mode: use custom key (required). Regular fallback: use custom key only — never env key
+      const openaiKey = usedProMode
+        ? (customApiKey || process.env.OPENAI_API_KEY)
+        : customApiKey
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
@@ -232,7 +234,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
             'Authorization': `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: usedProMode ? 'gpt-5' : 'gpt-4o',
+            model: usedProMode ? 'gpt-5' : 'gpt-4o-mini',
             max_completion_tokens: maxTokens,
             messages: [
               { role: 'system', content: systemMessage },
