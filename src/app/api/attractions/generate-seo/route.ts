@@ -167,8 +167,10 @@ Additional Rules:
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
       if (plError?.message === 'pro_mode') usedProMode = true
-      // Fallback: direct OpenAI (uses custom key if provided)
-      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
+      // Pro mode: use custom key (required). Regular fallback: use custom key only — never env key
+      const openaiKey = usedProMode
+        ? (customApiKey || process.env.OPENAI_API_KEY)
+        : customApiKey
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
@@ -176,7 +178,7 @@ Additional Rules:
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
-            model: usedProMode ? 'gpt-5' : 'gpt-4o',
+            model: usedProMode ? 'gpt-5' : 'gpt-4o-mini',
             max_completion_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
