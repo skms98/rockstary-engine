@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
 
     // Call AI via PL Supabase edge function (primary) — pro mode skips PL
     let aiResult: string
+    let usedProMode = false
     const systemMessage = isAttraction
       ? 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
       : `You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.
@@ -214,6 +215,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
+      if (plError?.message === 'pro_mode') usedProMode = true
       // If PL edge function fails, use custom key if available, then env key
       const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -306,6 +308,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       success: true,
       result: aiResult,
       step: stepField,
+      aiMode: usedProMode ? 'pro' : 'regular',
     })
 
   } catch (err: any) {
