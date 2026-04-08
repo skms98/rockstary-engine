@@ -91,26 +91,29 @@ export async function POST(req: NextRequest) {
       const data = await response.json()
       result = data.choices?.[0]?.message?.content || 'No response generated.'
     } else {
-      // Regular mode (text-only): PL edge function
-      const plClient = createPLClient()
-      const combinedPrompt = systemPrompt
-        ? `[INSTRUCTIONS]\n${systemPrompt}\n\n[TASK]\n${typeof userContent === 'string' ? userContent : JSON.stringify(userContent)}`
-        : (typeof userContent === 'string' ? userContent : JSON.stringify(userContent))
-      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
-        body: { prompt: combinedPrompt, stepField: 'mini-tools-query', eventTitle: '' },
+      // Regular mode (text-only): gpt-4o-mini via server key
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) {
+        return NextResponse.json({ error: 'No API key configured for regular mode.' }, { status: 500 })
+      }
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: typeof userContent === 'string' ? userContent : JSON.stringify(userContent) },
+          ],
+          max_tokens: 4000,
+        }),
       })
-      if (plError) {
-        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
+      if (!response.ok) {
+        const errorText = await response.text()
+        return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
       }
-      let aiResult = (plData?.result || plData?.text || plData?.content || '') as string
-      // PL edge fn sometimes wraps the response: {"result":"...","provider":"make-openai-gpt4o",...}
-      if (typeof aiResult === 'string' && aiResult.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(aiResult)
-          if (parsed?.result) aiResult = parsed.result
-        } catch { /* keep as-is */ }
-      }
-      result = aiResult
+      const data = await response.json()
+      result = data.choices?.[0]?.message?.content || 'No response generated.'
     }
 
 
