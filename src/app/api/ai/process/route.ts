@@ -233,7 +233,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
           },
           body: JSON.stringify({
             model: 'gpt-5',
-            max_tokens: maxTokens,
+            max_completion_tokens: maxTokens,
             messages: [
               { role: 'system', content: systemMessage },
               { role: 'user', content: prompt },
