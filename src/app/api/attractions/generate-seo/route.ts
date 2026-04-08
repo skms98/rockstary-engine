@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       .map((kw: string, i: number) => `[${i + 1}] ${kw}`)
       .join('\n')
 
-    const systemMessage = `Yu are a professional SEO content writer for Platinumlist.net, the GCC's go-to platform for tickets to concerts, attractions, sports, and cultural events.
+    const systemMessage = `You are a professional SEO content writer for Platinumlist.net, the GCC's go-to platform for tickets to concerts, attractions, sports, and cultural events.
 
 TONE OF VOICE (Platinumlist B2C TOV 2.4):
 You write like a trusted, upbeat friend who knows what's on. Your voice is emotionally aware, clear, and confident — never stiff or robotic.
@@ -179,29 +179,15 @@ Additional Rules:
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: gpt-4o-mini via server key
-      const apiKey = process.env.OPENAI_API_KEY
-      if (!apiKey) {
-        return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
-      }
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
+      // Regular mode: PL edge function
+      const plClient = createPLClient()
+      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
+        body: { prompt: `[INSTRUCTIONS]\n${systemMessage}\n\n[TASK]\n${prompt}`, stepField: 'generate-seo', eventTitle: '' },
       })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      if (plError) {
+        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
       }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+      aiResult = (plData?.result || plData?.text || plData?.content || '') as string
     }
 
     // Parse the JSON result
