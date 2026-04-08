@@ -33,7 +33,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [editMode, setEditMode] = useState(false)
   const [aiMode, setAiMode] = useState<'regular' | 'pro'>('regular')
   const [recoveredPin, setRecoveredPin] = useState('')
-  const [recoverLoading, setRecoverLoading] = useState(false)
+  const [pinRecoveryStep, setPinRecoveryStep] = useState<'idle' | 'otp_sent'>('idle')
+  const [otpInput, setOtpInput] = useState('')
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpVerifying, setOtpVerifying] = useState(false)
+  const [otpError, setOtpError] = useState('')
   const [testKeyStatus, setTestKeyStatus] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const [lastAiMode, setLastAiMode] = useState<'pro' | 'regular' | null>(null)
   const pinRef = useRef<HTMLInputElement>(null)
@@ -110,6 +114,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setSettingsOpen(true)
     setPinInput('')
     setPinError('')
+    setPinRecoveryStep('idle')
+    setOtpInput('')
+    setOtpError('')
+    setRecoveredPin('')
     setTimeout(() => pinRef.current?.focus(), 100)
   }
 
@@ -188,24 +196,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const handleRecoverPin = async () => {
-    setRecoverLoading(true)
+  const handleSendOtp = async () => {
+    setOtpSending(true)
+    setOtpError('')
     setRecoveredPin('')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) { setRecoveredPin('Not authenticated.'); return }
+      const { error } = await supabase.auth.signInWithOtp({
+        email: user!.email!,
+        options: { shouldCreateUser: false },
+      })
+      if (error) { setOtpError(error.message); return }
+      setPinRecoveryStep('otp_sent')
+    } catch {
+      setOtpError('Failed to send code. Try again.')
+    } finally {
+      setOtpSending(false)
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    setOtpVerifying(true)
+    setOtpError('')
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: user!.email!,
+        token: otpInput,
+        type: 'email',
+      })
+      if (error || !data.session) { setOtpError('Invalid or expired code. Try again.'); return }
       const res = await fetch('/api/settings/recover-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: session.access_token }),
+        body: JSON.stringify({ token: data.session.access_token }),
       })
-      const data = await res.json()
-      if (data.pin) setRecoveredPin(data.pin)
-      else setRecoveredPin(data.error || 'Could not retrieve PIN.')
+      const pinData = await res.json()
+      if (pinData.pin) {
+        setRecoveredPin(pinData.pin)
+        setPinRecoveryStep('idle')
+      } else {
+        setOtpError(pinData.error || 'Could not retrieve PIN.')
+      }
     } catch {
-      setRecoveredPin('Connection error.')
+      setOtpError('Connection error.')
     } finally {
-      setRecoverLoading(false)
+      setOtpVerifying(false)
     }
   }
 
@@ -549,17 +583,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {pinLoading ? 'Verifying...' : 'Unlock'}
                   </button>
 
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      onClick={handleRecoverPin}
-                      disabled={recoverLoading}
-                      className="text-xs text-pl-muted hover:text-pl-gold transition-colors disabled:opacity-50"
-                    >
-                      {recoverLoading ? 'Retrieving...' : 'Forgot PIN?'}
-                    </button>
+                  <div className="text-center space-y-2">
+                    {pinRecoveryStep === 'idle' && !recoveredPin && (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={otpSending}
+                        className="text-xs text-pl-muted hover:text-pl-gold transition-colors disabled:opacity-50"
+                      >
+                        {otpSending ? 'Sending code...' : 'Forgot PIN?'}
+                      </button>
+                    )}
+                    {pinRecoveryStep === 'otp_sent' && (
+                      <div className="space-y-2 text-left">
+                        <p className="text-xs text-pl-muted text-center">A 6-digit code was sent to your email</p>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={otpInput}
+                          onChange={e => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter code"
+                          className="w-full bg-pl-card border border-pl-border rounded-lg px-4 py-2 text-white text-center text-lg tracking-[0.4em] placeholder:tracking-normal placeholder:text-sm placeholder:text-pl-muted focus:outline-none focus:border-pl-gold/50 transition-colors"
+                        />
+                        {otpError && <p className="text-red-400 text-xs text-center">{otpError}</p>}
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={otpInput.length < 6 || otpVerifying}
+                          className="w-full bg-pl-gold/20 hover:bg-pl-gold/30 disabled:opacity-40 text-pl-gold text-sm font-medium py-2 rounded-lg transition-colors"
+                        >
+                          {otpVerifying ? 'Verifying...' : 'Verify code'}
+                        </button>
+                      </div>
+                    )}
+                    {otpError && pinRecoveryStep === 'idle' && (
+                      <p className="text-red-400 text-xs">{otpError}</p>
+                    )}
                     {recoveredPin && (
-                      <div className="mt-2 p-2 rounded-lg bg-pl-gold/10 border border-pl-gold/20">
+                      <div className="p-2 rounded-lg bg-pl-gold/10 border border-pl-gold/20">
                         <p className="text-xs text-pl-muted mb-0.5">Your PIN is:</p>
                         <p className="text-lg font-bold text-pl-gold tracking-[0.4em]">{recoveredPin}</p>
                       </div>
