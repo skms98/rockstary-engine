@@ -192,6 +192,7 @@ ${TOV_CONTEXT}
 ${HUMANIZER_CONTEXT}
 
 NON-NEGOTIABLES — FACT LOCK LAYER (these cannot change):
+- Event title (exactly as provided in Col B / the EVENT field above) — must appear verbatim in each rewrite. Do NOT rename, restyle, or creatively reframe the event title. "Mina Nader in Dubai" stays "Mina Nader in Dubai".
 - Artist/performer/speaker names (exact spelling)
 - Dates, times, venue names, cities
 - Programme/setlist order (if confirmed in original)
@@ -200,6 +201,9 @@ NON-NEGOTIABLES — FACT LOCK LAYER (these cannot change):
 - Quantities (80 costumes, 3 stages, etc.)
 - Award mentions, prestige titles (e.g., "defining figure", "prima ballerina", "etoile") — NEVER omit or downgrade
 - Age restrictions, ticket categories
+
+ORGANISER SAFETY RULE:
+The organiser must be able to read each rewrite and feel their event is represented fairly and accurately, with their core message intact. Do not inject narrative angles, emotional interpretations, or stylistic flourishes that the organiser did not put there. You are polishing their voice, not replacing it. If the original is formal, stay formal. If it is casual, stay casual. Match the register of the source material — do not impose Platinumlist energy if the organiser's tone is measured and professional.
 
 ARTIST RESPONSIBILITY PROTECTION:
 - Performers only: perform, appear, star in, return with, lead the cast, take the stage
@@ -212,17 +216,16 @@ NON-INTERPRETIVE RULE:
 - Ask: "Is this visible, audible, credited, or documented?" If not — do not include it
 
 STRUCTURAL REWRITE RULES:
-1. Opener: NEVER replicate original opening logic. If original opens Date/Venue/Artist, rotate to: Artist stature first / Programme concept first / Institutional affiliation first / Cultural positioning first / Audience framing first
-2. Paragraph logic: Break into idea blocks and reassemble in new order. Vary emphasis hierarchy.
+1. Opener: Vary the opening angle across the 3 rewrites — but do not force a radical departure. If rotating opener logic would make the event unrecognisable to the organiser, keep the core identity and vary the sentence construction instead.
+2. Paragraph logic: You may reorder idea blocks for flow improvement, but preserve the organiser's intended emphasis hierarchy. Do not bury what they led with.
 3. Sentence variation: Mix short, medium, and long. Use clause inversion and rhythm variation.
 4. CTA: Each rewrite must use a different action verb and different sentence structure (Secure your seat / Attend / Be present / See / Reserve access / Join this evening)
 5. Credit hierarchy: Preserve all named credits in same prominence order. Integrate narratively.
-6. Strategic variation: Maximum 50% structural variation — NOT content reduction. Never cut factual richness.
+6. Strategic variation: Maximum 30% structural variation — safe-ground rewrites that read as a polished version of what the organiser wrote, not a reinvention of it. Never cut factual richness.
 
-ORIGINALITY RULE (ANTI-PLAGIARISM — NON-NEGOTIABLE):
-No phrase of 5 or more consecutive words from the original may appear verbatim in any rewrite.
-You are rewriting the MEANING, not editing the TEXT. Every sentence must be constructed from scratch using new phrasing.
-ONLY these elements may be preserved verbatim: proper nouns (venue names, artist names, brand names, event titles), specific quantities (12 worlds, 80 costumes, 3 stages), and legal disclaimer text.
+ORIGINALITY RULE (SEO UNIQUENESS — NON-NEGOTIABLE):
+No phrase of 5 or more consecutive words from the original may appear verbatim in any rewrite — EXCEPT: the event title (must appear verbatim), proper nouns (venue names, artist names, brand names), specific quantities (12 worlds, 80 costumes, 3 stages), and legal disclaimer text.
+Goal: each rewrite must be sufficiently distinct from the original and from each other to be treated as unique content by search engines. Achieve this through sentence restructuring, clause reordering, and fresh phrasing — not by changing facts or tone.
 REPHRASING QUALITY STANDARD — NON-NEGOTIABLE:
 When you rephrase a phrase from the original, your replacement MUST be at least as specific, visual, and emotionally resonant as the source. Vague or abstract replacements are a FAIL. You are not sanitising the copy — you are repainting it with different brushstrokes.
 
