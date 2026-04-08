@@ -158,6 +158,11 @@ Additional Rules:
     let usedProMode = false
 
     // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
+    // Pro mode with no key → hard error, never fall through to PL
+    if (proMode && !customApiKey) {
+      return NextResponse.json({ error: 'Pro mode requires an OpenAI API key. Add your key in Settings.' }, { status: 401 })
+    }
+
     if (proMode && customApiKey) {
       usedProMode = true
       const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
