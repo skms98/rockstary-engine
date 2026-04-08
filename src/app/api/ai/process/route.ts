@@ -186,13 +186,16 @@ export async function POST(request: NextRequest) {
       prompt = STEP_PROMPTS[promptKey](ctx)
     }
 
-    // Custom key from frontend settings
-    const customApiKey = request.headers.get('x-openai-key')
+        // Both modes use server OPENAI_API_KEY. Pro = gpt-4o, Regular = gpt-4o-mini.
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
+    }
     const proMode = request.headers.get('x-ai-mode') === 'pro'
-
-    // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
+    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
+    let usedProMode = proMode
     let aiResult: string
-    let usedProMode = false
+
     const systemMessage = isAttraction
       ? 'You are a professional content writer and SEO specialist for Platinumlist.net, specializing in attraction and experience descriptions for a leading ticketing platform in the Middle East.'
       : `You are a professional content editor and analyst for Platinumlist.net, a leading events and entertainment ticketing platform in the Middle East.
@@ -206,31 +209,28 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 - BANNED WORDS: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, we are pleased to announce, we are delighted, we are thrilled, immerse yourself, promises to be, memorable moments, an evening to remember
 - 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
-    if (proMode && customApiKey) {
-      usedProMode = true
-      // Heavy steps need more tokens — 16384 for full 4-variant output
-      const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
-      const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
+    // Heavy steps need more tokens
+    const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
+    const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customApiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: maxTokens,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
-      })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
-      }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
-    } else {
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: prompt },
+        ],
+      }),
+    })
+    if (!aiResponse.ok) {
+      const errText = await aiResponse.text()
+      return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+    }
+    const aiData = await aiResponse.json()
+    aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI' else {
       // Regular mode: gpt-4o-mini via server key
       const apiKey = process.env.OPENAI_API_KEY
       if (!apiKey) {
