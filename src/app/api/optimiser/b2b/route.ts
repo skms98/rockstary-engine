@@ -97,6 +97,27 @@ NEVER:
 
 Core brand insight: Platinumlist is the infrastructure behind the GCC's live entertainment ecosystem. We empower organisers, venues, and entertainment businesses to sell more, know more, and grow more. Our B2B voice should make clients feel like they've found a strategic partner, not just a vendor.
 
+HUMANIZER RULES — STRIP AI PATTERNS FROM ALL OUTPUT:
+
+BANNED WORDS (never use, no exceptions):
+crucial, showcase, landscape, testament, delve, foster, navigate, leverage, unlock, elevate, streamline, pivotal, milestone, groundbreaking, game-changer, vibrant, nestled, thriving, dynamic, robust, holistic, seamless, cutting-edge, transformative, innovative
+
+BANNED OPENERS (never start a sentence with):
+Additionally, Furthermore, Moreover, It's worth noting that, It's important to note that, Notably,
+
+BANNED CONSTRUCTIONS:
+- "serves as" — use "is" instead
+- "functions as" — use "is" instead
+- Vague -ing modifiers: "showcasing how", "highlighting the importance of", "demonstrating that", "underscoring"
+- Stacked hedges: "somewhat possibly", "might potentially", "could perhaps", "it could be argued that"
+- Generic conclusions: ending with a vague wrap-up instead of a specific point
+
+STYLE RULES:
+- Write with a clear point of view — human writing has an opinion
+- Be specific: if you can't name something concrete, cut the line
+- No passive voice stacking — two passive constructions in a row must be rewritten
+- End every piece on a specific, grounded note — not a vague aspiration
+
 AUDIENCE: ${audienceInstruction}`
 
     // Build keyword annotation block only if keywords are provided
