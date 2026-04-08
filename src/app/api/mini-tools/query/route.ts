@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const proMode = req.headers.get('x-ai-mode') === 'pro'
     const hasImages = images && images.length > 0
-    const model = (hasImages || proMode) ? 'gpt-4o' : 'gpt-4o-mini'
+    const model = (hasImages || proMode) ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o')
     const usedProMode = proMode || hasImages
 
     // Build user message content - supports text-only or text+images
@@ -61,14 +61,14 @@ export async function POST(req: NextRequest) {
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text()
-      return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
+      return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 5031 })
     }
 
     const data = await aiResponse.json()
     const result = data.choices?.[0]?.message?.content || 'No response generated.'
 
     return NextResponse.json({ result, aiMode: usedProMode ? 'pro' : 'regular' })
-  } catch (error: any) {
+  } catch(error: any) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
