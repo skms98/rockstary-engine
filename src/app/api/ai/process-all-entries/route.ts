@@ -10,6 +10,10 @@ export async function POST(request: NextRequest) {
     const { mode, authToken, entryIds } = await request.json()
     const baseUrl = request.nextUrl.origin
 
+    // Forward AI mode headers so pro mode works in the chain
+    const customApiKey = request.headers.get('x-openai-key') || ''
+    const aiMode = request.headers.get('x-ai-mode') || ''
+
     if (!mode || !authToken) {
       return NextResponse.json({ error: 'Missing mode or authToken' }, { status: 400 })
     }
@@ -96,9 +100,13 @@ export async function POST(request: NextRequest) {
 
       for (const step of AI_STEPS) {
         try {
+          const aiHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+          if (customApiKey) aiHeaders['x-openai-key'] = customApiKey
+          if (aiMode) aiHeaders['x-ai-mode'] = aiMode
+
           const res = await fetch(`${baseUrl}/api/ai/process`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: aiHeaders,
             body: JSON.stringify({
               entryId: entry.id,
               stepField: step,
