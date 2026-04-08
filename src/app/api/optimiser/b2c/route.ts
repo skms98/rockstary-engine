@@ -169,6 +169,9 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
   "tone_notes": "Brief note on which vibe pillars were emphasised"${keywordsTotal > 0 ? ',\n  "_keywords_mapping": [array of keyword mapping objects as described above]' : ''}
 }`
 
+    // Custom key from frontend settings (additional fallback key)
+    const customApiKey = request.headers.get('x-openai-key')
+
     let aiResult: string
 
     // Primary: Supabase edge function
@@ -180,7 +183,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
-      const openaiKey = process.env.OPENAI_API_KEY
+      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
