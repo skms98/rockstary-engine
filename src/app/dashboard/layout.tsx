@@ -79,6 +79,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const mode = localStorage.getItem('rs_ai_mode') || 'regular'
       const isAIPath = AI_API_PATHS.some(p => url.includes(p))
       if (isAIPath) {
+        // Pro mode with no key → reject immediately, never fall through to PL
+        if (mode === 'pro' && !key) {
+          return Promise.reject(new Error('Pro mode requires an OpenAI API key. Please add your key in Settings.'))
+        }
         const extraHeaders: Record<string, string> = {}
         if (mode === 'pro' && key) extraHeaders['x-openai-key'] = key
         if (mode === 'pro' && key) extraHeaders['x-ai-mode'] = 'pro'
