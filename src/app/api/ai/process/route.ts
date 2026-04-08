@@ -232,7 +232,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
             'Authorization': `Bearer ${openaiKey}`,
           },
           body: JSON.stringify({
-            model: 'gpt-5',
+            model: usedProMode ? 'gpt-5' : 'gpt-4o',
             max_completion_tokens: maxTokens,
             messages: [
               { role: 'system', content: systemMessage },
