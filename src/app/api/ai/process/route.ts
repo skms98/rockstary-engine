@@ -186,6 +186,9 @@ export async function POST(request: NextRequest) {
       prompt = STEP_PROMPTS[promptKey](ctx)
     }
 
+    // Custom key from frontend settings (takes priority over PL edge function)
+    const customApiKey = request.headers.get('x-openai-key')
+
     // Call AI via PL Supabase edge function (primary)
     let aiResult: string
     const systemMessage = isAttraction
@@ -209,8 +212,8 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
-      // If PL edge function fails, try direct OpenAI/Anthropic as fallback
-      const openaiKey = process.env.OPENAI_API_KEY
+      // If PL edge function fails, use custom key if available, then env key
+      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
