@@ -150,6 +150,9 @@ Additional Rules:
 - If original content doesn't mention a section, write reasonable content or put "Information not available"
 `
 
+    // Custom key from frontend settings (takes priority over PL edge function)
+    const customApiKey = request.headers.get('x-openai-key')
+
     let aiResult: string
 
     // Primary: Supabase edge function
@@ -160,8 +163,8 @@ Additional Rules:
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
-      // Fallback: direct OpenAI
-      const openaiKey = process.env.OPENAI_API_KEY
+      // Fallback: direct OpenAI (uses custom key if provided)
+      const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
       if (openaiKey) {
