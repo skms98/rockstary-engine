@@ -38,12 +38,13 @@ export async function POST(req: NextRequest) {
 
     // Custom key from frontend settings (takes priority over PL edge function)
     const customApiKey = req.headers.get('x-openai-key')
+    const proMode = req.headers.get('x-ai-mode') === 'pro'
 
-    // Primary: Use PL Supabase edge function (same as event pipeline)
-    // This avoids needing OPENAI_API_KEY as a Vercel env var
+    // Primary: Use PL Supabase edge function — pro mode skips PL and uses custom key directly
     let result: string
 
     try {
+      if (proMode && customApiKey) throw new Error('pro_mode')
       const plClient = createPLClient()
       const { data, error } = await plClient.functions.invoke('ai-process', {
         body: {
