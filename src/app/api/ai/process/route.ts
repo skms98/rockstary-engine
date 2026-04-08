@@ -206,6 +206,11 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 - BANNED WORDS: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, don't miss out, we are pleased to announce, we are delighted, we are thrilled, immerse yourself, promises to be, memorable moments, an evening to remember
 - 5 TOV pillars: Inviting & Human / Energetic & Playful / Inclusive & Local / Reassuring & Kind / Joyful & Actionable`
 
+    // Pro mode with no key → hard error, never fall through to PL
+    if (proMode && !customApiKey) {
+      return NextResponse.json({ error: 'Pro mode requires an OpenAI API key. Add your key in Settings.' }, { status: 401 })
+    }
+
     if (proMode && customApiKey) {
       usedProMode = true
       // Heavy steps need more tokens — 16384 for full 4-variant output
