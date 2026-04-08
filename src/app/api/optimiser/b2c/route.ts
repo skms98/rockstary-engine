@@ -171,12 +171,14 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
 
     // Custom key from frontend settings (additional fallback key)
     const customApiKey = request.headers.get('x-openai-key')
+    const proMode = request.headers.get('x-ai-mode') === 'pro'
 
     let aiResult: string
 
-    // Primary: Supabase edge function
+    // Primary: Supabase edge function — pro mode skips PL and uses custom key directly
     const plClient = createPLClient()
     try {
+      if (proMode && customApiKey) throw new Error('pro_mode')
       const { data, error } = await plClient.functions.invoke('ai-process', {
         body: { prompt: `${systemMessage}\n\n${prompt}`, stepField: 'b2c_optimiser', eventTitle: 'B2C Optimiser' }
       })
