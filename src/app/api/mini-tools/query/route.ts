@@ -36,49 +36,23 @@ export async function POST(req: NextRequest) {
       userContent = contentParts
     }
 
-    // Custom key from frontend settings (takes priority over PL edge function)
+    // Custom key from frontend settings
     const customApiKey = req.headers.get('x-openai-key')
     const proMode = req.headers.get('x-ai-mode') === 'pro'
 
-    // Primary: Use PL Supabase edge function — pro mode skips PL and uses custom key directly
+    // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
+    // Vision requests (images) always use direct OpenAI regardless of mode.
     let result: string
     let usedProMode = false
+    const hasImages = images && images.length > 0
 
-    try {
-      if (proMode && customApiKey) throw new Error('pro_mode')
-      const plClient = createPLClient()
-      const { data, error } = await plClient.functions.invoke('ai-process', {
-        body: {
-          prompt: typeof userContent === 'string'
-            ? `${systemPrompt}\n\n${userContent}`
-            : `${systemPrompt}\n\n${userMessage || 'Analyze the provided images.'}`,
-          stepField: 'mini_tools_query',
-          eventTitle: 'Mini Tools'
-        }
-      })
-      if (error) throw error
-      result = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
-    } catch (plError: any) {
-      if (plError?.message === 'pro_mode') usedProMode = true
-      // Pro mode: use custom key. Regular mode: use env key. Keys never mixed.
-      const apiKey = usedProMode
-        ? customApiKey
-        : process.env.OPENAI_API_KEY
-
-      if (!apiKey) {
-        return NextResponse.json({
-          error: `PL AI edge function error: ${plError?.message || 'Unknown error'}. No fallback OPENAI_API_KEY configured.`
-        }, { status: 500 })
-      }
-
+    if (proMode && customApiKey) {
+      usedProMode = true
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customApiKey}` },
         body: JSON.stringify({
-          model: usedProMode ? 'gpt-4o' : 'gpt-4o-mini',
+          model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent },
@@ -86,15 +60,51 @@ export async function POST(req: NextRequest) {
           max_tokens: 4000,
         }),
       })
-
       if (!response.ok) {
         const errorText = await response.text()
         return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
       }
-
       const data = await response.json()
       result = data.choices?.[0]?.message?.content || 'No response generated.'
+    } else if (hasImages) {
+      // Vision mode in regular: use Vercel env key (PL doesn't support vision)
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) {
+        return NextResponse.json({ error: 'No API key configured for vision in regular mode.' }, { status: 500 })
+      }
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+          max_tokens: 4000,
+        }),
+      })
+      if (!response.ok) {
+        const errorText = await response.text()
+        return NextResponse.json({ error: `OpenAI API error: ${errorText}` }, { status: 500 })
+      }
+      const data = await response.json()
+      result = data.choices?.[0]?.message?.content || 'No response generated.'
+    } else {
+      // Regular mode (text-only): PL edge function
+      const plClient = createPLClient()
+      const combinedPrompt = systemPrompt
+        ? `[INSTRUCTIONS]\n${systemPrompt}\n\n[TASK]\n${typeof userContent === 'string' ? userContent : JSON.stringify(userContent)}`
+        : (typeof userContent === 'string' ? userContent : JSON.stringify(userContent))
+      const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
+        body: { prompt: combinedPrompt, stepField: 'mini-tools-query', eventTitle: '' },
+      })
+      if (plError) {
+        return NextResponse.json({ error: plError.message || JSON.stringify(plError) }, { status: 500 })
+      }
+      result = (plData?.result || plData?.text || plData?.content || '') as string
     }
+
 
     return NextResponse.json({ result, aiMode: usedProMode ? 'pro' : 'regular' })
   } catch (error: any) {
