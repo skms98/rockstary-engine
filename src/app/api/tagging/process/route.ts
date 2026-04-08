@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
             model: 'gpt-5',
-            max_tokens: 4096,
+            max_completion_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
               { role: 'user', content: prompt },
