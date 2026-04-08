@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { STEP_PROMPTS, STEP_FIELD_TO_PROMPT, type StepContext } from '@/lib/ai-prompts'
-import { ATTRACTION_PROMPTS, ATTRACTION_FIELD_TO_PROMPT, type AttractionStepContext } from '@/lib/ai-prompts-attractions'
+import { ATTRACTION_PROMPTS, ATTRACTION_FIELD_TO_PROMPT, type AttractionStepContext } from 'A/lib/ai-prompts-attractions'
 import { createPLClient } from '@/lib/pl-supabase'
 
 // Server-side only route - credentials never exposed to browser
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
     }
     const proMode = request.headers.get('x-ai-mode') === 'pro'
-    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
+    const model = proMode ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o')
     let usedProMode = proMode
     let aiResult: string
 
@@ -215,7 +215,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      headers: { 'Content-Type': 'application/json) , 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         max_tokens: maxTokens,
@@ -244,7 +244,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
     }
     // Step B (categories) also extracts tags from the combined output
     if (stepField === 'categories') {
-      const tagsMatch = aiResult.match(/TAGS:\s*\n([^\n]+)/i)
+      const tagsMatch = aiResult.match(/TAGS:\s*\n([^\n]+))/i)
       if (tagsMatch) {
         updateData.tags = tagsMatch[1].trim()
       }
