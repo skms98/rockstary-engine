@@ -174,6 +174,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
     const proMode = request.headers.get('x-ai-mode') === 'pro'
 
     let aiResult: string
+    let usedProMode = false
 
     // Primary: Supabase edge function — pro mode skips PL and uses custom key directly
     const plClient = createPLClient()
@@ -185,6 +186,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       if (error) throw error
       aiResult = data?.result || data?.text || data?.content || (typeof data === 'string' ? data : JSON.stringify(data))
     } catch (plError: any) {
+      if (plError?.message === 'pro_mode') usedProMode = true
       const openaiKey = customApiKey || process.env.OPENAI_API_KEY
       const anthropicKey = process.env.ANTHROPIC_API_KEY
 
@@ -280,6 +282,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT (no markdown code blocks):
       keywordsUsed,
       keywordsTotal,
       keywordsMapping,
+      aiMode: usedProMode ? 'pro' : 'regular',
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
