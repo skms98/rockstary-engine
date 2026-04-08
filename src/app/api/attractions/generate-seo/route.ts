@@ -178,7 +178,7 @@ Additional Rules:
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
           body: JSON.stringify({
-            model: usedProMode ? 'gpt-5' : 'gpt-4o-mini',
+            model: usedProMode ? 'gpt-5-mini' : 'gpt-4o-mini',
             max_completion_tokens: 4096,
             messages: [
               { role: 'system', content: systemMessage },
