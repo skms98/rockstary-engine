@@ -604,8 +604,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </button>
                       <button
                         onClick={() => handleSetMode('pro')}
-                        disabled={!savedKey}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all text-sm ${
                           aiMode === 'pro'
                             ? 'bg-purple-500/10 border-purple-500/40 text-purple-400'
                             : 'border-pl-border text-pl-muted hover:border-pl-border/60 hover:text-pl-text'
