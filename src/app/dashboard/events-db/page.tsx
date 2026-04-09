@@ -148,6 +148,8 @@ export default function EventsDBPage() {
   const [loading,setLoading] = useState(false)
   const [error,setError] = useState('')
   const [search,setSearch] = useState('')
+  const [searchId,setSearchId] = useState('')
+  const [searchUrl,setSearchUrl] = useState('')
   const [country,setCountry] = useState('')
   const [city,setCity] = useState('')
   const [active,setActive] = useState('')
@@ -160,7 +162,7 @@ export default function EventsDBPage() {
 
   const fetchEvents = useCallback(async(pg)=>{
     setLoading(true); setError('')
-    const p = new URLSearchParams({page:String(pg),...(search&&{search}),...(country&&{country}),...(city&&{city}),...(active&&{active}),...(typeFilter&&{type:typeFilter})})
+    const p = new URLSearchParams({page:String(pg),...(search&&{search}),...(searchId&&{id:searchId}),...(searchUrl&&{url:searchUrl}),...(country&&{country}),...(city&&{city}),...(active&&{active}),...(typeFilter&&{type:typeFilter})})
     try {
       const res = await fetch(`/api/events-db?${p}`)
       const d = await res.json()
@@ -168,11 +170,11 @@ export default function EventsDBPage() {
       setEvents(d.events||[]); setTotal(d.total||0)
     } catch { setError('Failed to load events') }
     finally { setLoading(false) }
-  },[search,country,city,active,typeFilter])
+  },[search,searchId,searchUrl,country,city,active,typeFilter])
 
   useEffect(()=>{setPage(1);setExpanded(null);fetchEvents(1)},[fetchEvents])
   const go = (p)=>{setPage(p);setExpanded(null);fetchEvents(p)}
-  const clear = ()=>{setSearch('');setCountry('');setCity('');setActive('');setTypeFilter('')}
+  const clear = ()=>{setSearch('');setSearchId('');setSearchUrl('');setCountry('');setCity('');setActive('');setTypeFilter('')}
 
   return (
     <div className="p-6 space-y-6">
@@ -188,6 +190,10 @@ export default function EventsDBPage() {
           <input className={INP} placeholder="City…" value={city} onChange={e=>setCity(e.target.value)}/>
           <select className={INP} value={active} onChange={e=>setActive(e.target.value)}><option value="">All Statuses</option><option value="true">Active (On Sale / Coming)</option><option value="false">Inactive (Ended / Cancelled)</option></select>
           <select className={INP} value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">All Types</option><option value="event">Events only</option><option value="attraction">Attractions only</option></select>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input className={INP} placeholder="Search by Event ID…" value={searchId} onChange={e=>setSearchId(e.target.value.replace(/\D/g,''))} inputMode="numeric"/>
+          <input className={INP} placeholder="Search by URL (partial match)…" value={searchUrl} onChange={e=>setSearchUrl(e.target.value)}/>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">Page {page} of {totalPages||1} · {events.length} rows shown</span>

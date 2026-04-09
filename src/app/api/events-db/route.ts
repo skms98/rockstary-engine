@@ -27,6 +27,8 @@ export async function GET(req: NextRequest) {
     const limit      = 50
     const offset     = (page - 1) * limit
     const search     = sp.get('search') || ''
+    const searchId   = sp.get('id') || ''
+    const searchUrl  = sp.get('url') || ''
     const country    = sp.get('country') || ''
     const city       = sp.get('city') || ''
     const active     = sp.get('active')      // 'true' | 'false' | null
@@ -120,9 +122,11 @@ export async function GET(req: NextRequest) {
       { count: 'exact' }
     )
 
-    if (search)  query = query.ilike('event_name_en', `%${search}%`)
-    if (country) query = query.eq('country', country)
-    if (city)    query = query.ilike('city', `%${city}%`)
+    if (searchId)  query = query.eq('event_id', parseInt(searchId, 10))
+    if (searchUrl) query = query.ilike('url', `%${searchUrl}%`)
+    if (search)    query = query.ilike('event_name_en', `%${search}%`)
+    if (country)   query = query.eq('country', country)
+    if (city)      query = query.ilike('city', `%${city}%`)
     if (active === 'true')  query = query.in('status', ACTIVE_STATUSES)
     if (active === 'false') query = query.in('status', INACTIVE_STATUSES)
     if (typeFilter === 'attraction') query = query.eq('is_attraction', true)
