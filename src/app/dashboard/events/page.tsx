@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { parseExcelFile, type ParsedRow } from '@/lib/excel-parser'
 import type { InputMethod, EventEntry } from '@/types'
+import BatchToolbar from '@/components/BatchToolbar'
 
 export default function EventsDashboard() {
   const [entries, setEntries] = useState<EventEntry[]>([])
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [showNewForm, setShowNewForm] = useState(false)
   const [inputMethod, setInputMethod] = useState<InputMethod>('rawtext_url')
   const [excelFile, setExcelFile] = useState<File | null>(null)
@@ -1035,6 +1037,7 @@ export default function EventsDashboard() {
           ))}
         </div>
       )}
-    </div>
+          <BatchToolbar selectedIds={Array.from(selected)} type="events" onClear={() => setSelected(new Set())} />
+</div>
   )
 }
