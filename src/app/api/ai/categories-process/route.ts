@@ -109,17 +109,24 @@ export async function POST(request: NextRequest) {
     const customApiKey = request.headers.get('x-openai-key')
     const proMode = request.headers.get('x-ai-mode') === 'pro'
 
-    // Pro mode: user's personal key → gpt-4o directly. Regular mode: PL edge function. Never mixed.
+    // Determine API key and model:
+    // Pro mode: gpt-4o. Regular mode: gpt-4o-mini.
+    // Priority: custom key from header > OPENAI_API_KEY env var > fallback to PL edge function
+    const envApiKey = process.env.OPENAI_API_KEY
+    const apiKey = customApiKey || envApiKey
+    const model = proMode ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o-mini')
+
     let aiResult: string
     let usedProMode = false
 
-    if (proMode && customApiKey) {
-      usedProMode = true
+    if (apiKey) {
+      // Direct OpenAI call using available key
+      usedProMode = proMode
       const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${customApiKey}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model,
           max_tokens: 4096,
           messages: [
             { role: 'system', content: systemMessage },
@@ -134,7 +141,7 @@ export async function POST(request: NextRequest) {
       const aiData = await aiResponse.json()
       aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
     } else {
-      // Regular mode: PL edge function
+      // Fallback: PL edge function (only if no API key available)
       const plClient = createPLClient()
       const { data: plData, error: plError } = await plClient.functions.invoke('ai-process', {
         body: { prompt: `[INSTRUCTIONS]\n${systemMessage}\n\n[TASK]\n${prompt}`, stepField: `categories-${phase}`, eventTitle: '' },
