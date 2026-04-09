@@ -8,6 +8,7 @@ export interface TaggingContext {
   validatorPrompt: string
   categories: string  // formatted list of all categories from taxonomy
   tags: string        // formatted list of all tags from taxonomy
+  artistEnrichment?: string  // real-time web search results for artist genre/nationality
 }
 
 export function buildInitialTaggingPrompt(ctx: TaggingContext): string {
@@ -23,7 +24,11 @@ ${ctx.tags}
 
 === SOURCE CONTENT TO CLASSIFY ===
 ${ctx.sourceText}
-
+${ctx.artistEnrichment ? `
+=== ARTIST ENRICHMENT (from real-time web search) ===
+Use this data to help determine genre tags, nationality, and artist classification. This supplements the source content above.
+${ctx.artistEnrichment}
+` : ''}
 === CRITICAL ENFORCEMENT: VERBATIM OR VOID ===
 RULE 1 — STRING MATCHING IS NON-NEGOTIABLE.
 Every category and tag you output MUST be a character-perfect, verbatim copy of a string in the AUTHORIZED TAXONOMY above.
