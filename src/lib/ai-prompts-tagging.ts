@@ -28,8 +28,9 @@ ${ctx.tags}
 === SOURCE CONTENT TO CLASSIFY ===
 ${ctx.sourceText}
 ${ctx.artistEnrichment ? `
-=== ARTIST ENRICHMENT (from real-time web search) ===
-Use this data to help determine genre tags, nationality, and artist classification. This supplements the source content above.
+=== ARTIST ENRICHMENT (supplementary reference only) ===
+Background info on performing artists. Use ONLY to help select genre-related TAGS (e.g. "Hip Hop", "EDM", "Pop", "Arabic Music").
+DO NOT use artist nationality or origin to influence CATEGORY selection — categories must be determined by what the EVENT is (pool party, concert, comedy show, etc.), not by the artist's background.
 ${ctx.artistEnrichment}
 ` : ''}`
 }
