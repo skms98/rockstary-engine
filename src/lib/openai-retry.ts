@@ -81,4 +81,4 @@ export async function callOpenAIWithRetry(
 
   return { error: 'Max retries exceeded', ok: false }
 }
-// v1.5 — mini-tools QA tools (factchecker + tagger) get pro/regular toggle
+// v1.6 — deploy after Git reconnect for QA tools toggle
