@@ -175,6 +175,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Extract final_status (VALID / UNCLASSIFIABLE)
+    const finalStatus: string = parsed.final_status || parsed.FINAL_STATUS ||
+      (finalOutput.match(/final_status["\s:]+["']?(VALID|UNCLASSIFIABLE)/i)?.[1]?.toUpperCase()) || 'UNKNOWN'
+
     // Extract fact sheet if present
     let factSheet: Record<string, unknown> = {}
     if (parsed.fact_sheet) {
@@ -219,6 +223,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      final_status: finalStatus,
       domain,
       primary_category: p1,
       secondary_category: p2,

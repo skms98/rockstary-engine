@@ -538,6 +538,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   const [editTags, setEditTags] = useState((entry.marketing_tags || []).join(', '))
   const [classifying, setClassifying] = useState(false)
   const [classifyError, setClassifyError] = useState('')
+  const [classifyStatus, setClassifyStatus] = useState<string | null>(null)
 
   useEffect(() => {
     setEditDomain(entry.domain || '')
@@ -558,6 +559,7 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   const runAIClassification = async () => {
     setClassifying(true)
     setClassifyError('')
+    setClassifyStatus(null)
     try {
       const res = await fetch('/api/attractions/classify', {
         method: 'POST',
@@ -573,6 +575,8 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
       if (data.tertiary_category) setEditP3(data.tertiary_category)
       if (data.quaternary_category) setEditP4(data.quaternary_category)
       if (data.marketing_tags) setEditTags(data.marketing_tags.join(', '))
+      // Show final status from TAGGING BEAST
+      if (data.final_status) setClassifyStatus(data.final_status)
       // Trigger a refresh from parent
       await save({})
     } catch (e: any) { setClassifyError(e.message || 'Network error') }
@@ -595,6 +599,24 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
           <button onClick={runAIClassification} disabled={classifying} className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 transition-all">{classifying ? 'Classifying...' : 'Run AI Classification'}</button>
         </div>
         {classifyError && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{classifyError}</p>}
+        {classifyStatus && (
+          <div className={`flex items-center gap-2 text-sm mb-3 px-3 py-2 rounded-lg border ${
+            classifyStatus === 'VALID'
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+              : classifyStatus === 'UNCLASSIFIABLE'
+              ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+              : 'text-gray-400 bg-gray-700/30 border-gray-600/30'
+          }`}>
+            <span>{classifyStatus === 'VALID' ? '✅' : classifyStatus === 'UNCLASSIFIABLE' ? '⚠️' : 'ℹ️'}</span>
+            <span>
+              {classifyStatus === 'VALID'
+                ? 'TAGGING BEAST classified successfully — categories applied above'
+                : classifyStatus === 'UNCLASSIFIABLE'
+                ? 'TAGGING BEAST: UNCLASSIFIABLE — no matching taxonomy category found. Set categories manually below.'
+                : `Status: ${classifyStatus}`}
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-4 gap-3">
           {phases.map((phase) => {
             const isActive = entry.tagging_status === phase.key
