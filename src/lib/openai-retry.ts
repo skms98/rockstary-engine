@@ -81,4 +81,4 @@ export async function callOpenAIWithRetry(
 
   return { error: 'Max retries exceeded', ok: false }
 }
-// v1.3 — reconnected Git integration after author fix
+// v1.4 — deploy test after Git reconnect
