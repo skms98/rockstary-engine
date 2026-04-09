@@ -2,6 +2,7 @@
 // Parses the "retry-after" header or "Please try again in X" from error body.
 // Model selection: Regular = gpt-4o-mini, Pro = gpt-4o (hardcoded in route handlers).
 // Model fallback: if the API key doesn't support gpt-4o, automatically falls back to gpt-4o-mini.
+// v2.0 — attraction classify + evaluate-quality endpoints
 
 interface OpenAICallOptions {
   apiKey: string
