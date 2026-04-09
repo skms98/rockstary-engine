@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createPLClient } from '@/lib/pl-supabase'
 import { buildInitialTaggingPrompt, buildValidatorPrompt, type TaggingContext } from '@/lib/ai-prompts-tagging'
 import { enrichArtistInfo } from '@/lib/artist-enrichment'
+import { callOpenAIWithRetry } from '@/lib/openai-retry'
 
 export async function POST(request: NextRequest) {
   try {
@@ -124,26 +125,20 @@ export async function POST(request: NextRequest) {
     let usedProMode = false
 
     if (apiKey) {
-      // Direct OpenAI call using available key
+      // Direct OpenAI call with retry on rate limit
       usedProMode = proMode
-      const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          messages: [
-            { role: 'system', content: systemMessage },
-            { role: 'user', content: prompt },
-          ],
-        }),
+      const result = await callOpenAIWithRetry({
+        apiKey,
+        model,
+        maxTokens: 4096,
+        systemMessage,
+        userPrompt: prompt,
+        maxRetries: 2,
       })
-      if (!aiResponse.ok) {
-        const errText = await aiResponse.text()
-        return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 500 })
       }
-      const aiData = await aiResponse.json()
-      aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
+      aiResult = result.content
     } else {
       // Fallback: PL edge function (only if no API key available)
       const plClient = createPLClient()
