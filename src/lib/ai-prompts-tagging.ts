@@ -28,10 +28,12 @@ ${ctx.tags}
 === SOURCE CONTENT TO CLASSIFY ===
 ${ctx.sourceText}
 ${ctx.artistEnrichment ? `
-=== ARTIST ENRICHMENT (supplementary reference only) ===
-Background info on performing artists. Use ONLY to help select genre-related TAGS (e.g. "Hip Hop", "EDM", "Pop", "Arabic Music").
-DO NOT use artist nationality or origin to influence CATEGORY selection — categories must be determined by what the EVENT is (pool party, concert, comedy show, etc.), not by the artist's background.
+=== EVENT ENRICHMENT (supplementary reference) ===
 ${ctx.artistEnrichment}
+
+How to use this data:
+- "Event Language: X" → If the event is performed/spoken in a non-English language (e.g. Arabic, Hindi), ALWAYS apply the matching language-based categories and tags from the taxonomy (e.g. "Arabic Events", "Arabic"). The event language is a strong, mandatory signal.
+- Artist genre info → Use ONLY to help select genre-related TAGS (e.g. "Hip Hop", "EDM", "Pop"). Do NOT let artist background influence CATEGORY selection — categories are determined by what the EVENT is (pool party, concert, comedy show, etc.), not by the artist.
 ` : ''}`
 }
 
