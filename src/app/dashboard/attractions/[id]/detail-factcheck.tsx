@@ -13,6 +13,8 @@ export function FactCheckTab({ entry, save, saving }: { entry: AttractionEntry; 
   const [results, setResults] = useState<Record<string, unknown>>(entry.fact_check_results || {})
   const [extractedFacts, setExtractedFacts] = useState<string[]>([])
   const [checkedFacts, setCheckedFacts] = useState<Record<number, 'pass' | 'fail' | 'warning'>>({})
+  const [evaluating, setEvaluating] = useState(false)
+  const [evalError, setEvalError] = useState('')
 
   useEffect(() => {
     setFactScore(entry.fact_check_score ?? 0)
@@ -76,6 +78,26 @@ export function FactCheckTab({ entry, save, saving }: { entry: AttractionEntry; 
     fact_check_score: factScore, fact_check_tov_score: tovScore, fact_check_variation: variation,
     fact_check_status: status, fact_check_results: results, fact_check_flags: flags,
   } as Partial<AttractionEntry>)
+
+  const runAIEvaluation = async () => {
+    setEvaluating(true)
+    setEvalError('')
+    try {
+      const res = await fetch('/api/attractions/evaluate-quality', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attractionId: entry.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setEvalError(data.error || 'Evaluation failed'); setEvaluating(false); return }
+      if (data.tovScore != null) setTovScore(data.tovScore)
+      if (data.variationScore != null) setVariation(data.variationScore)
+      if (data.factScore != null) setFactScore(data.factScore)
+      if (data.dimensions) setResults(prev => ({ ...prev, ...data.dimensions, ...data.rawResults }))
+      setStatus('reviewed')
+    } catch (e: any) { setEvalError(e.message || 'Network error') }
+    setEvaluating(false)
+  }
 
   const addFlag = () => { if (newFlag.trim()) { setFlags([...flags, newFlag.trim()]); setNewFlag('') } }
   const removeFlag = (idx: number) => setFlags(flags.filter((_, i) => i !== idx))
@@ -159,9 +181,13 @@ export function FactCheckTab({ entry, save, saving }: { entry: AttractionEntry; 
         <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-semibold">Fact Extraction & Verification</h3>
-            <button onClick={runAutoCheck} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">Run Auto-Check</button>
+            <div className="flex gap-2">
+              <button onClick={runAIEvaluation} disabled={evaluating} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 transition-all">{evaluating ? 'Evaluating...' : 'AI Evaluate (TOV + Variation + Fact Check)'}</button>
+              <button onClick={runAutoCheck} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">Quick Auto-Check</button>
+            </div>
           </div>
           <p className="text-gray-400 text-xs mb-4">Extracts factual anchors from Column C and verifies their presence in Column D.</p>
+          {evalError && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{evalError}</p>}
           {extractedFacts.length > 0 && (
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {extractedFacts.map((fact, i) => {
