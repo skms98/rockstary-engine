@@ -195,6 +195,10 @@ export async function POST(request: NextRequest) {
     const proMode = request.headers.get('x-ai-mode') === 'pro'
     const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
     let usedProMode = proMode
+    // S5 (ab_tests) and S8 (grammar_style) always use gpt-4o-mini — structured scoring tasks
+    const miniOnlySteps = ['ab_tests', 'grammar_style']
+    const effectiveModel = miniOnlySteps.includes(stepField) ? 'gpt-4o-mini' : model
+    if (miniOnlySteps.includes(stepField)) usedProMode = false
     let aiResult: string
 
     const systemMessage = isAttraction
@@ -216,7 +220,7 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
 
     const { data: aiData, usedModel, response: aiResponse } = await fetchOpenAIWithFallback({
       apiKey,
-      model,
+      model: effectiveModel,
       maxTokens,
       messages: [
         { role: 'system', content: systemMessage },
