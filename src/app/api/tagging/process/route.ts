@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createPLClient } from '@/lib/pl-supabase'
 import { buildInitialTaggingPrompt, buildValidatorPrompt, type TaggingContext } from '@/lib/ai-prompts-tagging'
+import { enrichArtistInfo } from '@/lib/artist-enrichment'
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,12 +66,26 @@ export async function POST(request: NextRequest) {
       return `- ${section}${t.name}${t.description ? ': ' + t.description : ''}`
     }).join('\n')
 
+    // Resolve API key and model early (needed for artist enrichment + main AI call)
+    const customApiKey = request.headers.get('x-openai-key')
+    const proMode = request.headers.get('x-ai-mode') === 'pro'
+    const envApiKey = process.env.OPENAI_API_KEY
+    const apiKey = customApiKey || envApiKey
+    const model = proMode ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o-mini')
+
+    // Real-time artist enrichment: search for genre/nationality if not in source text
+    let artistEnrichment = ''
+    if (phase === 'initial' && apiKey) {
+      artistEnrichment = await enrichArtistInfo(entry.source_text, apiKey, 'gpt-4o-mini')
+    }
+
     const ctx: TaggingContext = {
       sourceText: entry.source_text,
       taggingBeastPrompt,
       validatorPrompt,
       categories: categoriesText,
       tags: tagsText,
+      artistEnrichment,
     }
 
     let prompt: string
@@ -86,17 +101,6 @@ export async function POST(request: NextRequest) {
     }
 
     const systemMessage = 'You are TAGGING BEAST, a deterministic classification engine for Platinumlist.net. You execute rules. You never explain. You never guess. You output FINAL JSON ONLY.'
-
-    // Custom key from frontend settings
-    const customApiKey = request.headers.get('x-openai-key')
-    const proMode = request.headers.get('x-ai-mode') === 'pro'
-
-    // Determine API key and model:
-    // Pro mode: gpt-4o. Regular mode: gpt-4o-mini.
-    // Priority: custom key from header > OPENAI_API_KEY env var > fallback to PL edge function
-    const envApiKey = process.env.OPENAI_API_KEY
-    const apiKey = customApiKey || envApiKey
-    const model = proMode ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o-mini')
 
     let aiResult: string
     let usedProMode = false
