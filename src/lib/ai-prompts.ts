@@ -231,6 +231,17 @@ NON-INTERPRETIVE RULE:
 
 STRUCTURAL REWRITE RULES:
 1. Opener: You may vary the opening sentence construction across the 3 rewrites for SEO differentiation, but preserve the core identity and lead information the organiser established. Do not bury what they led with.
+
+BANNED OPENING PHRASES (any rewrite starting with these is an automatic fail — rewrite the opener):
+- "Get ready to..." / "Prepare to..." / "Brace yourself..."
+- "Don't miss..." / "This is your chance to..."
+- "Experience the magic..." / "Be swept away..." / "swept away by..."
+- "Join us for..." / "Come and experience..."
+- Any generic imperative opener that could describe any event anywhere
+If the original opened with an artist introduction or specific factual statement, mirror that structural approach.
+
+ARTIST AND PRESTIGE EVENTS — MANDATORY RULE:
+If the event centres on a named performer, artist, speaker, or celebrity, ALL language the organiser used to describe that person's status is NON-NEGOTIABLE. Phrases like "one of South Asia's most beloved voices", "legendary", "celebrated", "Grammy-winning", "multi-platinum", or similar prestige descriptors MUST be preserved verbatim or replaced only with an equally or more prestige-affirming equivalent. Downgrading artist status language is an automatic organiser rejection trigger. For artist-centric events, lead with the "Inviting and Human" TOV pillar — NOT "Energetic and Playful". Reverence, not hype.
 2. Paragraph logic: Follow the original paragraph flow unless there is a clear structural improvement. The organiser's emphasis hierarchy is intentional — respect it.
 3. Sentence variation: Mix short, medium, and long. Use clause inversion and rhythm variation within each sentence.
 4. CTA: Each rewrite must use a different action verb and different sentence structure (Secure your seat / Attend / Be present / See / Reserve access / Join this evening)
@@ -774,6 +785,11 @@ YOUR TASKS:
    Show: [Version Name] — Composite Score: XX/100 | TOV (normalized): XX/100 | Fact: XX | Organiser: XX | Grammar: XX | Conversion: XX | SEO: XX
    MINIMUM TOV GATE: Any version with normalized TOV below 65/100 must be flagged "BELOW BRAND STANDARD" in the output, regardless of composite score. Still rank it, but carry the flag visibly.
 
+   ORGANISER RISK GATE: Apply these caps BEFORE finalising composite scores:
+   - Organiser Risk MEDIUM (score 4-6/10): Cap the composite score at 75/100 maximum. Flag the version "MEDIUM ORGANISER RISK — REVIEW BEFORE USE".
+   - Organiser Risk HIGH (score 7+/10): Cap composite at 60/100 maximum. Flag "HIGH ORGANISER RISK — DO NOT PUBLISH WITHOUT ORGANISER APPROVAL". Rank this version last regardless of other scores.
+   - Artist Status Dimension triggered: Treat as automatic MEDIUM risk floor regardless of overall risk score. Preserving how the organiser described their artist is a non-negotiable trust signal.
+
 2. PER-VERSION ASSESSMENT:
    For each rewrite:
    - Top 3 strengths (specific, citing actual phrases)
@@ -816,6 +832,8 @@ YOUR TASKS:
   // Produces 4 final publication-ready resolved versions + curated teasers
   // ═══════════════════════════════════════════════════════════════
   resolver_output: (ctx) => `You are the Platinumlist Final Content Resolver. Based on all accumulated pipeline data and the reviewer's editorial direction, produce the FINAL resolved versions ready for publication.
+
+CRITICAL OUTPUT RULE: Begin your response IMMEDIATELY with "VARIANT 1 —". Do NOT write any preamble, acknowledgement, confirmation, meta-commentary, or explanation before the content. Do not start with "Sure", "Here is", "Here are", "Based on", "Of course", "Certainly", "Below", or any similar opener. Zero lines before the first variant. Output only the content.
 
 Every resolved variant MUST comply with Platinumlist B2C TOV 2.4:
 ${TOV_CONTEXT}
