@@ -5,6 +5,7 @@ import { plSupabase } from '@/lib/pl-supabase'
 import Link from 'next/link'
 import { AttractionCard, SeoStatusBadge, TaggingStatusBadge } from './attraction-components'
 import { AttractionModal } from './attraction-modal'
+import BatchToolbar from '@/components/BatchToolbar'
 
 type AttractionStage = 'intake' | 'seo_optimization' | 'tagging' | 'review' | 'exported'
 type SeoStatus = 'pending' | 'processing' | 'completed' | 'failed'
@@ -37,11 +38,11 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: '📥' },
-  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: '✍️' },
-  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: '🏷️' },
-  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: '✅' },
-  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: '📤' },
+  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: 'ð¥' },
+  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: 'âï¸' },
+  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: 'ð·ï¸' },
+  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: 'â' },
+  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: 'ð¤' },
 ]
 
 async function downloadTemplate() {
@@ -56,13 +57,13 @@ async function downloadTemplate() {
     ['Keywords', 'dubai aquarium, underwater zoo, dubai mall aquarium, things to do in dubai'],
     ['Description', 'Explore one of the largest suspended aquariums in the world, home to hundreds of species of aquatic animals including sharks and rays. Located inside The Dubai Mall.'],
     [],
-    ['─── Instructions ───', ''],
-    ['• Each sheet = one attraction', ''],
-    ['• Column A = field label, Column B = value', ''],
-    ['• Title is required, other fields are optional', ''],
-    ['• Keywords field is optional (used for SEO)', ''],
-    ['• Duplicate the sheet for multiple attractions', ''],
-    ['• Delete this instructions section before submitting', ''],
+    ['âââ Instructions âââ', ''],
+    ['â¢ Each sheet = one attraction', ''],
+    ['â¢ Column A = field label, Column B = value', ''],
+    ['â¢ Title is required, other fields are optional', ''],
+    ['â¢ Keywords field is optional (used for SEO)', ''],
+    ['â¢ Duplicate the sheet for multiple attractions', ''],
+    ['â¢ Delete this instructions section before submitting', ''],
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData)
@@ -100,6 +101,7 @@ export default function AttractionsFunnel() {
   const [filterStage, setFilterStage] = useState<AttractionStage | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBatch, setSelectedBatch] = useState<string | 'all'>('all')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const fetchEntries = useCallback(async () => {
     setLoading(true)
@@ -189,7 +191,7 @@ export default function AttractionsFunnel() {
             </button>
           </div>
           <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
-            ↓ Template
+            â Template
           </button>
           <button onClick={() => setShowNewForm(true)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             + Add
@@ -252,6 +254,7 @@ export default function AttractionsFunnel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700">
+                <th className="p-3 w-8"></th>
                 <th className="text-left p-3 text-gray-400 font-medium">Title</th>
                 <th className="text-left p-3 text-gray-400 font-medium">Stage</th>
                 <th className="text-left p-3 text-gray-400 font-medium">SEO</th>
@@ -266,11 +269,21 @@ export default function AttractionsFunnel() {
                 const stageConf = STAGES.find(s => s.key === entry.stage)!
                 return (
                   <tr key={entry.id} className="border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors">
+                  <td className="p-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(entry.id)}
+                      onChange={() => setSelectedIds(prev =>
+                        prev.includes(entry.id) ? prev.filter(i => i !== entry.id) : [...prev, entry.id]
+                      )}
+                      className="rounded border-gray-600 bg-white/5 text-orange-500 focus:ring-orange-500"
+                    />
+                  </td>
                     <td className="p-3"><Link href={`/dashboard/attractions/${entry.id}`} className="text-white hover:text-blue-400 font-medium">{entry.title}</Link>{entry.city && <span className="text-gray-500 text-xs ml-2">{entry.city}{entry.country ? `, ${entry.country}` : ''}</span>}</td>
                     <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}><span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{stageConf.icon}</span> {stageConf.label}</span></td>
                     <td className="p-3"><SeoStatusBadge status={entry.seo_status} used={entry.keywords_used} total={entry.keywords_total} /></td>
                     <td className="p-3"><TaggingStatusBadge status={entry.tagging_status} gates={entry.validation_gates_passed} /></td>
-                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || '—'}</td>
+                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || 'â'}</td>
                     <td className="p-3 text-gray-500 text-xs">{new Date(entry.updated_at).toLocaleDateString()}</td>
                     <td className="p-3 text-right"><div className="flex items-center justify-end gap-2"><Link href={`/dashboard/attractions/${entry.id}`} className="text-blue-400 hover:text-blue-300 text-xs">Open</Link>{entry.stage !== 'exported' && <button onClick={() => advanceStage(entry.id, entry.stage)} className="text-emerald-400 hover:text-emerald-300 text-xs">Adv</button>}</div></td>
                   </tr>
@@ -282,6 +295,7 @@ export default function AttractionsFunnel() {
         </div>
       )}
 
+      <BatchToolbar selectedIds={selectedIds} type="attractions" onClear={() => setSelectedIds([])} />
       <AttractionModal show={showNewForm} onClose={() => setShowNewForm(false)} onSuccess={fetchEntries} />
     </div>
   )
