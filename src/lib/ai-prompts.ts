@@ -490,6 +490,15 @@ STEP 2: LEXICAL SIMILARITY ANALYSIS
 Identify repeated phrases (3+ consecutive words), shared adjectives, vocabulary overlap.
 Estimate lexical similarity percentage (excluding stop words, proper nouns).
 
+STEP 2B: SYNONYM SUBSTITUTION ANALYSIS — the most common hidden duplicate
+A rewrite that swaps individual words for synonyms while keeping the same sentence skeleton IS a duplicate — it will be detected by search engines as near-duplicate content and will be seen by organisers as lazy rephrasing.
+Method: For each sentence in the rewrite, ask: "Does this sentence follow the same clause order, rhythm, and structural skeleton as the original sentence, with words substituted?" Common patterns: "one of X's most Y voices" → "among X's most Y artists", "returns to [city] for one [adjective] night" → "comes back to [city] for a [synonym] evening". If the skeleton is preserved with word swaps, flag it sentence by sentence.
+Verdict (per rewrite):
+- CLEAN: Sentences are genuinely rebuilt — different clause structures, different ordering of information, sentences that don't exist in the original
+- PARTIAL SUBSTITUTION: Some sentences rebuilt, some are skeleton-preserving synonym swaps
+- SYNONYM DUPLICATE: The majority of sentences preserve the original skeleton with word substitutions
+PENALTY RULE: A verdict of SYNONYM DUPLICATE automatically elevates Duplicate Risk Score to a minimum of 75/100, regardless of structural or lexical scores.
+
 STEP 3: SEMANTIC OVERLAP ANALYSIS
 Shared factual anchors (acceptable), narrative framing, emotional tone positioning.
 Determine: Factual-only (acceptable) / Mixed factual + stylistic / Stylistically redundant (risk)
@@ -508,9 +517,10 @@ REWRITE [N] SEO ANALYSIS:
 - Structural Similarity: Low / Moderate / High
 - Lexical Similarity: ~XX%
 - Semantic Overlap: [classification]
+- Synonym Substitution: CLEAN / PARTIAL / SYNONYM DUPLICATE
 - Intent Alignment: [classification]
-- Duplicate Risk Score: XX/100
-- Final Verdict: SEO-safe / Borderline / Duplicate content risk
+- Duplicate Risk Score: XX/100 (note: SYNONYM DUPLICATE forces minimum 75)
+- Final Verdict: SEO-safe / Borderline / Duplicate content risk / Synonym duplicate
 - Key differentiators that reduce duplication risk: [list]
 - Key similarities that increase duplication risk: [list]`,
 
@@ -916,7 +926,7 @@ Self-scores:
 - Fact Preservation: X/10
 - Organiser Safety: X/10
 - TOV Compliance: X/10
-- SEO Uniqueness: X/10
+- SEO Uniqueness: X/10 (if S4 verdict is SYNONYM DUPLICATE: cap at 3/10 regardless of other scores. If PARTIAL SUBSTITUTION: cap at 6/10.)
 - Grammar: X/10
 - A/B Conversion: X/10
 Composite Score (weighted /100):
