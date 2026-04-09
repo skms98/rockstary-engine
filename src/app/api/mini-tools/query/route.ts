@@ -15,9 +15,7 @@ export async function POST(req: Request) {
     // Determine AI mode from the x-ai-mode header injected by layout.tsx fetch interceptor
     const aiMode = req.headers.get('x-ai-mode') || 'regular';
     const isProMode = aiMode === 'pro';
-    const model = isProMode
-      ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o')
-      : (process.env.OPENAI_MODEL || 'gpt-4o-mini');
+    const model = isProMode ? 'gpt-4o' : 'gpt-4o-mini';
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
