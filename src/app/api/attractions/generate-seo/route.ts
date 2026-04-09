@@ -125,10 +125,24 @@ ${rawText}
 
 IMPORTANT: Do NOT generate or modify the H1/title. The original attraction title is kept as-is.
 
+═══ TEASER RULES (CRITICAL — READ BEFORE WRITING) ═══
+The "teaser" field MUST obey ALL of these rules. Violations = automatic reject.
+1. EXACTLY 13 words. Not 12, not 14, not 20. Count them. Strip (…)[N] markers before counting — only plain words count.
+2. MUST start with a strong action verb: Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, Feel, Explore, Savour, Chase, Wander, Unwind, Taste, Drift, Escape.
+3. NEVER include the attraction/event name in the teaser.
+4. NEVER include venue name, date, or CTA (book now, don't miss, get yours).
+5. NEVER use filler: "Get ready," "Join us," "Come and," "Be part of," "It's an experience."
+6. NEVER use banned words: unforgettable, incredible, amazing, ultimate, spectacular, must-see, extraordinary, once-in-a-lifetime, not to be missed, dive into, buckle up, won't want to miss.
+7. NEVER use em dashes (—).
+8. Write the teaser as plain text first. Count to exactly 13 words. Then optionally wrap 1 keyword phrase in (…)[N] — this must NOT change the word count.
+EXAMPLE GOOD TEASER: "Discover vibrant (coral reefs) [3] and marine life along a stunning coastal shoreline" = 13 words ✓
+EXAMPLE BAD TEASER: "Dive into the ultimate night of fun at the Full Moon Glow Party with magic" = TOO LONG + banned words + event name ✗ REJECTED
+═══ END TEASER RULES ═══
+
 RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. Do NOT wrap in markdown code blocks.
 
 {
-  "teaser": "ONE sentence, STRICT 13-word max. Start with action verb. Count keyword words inside () toward the limit, ignore [n] markers. If adding a keyword pushes past 13 words, omit it. Vivid, experience-driven, no venue/date/CTA/filler.",
+  "teaser": "EXACTLY 13 words, action verb start, no event name, no filler, no banned words — see TEASER RULES above",
   "what_to_expect": "3-4 sentences, 60-100 words, use 2-3 keywords with annotations",
   "highlights": "3-5 bullet points separated by newlines, 8-15 words each, use 1-2 keywords",
   "inclusions": "Bulleted list of what's included, copy from original if available",
