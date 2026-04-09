@@ -74,8 +74,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No OpenAI API key configured' }, { status: 500 })
     }
 
-    // Tagging always runs on gpt-4o — same as pipeline tagging tool
-    const model = 'gpt-4o'
+    // Phase 1 uses gpt-4o-mini (large prompt fits within higher TPM limits)
+    // Phase 2 (validator) uses gpt-4o for authoritative final classification
+    const phase1Model = 'gpt-4o-mini'
+    const phase2Model = 'gpt-4o'
     const proMode = true
 
     // Artist enrichment (for music attractions)
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
     const initialPrompt = buildInitialTaggingPrompt(ctx)
     const initialResult = await callOpenAIWithRetry({
       apiKey,
-      model,
+      model: phase1Model,
       maxTokens: 4096,
       systemMessage,
       userPrompt: initialPrompt,
@@ -112,13 +114,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: initialResult.error }, { status: 500 })
     }
 
-    taggingLog.push({ phase: 'initial', timestamp: new Date().toISOString(), model: initialResult.usedModel || model })
+    taggingLog.push({ phase: 'initial', timestamp: new Date().toISOString(), model: initialResult.usedModel || phase1Model })
 
     // ── Phase 2: Validation ──────────────────────────────
     const validatorPromptText = buildValidatorPrompt(ctx, initialResult.content)
     const validatorResult = await callOpenAIWithRetry({
       apiKey,
-      model,
+      model: phase2Model,
       maxTokens: 4096,
       systemMessage,
       userPrompt: validatorPromptText,
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validatorResult.error }, { status: 500 })
     }
 
-    taggingLog.push({ phase: 'validate', timestamp: new Date().toISOString(), model: validatorResult.usedModel || model })
+    taggingLog.push({ phase: 'validate', timestamp: new Date().toISOString(), model: validatorResult.usedModel || phase2Model })
 
     // ── Parse the final classification output ────────────
     const finalOutput = validatorResult.content
@@ -237,7 +239,8 @@ export async function POST(request: NextRequest) {
       aiMode: proMode ? 'pro' : 'regular',
       // Debug: confirm prompts/taxonomy were loaded
       _debug: {
-        model,
+        phase1Model,
+        phase2Model,
         promptChars: taggingBeastPrompt.length,
         validatorChars: validatorPrompt.length,
         categoryCount: (taxonomyCategories || []).length,
