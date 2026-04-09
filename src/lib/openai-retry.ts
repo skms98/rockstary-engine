@@ -81,4 +81,4 @@ export async function callOpenAIWithRetry(
 
   return { error: 'Max retries exceeded', ok: false }
 }
-// v1.2 — fixed commit author attribution for Vercel deployments
+// v1.3 — reconnected Git integration after author fix
