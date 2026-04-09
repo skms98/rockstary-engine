@@ -81,5 +81,4 @@ export async function callOpenAIWithRetry(
 
   return { error: 'Max retries exceeded', ok: false }
 }
-// deployed with skms98 Git connection
-// deployed with skms98 Git connection
+// v1.2 — fixed commit author attribution for Vercel deployments
