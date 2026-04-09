@@ -148,7 +148,7 @@ RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. D
   "inclusions": "Bulleted list of what's included, copy from original if available",
   "exclusions": "Bulleted list of what's NOT included, copy from original if available",
   "ticket_info": "Ticket types, pricing tiers, booking details, use 1-2 keywords",
-  "important_info": "3-5 bullet points: safety, age restrictions, accessibility, visitor tips",
+  "important_info": "3-5 bullet points: safety, age restrictions, accessibility, visitor tips. If 'tickets' or 'price' keywords feel stuffed elsewhere, place them here naturally. End with a varied booking guidance line: to check timings/prices/availability, press Select Tickets, pick a timeslot, and complete the booking. Vary phrasing each time.",
   "cancellation": "2-3 sentences on refund terms, modification windows",
   "by_car": "Directions by car if available from original, or general guidance",
   "by_public_transport": "Public transport options if available",

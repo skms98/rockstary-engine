@@ -110,7 +110,13 @@ ${HUMANIZER_CONTEXT}
 OUTPUT SECTIONS (use === SECTION NAME === delimiters):
 
 === TEASER ===
-STRICT 13-WORD MAXIMUM. Count every word — if a keyword annotation like (dubai tickets) [1] is present, count only the words inside the brackets ("dubai tickets" = 2 words), ignore the [1] marker. The final sentence must be ≤ 13 words total. Write the teaser FIRST without keywords, verify it is ≤ 13 words, THEN add one keyword annotation only if you can do so without exceeding 13 words. If adding a keyword would push it over 13, do NOT add it — keep the teaser clean. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be vivid and capture the experience + vibe. No venue name, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
+EXACTLY 13 WORDS. Not 12. Not 14. Not 15. Exactly 13.
+How to count: strip all (…) [N] annotation markers first, then count plain words. The plain-text version must be exactly 13 words.
+Example — GOOD (13 words): "Discover thrilling (water rides) [3] and scenic views across a stunning coastal park" → plain = "Discover thrilling water rides and scenic views across a stunning coastal park" = 13 words ✓
+Example — BAD (15 words): "Experience the magic of an incredible journey through the heart of a beautiful desert landscape" = 15 words ✗ REJECTED.
+Step 1: Write the teaser as plain text. Count words. Adjust until exactly 13.
+Step 2: Optionally wrap one or two keyword phrases in (…) [N] annotation — this must NOT change the word count.
+Start with a strong action verb. No venue name, no date, no CTA, no filler, no cliches. Used for SEO meta.
 
 === WHAT TO EXPECT ===
 2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
@@ -131,7 +137,13 @@ From source only. Line-break separated. No bullets. If unavailable: null
 From source. If empty: "Timings vary by date. Check available sessions by pressing Select Tickets."
 
 === IMPORTANT THINGS TO KNOW ===
-Practical info from source (preserve original wording, fix capitalisation only). End with: To check the (tickets) [n] and (price) [n], press "Select Tickets" on this page.
+Practical info from source (preserve original wording, fix capitalisation only).
+If keywords like "tickets" or "price" feel forced or repetitive elsewhere, place them naturally here instead.
+End with a helpful booking guidance line — vary the phrasing each time, but the gist is: to check timings, prices, and reserve tickets, press "Select Tickets," pick a timeslot, and complete the booking.
+Examples of varied closings (pick one style or invent a new one, never repeat the same phrasing):
+- "To check available dates and pricing, press Select Tickets on this page, choose your preferred timeslot, and confirm your booking."
+- "For timings and costs, hit Select Tickets above — pick a session that works and complete your reservation in a few taps."
+- "Curious about pricing or availability? Press Select Tickets, browse the timeslots, and lock in your spot."
 
 === CANCELLATION POLICY ===
 Use source policy verbatim or apply standard Platinumlist format. If unavailable: null
@@ -396,7 +408,13 @@ HARD RULES:
 OUTPUT FORMAT â Produce each section below. Use === SECTION NAME === as delimiters:
 
 === TEASER ===
-STRICT 13-WORD MAXIMUM. Count every word — if a keyword annotation like (dubai tickets) [1] is present, count only the words inside the brackets ("dubai tickets" = 2 words), ignore the [1] marker. The final sentence must be ≤ 13 words total. Write the teaser FIRST without keywords, verify it is ≤ 13 words, THEN add one keyword annotation only if you can do so without exceeding 13 words. If adding a keyword would push it over 13, do NOT add it — keep the teaser clean. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be vivid and capture the experience + vibe. No venue name, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
+EXACTLY 13 WORDS. Not 12. Not 14. Not 15. Exactly 13.
+How to count: strip all (…) [N] annotation markers first, then count plain words. The plain-text version must be exactly 13 words.
+Example — GOOD (13 words): "Discover thrilling (water rides) [3] and scenic views across a stunning coastal park" → plain = "Discover thrilling water rides and scenic views across a stunning coastal park" = 13 words ✓
+Example — BAD (15 words): "Experience the magic of an incredible journey through the heart of a beautiful desert landscape" = 15 words ✗ REJECTED.
+Step 1: Write the teaser as plain text. Count words. Adjust until exactly 13.
+Step 2: Optionally wrap one or two keyword phrases in (…) [N] annotation — this must NOT change the word count.
+Start with a strong action verb. No venue name, no date, no CTA, no filler, no cliches. Used for SEO meta.
 
 === WHAT TO EXPECT ===
 Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.
@@ -421,7 +439,12 @@ Timing info from the source. If unavailable, write: Timings vary by date. Check 
 
 === IMPORTANT THINGS TO KNOW ===
 Practical visitor info transplanted from the original (verbatim where possible, fixing only capitalisation).
-MUST end with: To check the (tickets) [n] and (price) [n], press "Select Tickets" on this page. Available dates and costs are displayed there, and the booking can be completed directly.
+If keywords like "tickets" or "price" feel stuffed or repetitive in other sections, use them naturally here instead.
+End with a helpful booking guidance line — vary the phrasing each time (never reuse the exact same sentence across attractions). The gist: to check timings, prices, and reserve tickets, press "Select Tickets," pick a timeslot, and complete the booking.
+Example variations (pick one style or write a fresh one):
+- "To check available dates and pricing, press Select Tickets on this page, choose your preferred timeslot, and confirm your booking."
+- "For timings and costs, hit Select Tickets above — pick a session that works and complete your reservation in a few taps."
+- "Curious about pricing or availability? Press Select Tickets, browse the timeslots, and lock in your spot."
 
 === CANCELLATION POLICY ===
 Apply the correct policy from these options:
