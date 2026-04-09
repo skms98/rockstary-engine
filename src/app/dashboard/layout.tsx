@@ -39,6 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isEvents = pathname.startsWith('/dashboard/events') && !pathname.startsWith('/dashboard/events-db')
   const isEventsDB = pathname.startsWith('/dashboard/events-db')
   const isAttractions = pathname.startsWith('/dashboard/attractions')
+  const isBatchJobs = pathname.startsWith('/dashboard/batch-jobs')
   const isAIRunner = pathname.startsWith('/dashboard/ai-runner')
   const isTagging = pathname.startsWith('/dashboard/tagging')
   const isMiniTools = pathname.startsWith('/dashboard/mini-tools')
@@ -53,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setAiMode(storedMode)
   }, [])
 
-  // Global fetch interceptor — injects x-ai-mode on every AI API call
+  // Global fetch interceptor â injects x-ai-mode on every AI API call
   // Also captures aiMode from responses to show which path actually ran
   useEffect(() => {
     const origFetch = window.fetch.bind(window)
@@ -266,6 +267,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
 
           <button
+            onClick={() => router.push('/dashboard/batch-jobs')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+              isBatchJobs ? 'bg-orange-500/10 border border-orange-500/30 text-orange-400' : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
+            }`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h8M4 18h8" />
+            </svg>
+            <span className="text-sm font-medium">Batch Jobs</span>
+          </button>
+
+          <button
             onClick={() => router.push('/dashboard/tagging')}
             className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
               isTagging ? 'bg-pl-gold/10 border border-pl-gold/30 text-pl-gold' : 'text-pl-text-dim hover:text-pl-text hover:bg-pl-card'
@@ -368,7 +381,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
 
-        {/* AI Mode Quick Toggle — always visible for samir, no PIN needed */}
+        {/* AI Mode Quick Toggle â always visible for samir, no PIN needed */}
         {canAccessSettings && (
           <div className={`border-t border-pl-border ${sidebarOpen ? 'px-4 py-3' : 'px-2 py-3'}`}>
             {sidebarOpen ? (
@@ -388,21 +401,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       aiMode === 'pro' ? 'bg-purple-500 text-white' : 'text-pl-muted hover:text-pl-text'
                     }`}
                   >
-                    ⚡ Pro
+                    â¡ Pro
                   </button>
                 </div>
                 {lastAiMode && (
                   <p className={`text-[10px] text-center mt-1.5 ${
                     lastAiMode === 'pro' ? 'text-purple-400' : 'text-pl-muted'
                   }`}>
-                    last call: {lastAiMode === 'pro' ? '⚡ pro key' : '✦ regular'}
+                    last call: {lastAiMode === 'pro' ? 'â¡ pro key' : 'â¦ regular'}
                   </p>
                 )}
               </div>
             ) : (
               <div
                 onClick={() => handleSetMode(aiMode === 'pro' ? 'regular' : 'pro')}
-                title={`AI: ${aiMode} — click to toggle`}
+                title={`AI: ${aiMode} â click to toggle`}
                 className="cursor-pointer"
               >
                 <div className={`w-3 h-3 rounded-full mx-auto ${
@@ -442,7 +455,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </div>
             )}
-            {/* Settings gear with active-key dot — only for samir */}
+            {/* Settings gear with active-key dot â only for samir */}
             {canAccessSettings && (
               <button
                 onClick={handleOpenSettings}
@@ -464,7 +477,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      {/* Settings Modal — only for samir */}
+      {/* Settings Modal â only for samir */}
       {settingsOpen && canAccessSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-pl-navy border border-pl-border rounded-2xl w-full max-w-md mx-4 shadow-2xl">
