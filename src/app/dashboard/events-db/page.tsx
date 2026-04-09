@@ -178,7 +178,7 @@ export default function EventsDBPage() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Events DB</h1>
-        <p className="text-sm text-gray-400 mt-1">{total.toLocaleString()} records · sourced from <span className="text-zinc-300 font-mono text-xs">all_events_on_sale</span></p>
+        <p className="text-sm text-gray-400 mt-1">{total.toLocaleString()} records · sourced from <span className="text-zinc-300 font-mono text-xs">hourly_sql_export</span></p>
       </div>
 
       <div className="pl-card pl-border rounded-xl p-4 space-y-3">
