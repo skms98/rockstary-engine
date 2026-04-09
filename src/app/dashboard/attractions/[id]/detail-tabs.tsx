@@ -577,6 +577,8 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
       if (data.marketing_tags) setEditTags(data.marketing_tags.join(', '))
       // Show final status from TAGGING BEAST
       if (data.final_status) setClassifyStatus(data.final_status)
+      // Log debug info
+      if (data._debug) console.log('[Classify debug]', data._debug)
       // Trigger a refresh from parent
       await save({})
     } catch (e: any) { setClassifyError(e.message || 'Network error') }
