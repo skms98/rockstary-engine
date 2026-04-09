@@ -74,8 +74,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No OpenAI API key configured' }, { status: 500 })
     }
 
-    const proMode = request.headers.get('x-ai-mode') === 'pro'
-    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
+    // Tagging always runs on gpt-4o — same as pipeline tagging tool
+    const model = 'gpt-4o'
+    const proMode = true
 
     // Artist enrichment (for music attractions)
     let artistEnrichment = ''
