@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const proMode = request.headers.get('x-ai-mode') === 'pro'
     const envApiKey = process.env.OPENAI_API_KEY
     const apiKey = customApiKey || envApiKey
-    const model = proMode ? (process.env.OPENAI_PRO_MODEL || 'gpt-4o') : (process.env.OPENAI_MODEL || 'gpt-4o-mini')
+    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
 
     // Real-time artist enrichment: search for genre/nationality if not in source text
     let artistEnrichment = ''
