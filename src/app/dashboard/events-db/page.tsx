@@ -1,4 +1,5 @@
 // @ts-nocheck
+// v2 — ID + URL search filters
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 
