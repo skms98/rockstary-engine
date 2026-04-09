@@ -235,6 +235,14 @@ export async function POST(request: NextRequest) {
       initial_raw: initialResult.content,
       validated_raw: finalOutput,
       aiMode: proMode ? 'pro' : 'regular',
+      // Debug: confirm prompts/taxonomy were loaded
+      _debug: {
+        model,
+        promptChars: taggingBeastPrompt.length,
+        validatorChars: validatorPrompt.length,
+        categoryCount: (taxonomyCategories || []).length,
+        tagCount: (taxonomyTags || []).length,
+      },
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
