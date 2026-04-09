@@ -32,7 +32,7 @@ ${ctx.artistEnrichment ? `
 ${ctx.artistEnrichment}
 
 How to use this data:
-- "Event Language: X" → If the event is performed/spoken in a non-English language (e.g. Arabic, Hindi), ALWAYS apply the matching language-based categories and tags from the taxonomy (e.g. "Arabic Events", "Arabic"). The event language is a strong, mandatory signal.
+- "Performance Language: X" → If the show is performed/spoken in a non-English language (e.g. Arabic, Hindi), ALWAYS apply the matching language-based categories and tags from the taxonomy (e.g. "Arabic Events", "Arabic"). Performance language is a strong, mandatory signal — it means the audience will hear that language on stage.
 - Artist genre info → Use ONLY to help select genre-related TAGS (e.g. "Hip Hop", "EDM", "Pop"). Do NOT let artist background influence CATEGORY selection — categories are determined by what the EVENT is (pool party, concert, comedy show, etc.), not by the artist.
 ` : ''}`
 }
