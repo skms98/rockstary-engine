@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       let from = 0
       while (true) {
         const { data, error } = await pl
-          .from('hourly_sql_export')
+          .from('all_events_on_sale')
           .select('country')
           .not('country', 'is', null)
           .order('country')
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     // ── Main events query ────────────────────────────────────────
     type Row = Record<string, unknown>
-    let query = pl.from('hourly_sql_export').select(
+    let query = pl.from('all_events_on_sale').select(
       `event_id,
        event_name_en, event_name_ar,
        event_short_name_en, event_short_name_ar,
@@ -86,8 +86,6 @@ export async function GET(req: NextRequest) {
        meta_keywords_en, meta_keywords_ar,
        meta_description_en, meta_description_ar,
        seo_block_text_en, seo_block_text_ar, seo_qa_block,
-       img_orig, img_full, img_middle, img_thumb,
-       img_feature_mobile, img_featured_mobile_thumb,
        custom_block_additional_description,
        custom_block_attr_before_you_visit,
        custom_block_attr_cancel_policy,
