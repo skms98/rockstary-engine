@@ -1,6 +1,7 @@
 // OpenAI API call with automatic retry on rate limit (429) errors.
 // Parses the "retry-after" header or "Please try again in X" from error body.
 // Model selection: Regular = gpt-4o-mini, Pro = gpt-4o (hardcoded in route handlers).
+// v1.1 — reconnected Git integration to fix webhook.
 
 interface OpenAICallOptions {
   apiKey: string
