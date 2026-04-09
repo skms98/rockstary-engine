@@ -128,7 +128,7 @@ IMPORTANT: Do NOT generate or modify the H1/title. The original attraction title
 RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. Do NOT wrap in markdown code blocks.
 
 {
-  "teaser": "1-2 sentence hook, 15-30 words, include primary keyword with annotation",
+  "teaser": "ONE sentence, STRICT 13-word max. Start with action verb. Count keyword words inside () toward the limit, ignore [n] markers. If adding a keyword pushes past 13 words, omit it. Vivid, experience-driven, no venue/date/CTA/filler.",
   "what_to_expect": "3-4 sentences, 60-100 words, use 2-3 keywords with annotations",
   "highlights": "3-5 bullet points separated by newlines, 8-15 words each, use 1-2 keywords",
   "inclusions": "Bulleted list of what's included, copy from original if available",

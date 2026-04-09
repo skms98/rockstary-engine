@@ -110,7 +110,7 @@ ${HUMANIZER_CONTEXT}
 OUTPUT SECTIONS (use === SECTION NAME === delimiters):
 
 === TEASER ===
-One line, max 13 words. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be short, vivid, and capture the experience + vibe. No venue, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
+STRICT 13-WORD MAXIMUM. Count every word — if a keyword annotation like (dubai tickets) [1] is present, count only the words inside the brackets ("dubai tickets" = 2 words), ignore the [1] marker. The final sentence must be ≤ 13 words total. Write the teaser FIRST without keywords, verify it is ≤ 13 words, THEN add one keyword annotation only if you can do so without exceeding 13 words. If adding a keyword would push it over 13, do NOT add it — keep the teaser clean. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be vivid and capture the experience + vibe. No venue name, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
 
 === WHAT TO EXPECT ===
 2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
@@ -396,7 +396,7 @@ HARD RULES:
 OUTPUT FORMAT â Produce each section below. Use === SECTION NAME === as delimiters:
 
 === TEASER ===
-One line, max 13 words. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be short, vivid, and capture the experience + vibe. No venue, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
+STRICT 13-WORD MAXIMUM. Count every word — if a keyword annotation like (dubai tickets) [1] is present, count only the words inside the brackets ("dubai tickets" = 2 words), ignore the [1] marker. The final sentence must be ≤ 13 words total. Write the teaser FIRST without keywords, verify it is ≤ 13 words, THEN add one keyword annotation only if you can do so without exceeding 13 words. If adding a keyword would push it over 13, do NOT add it — keep the teaser clean. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be vivid and capture the experience + vibe. No venue name, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
 
 === WHAT TO EXPECT ===
 Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.
