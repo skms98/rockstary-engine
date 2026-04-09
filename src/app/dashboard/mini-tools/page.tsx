@@ -265,6 +265,7 @@ export default function MiniToolsPage() {
             systemPrompt: SYSTEM_PROMPTS.tagger,
             userMessage: textContext,
             images: imageData,
+            toolName: 'tagger',
           }),
         })
 
@@ -304,6 +305,7 @@ export default function MiniToolsPage() {
             systemPrompt: SYSTEM_PROMPTS.transcriber,
             userMessage: textContext,
             images: imageData,
+            toolName: 'transcriber',
           }),
         })
 
@@ -338,6 +340,7 @@ export default function MiniToolsPage() {
         body: JSON.stringify({
           systemPrompt: SYSTEM_PROMPTS[activeTab],
           userMessage,
+          toolName: activeTab,
         }),
       })
 

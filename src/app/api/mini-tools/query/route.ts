@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { systemPrompt, userMessage, images } = body;
+    const { systemPrompt, userMessage, images, toolName } = body;
 
     if (!systemPrompt || !userMessage) {
       return NextResponse.json(
@@ -12,8 +12,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Mini-tools always use gpt-4o-mini (pro mode only applies to pipeline + tagging)
-    const model = 'gpt-4o-mini';
+    // Pro mode only for factchecker and tagger; everything else always gpt-4o-mini
+    const proEligibleTools = ['factchecker', 'tagger'];
+    const isProMode = proEligibleTools.includes(toolName) && req.headers.get('x-ai-mode') === 'pro';
+    const model = isProMode ? 'gpt-4o' : 'gpt-4o-mini';
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -92,7 +94,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       result,
       provider: `direct-openai-${model}`,
-      mode: 'regular',
+      mode: isProMode ? 'pro' : 'regular',
     });
   } catch (err: any) {
     return NextResponse.json(
