@@ -110,7 +110,7 @@ ${HUMANIZER_CONTEXT}
 OUTPUT SECTIONS (use === SECTION NAME === delimiters):
 
 === TEASER ===
-13 words max, starts with action verb, describes the experience.
+One line, max 13 words. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be short, vivid, and capture the experience + vibe. No venue, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
 
 === WHAT TO EXPECT ===
 2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
@@ -396,7 +396,7 @@ HARD RULES:
 OUTPUT FORMAT â Produce each section below. Use === SECTION NAME === as delimiters:
 
 === TEASER ===
-One line, max 13 words, starting with an action verb. Describes the experience. Used for SEO meta.
+One line, max 13 words. Start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, etc.). Must be short, vivid, and capture the experience + vibe. No venue, no date, no CTA, no filler, no cliches (unforgettable, incredible, amazing, must-see, like no other, promises to be). Used for SEO meta.
 
 === WHAT TO EXPECT ===
 Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.

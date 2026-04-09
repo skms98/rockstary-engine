@@ -329,14 +329,18 @@ REWRITE 3 QUALITY GATE:
 - Verbatim check: [confirm no 5+ word phrase from original, or list what was fixed]
 - Word count check: [confirm within 80-120% of original, or state "ENHANCING" and add words]
 
-TEASERS (20 exactly — 13 words each — hard limit):
+TEASERS (20 exactly — ≤ 13 words each — hard limit):
 Rules for teasers:
-- Exactly 13 words. Not 12. Not 14. Count them.
-- Each from a completely different angle: artist stature / experience / venue / cultural moment / genre / crowd type / production / milestone / sensory / discovery
-- Adapt to the event type and audience profile
-- Soft CTA woven in naturally, never aggressive
-- No interpretation, no inflated claims
-- BANNED: unforgettable, incredible, amazing, must-see, don't miss, once-in-a-lifetime, promises to be
+- Maximum 13 words per teaser. Not 14. Count them.
+- Every teaser MUST start with a strong action verb (Experience, Discover, Celebrate, Witness, Immerse, Ignite, Embrace, Feel, Surrender, Explore, Relive, Savour, Chase, Wander, Unwind, Taste, Drift, Escape, Groove, Dance).
+- No venue name, no date, no CTA ("Book now," "Don't miss," "Get yours").
+- No filler ("Get ready," "Join us for," "Come and," "Be part of").
+- No emojis, no hashtags, no ALL CAPS.
+- Each from a completely different angle: artist stature / experience / cultural moment / genre / crowd energy / production / milestone / sensory / discovery / vibe
+- Must be short, vivid, and capture the experience + vibe
+- BANNED: unforgettable, incredible, amazing, spectacular, must-see, extraordinary, like no other, once-in-a-lifetime, not to be missed, promises to be, memorable moments, an evening to remember
+
+Before writing, silently analyze: (1) core promise of the event, (2) target audience and what resonates, (3) vibe — energy, mood, sensory cues. Then draft teasers. Quality check each: word count ≤ 13, starts with verb, no banned elements, captures promise + vibe.
 
 1. [Teaser]
 2. [Teaser]

@@ -123,10 +123,11 @@ After the main JSON content, include a "_keywords_mapping" key in the JSON respo
 ORIGINAL CONTENT (Column C):
 ${rawText}
 
+IMPORTANT: Do NOT generate or modify the H1/title. The original attraction title is kept as-is.
+
 RESPOND WITH ONLY A VALID JSON OBJECT with these keys. Each value is a string. Do NOT wrap in markdown code blocks.
 
 {
-  "h1": "SEO-optimized H1 headline (include primary keyword with annotation)",
   "teaser": "1-2 sentence hook, 15-30 words, include primary keyword with annotation",
   "what_to_expect": "3-4 sentences, 60-100 words, use 2-3 keywords with annotations",
   "highlights": "3-5 bullet points separated by newlines, 8-15 words each, use 1-2 keywords",
