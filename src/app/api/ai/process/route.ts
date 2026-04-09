@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { STEP_PROMPTS, STEP_FIELD_TO_PROMPT, type StepContext } from '@/lib/ai-prompts'
 import { ATTRACTION_PROMPTS, ATTRACTION_FIELD_TO_PROMPT, type AttractionStepContext } from '@/lib/ai-prompts-attractions'
 import { createPLClient } from '@/lib/pl-supabase'
+import { fetchOpenAIWithFallback } from '@/lib/openai-retry'
 
 // Server-side only route - credentials never exposed to browser
 export async function POST(request: NextRequest) {
@@ -213,23 +214,20 @@ You apply Platinumlist B2C TOV 2.4 to ALL content you produce or evaluate. Core 
     const heavySteps = ['reviewer_output', 'resolver_output', 'ranked_versions', 'recommended_versions', 'fact_check_scores', 'fact_check_final']
     const maxTokens = heavySteps.includes(stepField) ? 16384 : 4096
 
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: prompt },
-        ],
-      }),
+    const { data: aiData, usedModel, response: aiResponse } = await fetchOpenAIWithFallback({
+      apiKey,
+      model,
+      maxTokens,
+      messages: [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: prompt },
+      ],
     })
     if (!aiResponse.ok) {
-      const errText = await aiResponse.text()
+      const errText = aiData ? JSON.stringify(aiData) : 'Unknown AI error'
       return NextResponse.json({ error: `AI error: ${errText}` }, { status: 500 })
     }
-    const aiData = await aiResponse.json()
+    if (usedModel !== model) usedProMode = false // fell back to mini
     aiResult = aiData.choices?.[0]?.message?.content || 'No response from AI'
 
     // Save result to the entry

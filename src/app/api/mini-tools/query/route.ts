@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchOpenAIWithFallback } from '@/lib/openai-retry';
 
 export async function POST(req: Request) {
   try {
@@ -42,7 +43,6 @@ export async function POST(req: Request) {
       // Add each image
       for (const img of images) {
         if (img.data) {
-          // img.data is a base64 data URL like "data:image/png;base64,..."
           contentParts.push({
             type: 'image_url',
             image_url: {
@@ -50,7 +50,6 @@ export async function POST(req: Request) {
               detail: 'high',
             },
           });
-          // Add label reference if present
           if (img.label) {
             contentParts.push({
               type: 'text',
@@ -65,36 +64,30 @@ export async function POST(req: Request) {
       messages.push({ role: 'user', content: userMessage });
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.7,
-        max_tokens: 4096,
-      }),
+    // Use fetchOpenAIWithFallback — automatically retries with gpt-4o-mini if gpt-4o is not accessible
+    const { data, usedModel, response } = await fetchOpenAIWithFallback({
+      apiKey,
+      model,
+      messages,
+      temperature: 0.7,
+      maxTokens: 4096,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData?.error?.message || `OpenAI API error: ${response.status}`;
+      const errorMessage = data?.error?.message || `OpenAI API error: ${response.status}`;
       return NextResponse.json(
         { error: errorMessage, provider: `direct-openai-${model}` },
         { status: response.status }
       );
     }
 
-    const data = await response.json();
     const result = data.choices?.[0]?.message?.content || '';
+    const actuallyPro = isProMode && usedModel === 'gpt-4o';
 
     return NextResponse.json({
       result,
-      provider: `direct-openai-${model}`,
-      mode: isProMode ? 'pro' : 'regular',
+      provider: `direct-openai-${usedModel}`,
+      mode: actuallyPro ? 'pro' : 'regular',
     });
   } catch (err: any) {
     return NextResponse.json(
