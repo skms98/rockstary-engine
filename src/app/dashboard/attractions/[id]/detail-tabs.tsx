@@ -536,6 +536,8 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   const [editP3, setEditP3] = useState(entry.tertiary_category || '')
   const [editP4, setEditP4] = useState(entry.quaternary_category || '')
   const [editTags, setEditTags] = useState((entry.marketing_tags || []).join(', '))
+  const [classifying, setClassifying] = useState(false)
+  const [classifyError, setClassifyError] = useState('')
 
   useEffect(() => {
     setEditDomain(entry.domain || '')
@@ -553,6 +555,30 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
     marketing_tags: editTags.split(',').map(t => t.trim()).filter(Boolean),
   })
 
+  const runAIClassification = async () => {
+    setClassifying(true)
+    setClassifyError('')
+    try {
+      const res = await fetch('/api/attractions/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attractionId: entry.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setClassifyError(data.error || 'Classification failed'); setClassifying(false); return }
+      // Update local state with AI results
+      if (data.domain) setEditDomain(data.domain)
+      if (data.primary_category) setEditP1(data.primary_category)
+      if (data.secondary_category) setEditP2(data.secondary_category)
+      if (data.tertiary_category) setEditP3(data.tertiary_category)
+      if (data.quaternary_category) setEditP4(data.quaternary_category)
+      if (data.marketing_tags) setEditTags(data.marketing_tags.join(', '))
+      // Trigger a refresh from parent
+      await save({})
+    } catch (e: any) { setClassifyError(e.message || 'Network error') }
+    setClassifying(false)
+  }
+
   const phases = [
     { key: 'gathering', label: 'Phase 1: Gather', desc: 'Fact Sheet compilation', icon: '🔍' },
     { key: 'classifying', label: 'Phase 2: Classify', desc: 'Domain + Categories + Tags', icon: '📋' },
@@ -564,7 +590,11 @@ export function TaggingTab({ entry, save, saving }: { entry: AttractionEntry; sa
   return (
     <div className="space-y-6">
       <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 p-5">
-        <h3 className="text-white font-semibold mb-3">4-Phase Tagging Workflow</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-semibold">4-Phase Tagging Workflow</h3>
+          <button onClick={runAIClassification} disabled={classifying} className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm font-medium rounded-lg hover:from-purple-600 hover:to-pink-700 disabled:opacity-50 transition-all">{classifying ? 'Classifying...' : 'Run AI Classification'}</button>
+        </div>
+        {classifyError && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{classifyError}</p>}
         <div className="grid grid-cols-4 gap-3">
           {phases.map((phase) => {
             const isActive = entry.tagging_status === phase.key
