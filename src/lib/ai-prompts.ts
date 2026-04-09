@@ -198,8 +198,8 @@ NON-NEGOTIABLES — FACT LOCK LAYER (these cannot change):
 - Artist/performer/speaker names (exact spelling)
 - Dates, times, venue names, cities
 - Programme/setlist order (if confirmed in original)
-- Production and presenter credits (e.g., "Presented by M Premiere and MuzArts")
-- Legal disclaimers (e.g., "Please note: This performance is a venue hire...") — PRESERVED VERBATIM, word-for-word
+- Production and presenter credits — PRESERVED VERBATIM: "Presented by [X]", "Brought to you by [X]", "In association with [X]", organiser name, co-presenter name. These are contractual attribution lines. They must appear in every rewrite exactly as written. Do NOT paraphrase, reorder, or omit.
+- Legal disclaimers — PRESERVED VERBATIM, word-for-word at the END of every rewrite: age restrictions, venue hire notices, terms, health warnings, dress code, any "please note" language. Never move, shorten, rephrase, or drop these under any circumstances.
 - Quantities (80 costumes, 3 stages, etc.)
 - Award mentions, prestige titles (e.g., "defining figure", "prima ballerina", "etoile") — NEVER omit or downgrade
 - Age restrictions, ticket categories
@@ -232,12 +232,14 @@ NON-INTERPRETIVE RULE:
 STRUCTURAL REWRITE RULES:
 1. Opener: You may vary the opening sentence construction across the 3 rewrites for SEO differentiation, but preserve the core identity and lead information the organiser established. Do not bury what they led with.
 
-BANNED OPENING PHRASES (any rewrite starting with these is an automatic fail — rewrite the opener):
+BANNED OPENING PHRASES — applies to AI-generated openers ONLY:
+IMPORTANT: This ban applies when YOU are constructing an opener. If the ORGANISER'S original description itself opens with one of these phrases (e.g., their copy begins "Join us for..."), that is their voice and must be mirrored or preserved — not replaced. The ban is on generic AI defaults, not on the organiser's own language.
+Banned AI-generated openers (automatic fail):
 - "Get ready to..." / "Prepare to..." / "Brace yourself..."
 - "Don't miss..." / "This is your chance to..."
 - "Experience the magic..." / "Be swept away..." / "swept away by..."
-- "Join us for..." / "Come and experience..."
-- Any generic imperative opener that could describe any event anywhere
+- "Come and experience..." (unless the organiser wrote this themselves)
+- Any generic imperative opener that could describe any event anywhere with the name swapped
 If the original opened with an artist introduction or specific factual statement, mirror that structural approach.
 
 ARTIST AND PRESTIGE EVENTS — MANDATORY RULE:
