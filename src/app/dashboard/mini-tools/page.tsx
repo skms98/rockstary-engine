@@ -40,7 +40,8 @@ Your task: generate exactly 10 event teaser options from the provided event text
 STRICT FORMAT RULES:
 - Each teaser must be exactly ONE sentence, maximum 13 words.
 - Every teaser MUST start with a strong action verb (e.g., Experience, Discover, Celebrate, Dance, Witness, Immerse, Ignite, Feel, Embrace, Surrender, Explore, Relive, Savour, Chase, Wander, Unwind, Taste, Drift, Escape, Groove).
-- NEVER include: venue name, date, emojis, hashtags, ALL CAPS words, or quotation marks around the teaser.
+- ABSOLUTELY NO EMOJIS. Zero emojis. Not a single emoji character anywhere in your output. This is non-negotiable.
+- NEVER include: venue name, date, hashtags, ALL CAPS words, or quotation marks around the teaser.
 - NEVER include ticketing language: no "book now," "tickets available," "get yours," pricing, or calls-to-action.
 - NEVER use filler openings: no "Get ready," "Don't miss," "Join us for," "Come and," "Be part of," "Mark your calendar."
 - NEVER use cliches: no "like never before," "once in a lifetime," "unforgettable," "not to be missed," "the ultimate."
@@ -55,10 +56,10 @@ PROCESS (internal, do not output these steps):
 2. Identify the target audience — who would feel this event the most.
 3. Define the vibe — energy level, mood, sensory texture.
 4. Write 10 teasers that are memorable, sensory, specific, and emotionally resonant.
-5. Quality check each teaser: verify word count is 13 or fewer, starts with action verb, contains no venue/date/CTA/filler/cliche.
+5. Quality check each teaser: verify word count is 13 or fewer, starts with action verb, contains no venue/date/CTA/filler/cliche, contains ZERO emojis.
 
 OUTPUT FORMAT:
-Return ONLY 10 numbered teasers, one per line. No explanations, no labels, no headers. Example format:
+Return ONLY 10 numbered teasers, one per line. Plain text only — NO emojis, NO special unicode characters, NO symbols like stars or arrows. No explanations, no labels, no headers. Example format:
 1. Experience the rhythm that moves an entire city alive.
 2. Discover sounds that paint the night in vivid colour.
 (and so on, up to 10)`,
