@@ -116,7 +116,7 @@ OUTPUT SECTIONS (use === SECTION NAME === delimiters):
 2-4 paragraphs. Full SEO rewrite. Weave brand/location keywords here. Follow visitor journey: arrival, activities, atmosphere, outcome.
 
 === CTA ===
-One line: "Book your spot now and..."
+One line starting with a warm action verb. NEVER mention Platinumlist or any platform name. Example: "Book your spot now and..."
 
 === HIGHLIGHTS ===
 Exactly 4 lines. Each starts with present-tense action verb. Under 12 words. No adjective hype. Line-break separated. No bullets.
@@ -402,7 +402,7 @@ One line, max 13 words, starting with an action verb. Describes the experience. 
 Full SEO-optimised rewrite of the description. 2-4 short paragraphs. Naturally weave in brand/location keywords here. Follow the Visitor Journey flow: arrival, activities, atmosphere, outcome.
 
 === CTA ===
-One closing line starting with "Book your spot now and..."
+One closing line starting with a warm action verb. NEVER mention Platinumlist or any platform name. Example: "Book your spot now and..."
 
 === HIGHLIGHTS ===
 Exactly 4 lines, each starting with a present-tense action verb (Explore, Discover, Access, View, etc.).
