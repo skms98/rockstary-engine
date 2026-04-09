@@ -12,10 +12,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Determine AI mode from the x-ai-mode header injected by layout.tsx fetch interceptor
-    const aiMode = req.headers.get('x-ai-mode') || 'regular';
-    const isProMode = aiMode === 'pro';
-    const model = isProMode ? 'gpt-4o' : 'gpt-4o-mini';
+    // Mini-tools always use gpt-4o-mini (pro mode only applies to pipeline + tagging)
+    const model = 'gpt-4o-mini';
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -94,7 +92,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       result,
       provider: `direct-openai-${model}`,
-      mode: isProMode ? 'pro' : 'regular',
+      mode: 'regular',
     });
   } catch (err: any) {
     return NextResponse.json(

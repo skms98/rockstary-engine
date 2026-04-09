@@ -155,9 +155,9 @@ Additional Rules:
     if (!apiKey) {
       return NextResponse.json({ error: 'No OpenAI API key configured on server' }, { status: 500 })
     }
-    const proMode = request.headers.get('x-ai-mode') === 'pro'
-    const model = proMode ? 'gpt-4o' : 'gpt-4o-mini'
-    let usedProMode = proMode
+    // SEO generation always uses gpt-4o-mini (pro mode only applies to pipeline + tagging)
+    const model = 'gpt-4o-mini'
+    let usedProMode = false
     let aiResult: string
 
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
