@@ -55,7 +55,7 @@ export async function enrichArtistInfo(
 
     for (const artist of searchArtists) {
       try {
-        const searchQuery = `${artist} musician genre nationality country origin`
+        const searchQuery = `${artist} musician music genre style`
         // Use Google Custom Search API if available, otherwise use a simple knowledge call
         const searchResponse = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -67,7 +67,7 @@ export async function enrichArtistInfo(
             messages: [
               {
                 role: 'system',
-                content: 'You are a music knowledge database. Given an artist name, provide their genre(s) and nationality/country of origin. Be concise. Format: "Genre: X | Nationality: Y". If unknown, say "Unknown".',
+                content: 'You are a music knowledge database. Given an artist name, provide ONLY their music genre(s). Be concise. Format: "Genre: X, Y". Do NOT include nationality or country of origin — only genre matters for event classification. If unknown, say "Unknown".',
               },
               {
                 role: 'user',
