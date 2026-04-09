@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import VariableLoader from './VariableLoader'
 
 interface BatchToolbarProps {
@@ -9,50 +9,85 @@ interface BatchToolbarProps {
   onClear: () => void
 }
 
+const VARS_KEY = (type: string) => `batch_vars_${type}`
+
+const DEFAULT_VARS = {
+  events: { authToken: '', adminKey: '', mode: 'b2c' },
+  attractions: { steps: ['seo', 'classify'] }
+}
+
 export default function BatchToolbar({ selectedIds, type, onClear }: BatchToolbarProps) {
-  const [variables, setVariables] = useState<Record<string, unknown>>({
-    authToken: '',
-    adminKey: '',
-    mode: 'b2c',
-    steps: ['seo', 'classify']
-  })
+  const [variables, setVariables] = useState<Record<string, unknown>>(DEFAULT_VARS[type])
   const [showVarLoader, setShowVarLoader] = useState(false)
   const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load saved variables for this type from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VARS_KEY(type))
+      if (saved) setVariables(JSON.parse(saved))
+      else setVariables(DEFAULT_VARS[type])
+    } catch {
+      setVariables(DEFAULT_VARS[type])
+    }
+  }, [type])
 
   if (selectedIds.length === 0) return null
 
+  const handleApplyVars = (v: Record<string, unknown>) => {
+    setVariables(v)
+    // Persist per type so it survives navigation
+    try { localStorage.setItem(VARS_KEY(type), JSON.stringify(v)) } catch {}
+    setShowVarLoader(false)
+  }
+
   const handleRunBatch = async () => {
     setRunning(true)
+    setError(null)
     try {
-      // 1. Create the persistent job record
-      const createRes = await fetch('/api/batch/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          item_ids: selectedIds,
-          variables,
-          label: `${type} batch — ${selectedIds.length} item${selectedIds.length !== 1 ? 's' : ''}`
+      // 1. Create the job record (best-effort — works if batch_jobs table exists)
+      let jobId: string | null = null
+      try {
+        const createRes = await fetch('/api/batch/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type,
+            item_ids: selectedIds,
+            variables,
+            label: `${type} batch — ${selectedIds.length} item${selectedIds.length !== 1 ? 's' : ''}`
+          })
         })
-      })
-      const { jobId } = await createRes.json()
+        const createData = await createRes.json()
+        jobId = createData.jobId || null
+      } catch {
+        // Table may not exist yet — continue without tracking
+      }
 
-      // 2. Fire-and-forget: start parallel AI run in background
+      // 2. Fire-and-forget: run the AI pipeline in parallel background
       fetch('/api/batch/run-many', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId })
+        body: JSON.stringify({ jobId, type, item_ids: selectedIds, variables })
       }).catch(console.error)
 
-      // 3. Go to batch jobs page to watch progress
-      window.location.href = '/dashboard/batch-jobs'
+      // 3. Navigate to batch jobs page (or back to list if no tracking)
+      onClear()
+      if (jobId) {
+        window.location.href = '/dashboard/batch-jobs'
+      } else {
+        alert(`Batch started for ${selectedIds.length} ${type} — AI is running in background. Check the items shortly for updated results.`)
+      }
     } catch (err) {
-      alert('Failed to start batch: ' + String(err))
+      setError(String(err))
       setRunning(false)
     }
   }
 
-  const hasToken = Boolean(variables.authToken)
+  const isEventsReady = type === 'events'
+    ? Boolean(variables.authToken)
+    : (variables.steps as string[] || []).length > 0
 
   return (
     <>
@@ -60,7 +95,7 @@ export default function BatchToolbar({ selectedIds, type, onClear }: BatchToolba
         <VariableLoader
           type={type}
           variables={variables}
-          onApply={(v) => { setVariables(v); setShowVarLoader(false) }}
+          onApply={handleApplyVars}
           onClose={() => setShowVarLoader(false)}
         />
       )}
@@ -84,8 +119,13 @@ export default function BatchToolbar({ selectedIds, type, onClear }: BatchToolba
         >
           <span>⚙</span>
           <span>Variables</span>
-          <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${hasToken ? 'bg-green-400' : 'bg-yellow-400'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isEventsReady ? 'bg-green-400' : 'bg-yellow-400'}`} />
         </button>
+
+        {/* Error */}
+        {error && (
+          <span className="text-red-400 text-xs max-w-[160px] truncate" title={error}>{error}</span>
+        )}
 
         {/* Run button */}
         <button
