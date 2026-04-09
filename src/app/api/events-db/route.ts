@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       let from = 0
       while (true) {
         const { data, error } = await pl
-          .from('all_events_on_sale')
+          .from('hourly_sql_export')
           .select('country')
           .not('country', 'is', null)
           .order('country')
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     // ── Main events query ────────────────────────────────────────
     type Row = Record<string, unknown>
-    let query = pl.from('all_events_on_sale').select(
+    let query = pl.from('hourly_sql_export').select(
       `event_id,
        event_name_en, event_name_ar,
        event_short_name_en, event_short_name_ar,
