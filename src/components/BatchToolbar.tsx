@@ -106,38 +106,32 @@ export default function BatchToolbar({ selectedIds, type, onClear }: BatchToolba
         onClear()
   }
 
-  const progressLabel = progress ? (progress.done + '/' + progress.total) : null
+    const progressLabel = progress ? progress.done + '/' + progress.total : null
 
-  return (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121e] border border-white/10 rounded-full px-5 py-3 shadow-2xl">
-              <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
-              <span className="text-sm text-white/70">
-                {selectedIds.length} {label}{selectedIds.length !== 1 ? 's' : ''} selected
-              </span>
-          {error && (
-                  <span className="text-sm text-red-400">{error}</span>
-              )}
-              <button
-                        onClick={handleRunBatch}
-                        disabled={running}
-                        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-full px-5 py-1.5 transition-all"
-                      >
-                {running ? (
-                                  <>
-                                              <span className="inline-block h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    {progressLabel ? progressLabel + ' done' : 'Starting...'}
-                                  </>>
-                                ) : (
-                                  <>&#9654; Run AI Batch</>>
-                                )}
-              </button>button>
-              <button
-                        onClick={onClear}
-                        className="text-white/30 hover:text-white/60 text-lg leading-none transition-colors"
-                        title="Clear selection"
-                      >
-                      &#215;
-              </button>button>
-        </div>div>
-      )
-}</></></div>
+      return (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#12121e] border border-white/10 rounded-full px-5 py-3 shadow-2xl">
+                <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
+                      <span className="text-sm text-white/70">
+                              {selectedIds.length} {label}{selectedIds.length !== 1 ? 's' : ''} selected
+                                    </span>
+                                          {error && (
+                                                  <span className="text-sm text-red-400">{error}</span>
+                                                        )}
+                                                              <button onClick={handleRunBatch} disabled={running}
+                                                                      className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-full px-5 py-1.5 transition-all">
+                                                                              {running ? (
+                                                                                        <>
+                                                                                                    <span className="inline-block h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                                                                {progressLabel ? progressLabel + ' done' : 'Starting...'}
+                                                                                                                          </>
+                                                                                                                                  ) : (
+                                                                                                                                            <>Run AI Batch</>
+                                                                                                                                                    )}
+                                                                                                                                                          </button>
+                                                                                                                                                                <button onClick={onClear}
+                                                                                                                                                                        className="text-white/30 hover:text-white/60 text-lg leading-none transition-colors" title="Clear selection">
+                                                                                                                                                                                ×
+                                                                                                                                                                                      </button>
+                                                                                                                                                                                          </div>
+                                                                                                                                                                                            )
+                                                                                                                                                                                            }
