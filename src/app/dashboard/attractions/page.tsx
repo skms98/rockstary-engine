@@ -183,10 +183,7 @@ export default function AttractionsFunnel() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex bg-gray-800 rounded-lg p-1">
-            <button onClick={() => setView('funnel')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'funnel' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
-              Funnel
-            </button>
-            <button onClick={() => setView('list')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setView('list')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
               List
             </button>
           </div>
@@ -199,18 +196,7 @@ export default function AttractionsFunnel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-3 mb-6">
-        {stageCounts.map((s) => (
-          <button key={s.key} onClick={() => setFilterStage(filterStage === s.key ? 'all' : s.key)} className={`p-3 rounded-xl border transition-all ${filterStage === s.key ? `${s.bgColor} ${s.borderColor}` : 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600'}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-lg">{s.icon}</span>
-              <span className={`text-2xl font-bold ${s.color}`}>{s.count}</span>
-            </div>
-            <p className={`text-xs font-medium mt-1 ${s.color}`}>{s.label}</p>
-          </button>
-        ))}
-      </div>
-
+      
       <div className="flex items-center gap-3 mb-6">
         <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         {batches.length > 0 && (
@@ -224,31 +210,7 @@ export default function AttractionsFunnel() {
 
       {loading && <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}
 
-      {!loading && view === 'funnel' && (
-        <div className="grid grid-cols-5 gap-4 items-start">
-          {STAGES.map((stage) => {
-            const items = entriesByStage(stage.key)
-            return (
-              <div key={stage.key} className={`rounded-xl border ${stage.borderColor} ${stage.bgColor} p-3 min-h[300px]`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span>{stage.icon}</span>
-                    <h3 className={`text-sm font-semibold ${stage.color}`}>{stage.label}</h3>
-                  </div>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stage.bgColor} ${stage.color}`}>{items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {items.map((entry) => (
-                    <AttractionCard key={entry.id} entry={entry} stageConfig={stage} onAdvance={() => advanceStage(entry.id, entry.stage)} onDelete={() => deleteEntry(entry.id)} />
-                  ))}
-                  {items.length === 0 && <p className="text-gray-500 text-xs text-center py-8">No items</p>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
+      
       {!loading && view === 'list' && (
         <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
           <table className="w-full text-sm">
