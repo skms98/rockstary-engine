@@ -87,6 +87,7 @@ export default function AttractionDetailPage() {
   const [entry, setEntry] = useState<AttractionEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [runningAI, setRunningAI] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'factcheck' | 'tagging' | 'review' | 'screenshots'>('overview')
 
   const fetchEntry = useCallback(async () => {
@@ -177,6 +178,25 @@ export default function AttractionDetailPage() {
 
   const currentStageIdx = STAGE_ORDER.indexOf(entry.stage)
   const meta = STAGE_META[entry.stage]
+  const runAIPipeline = async () => {
+    if (!entry) return
+    setRunningAI(true)
+    try {
+      const res = await fetch('/api/batch/run-many', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [entry.id], variables: { steps: ['seo', 'classify', 'evaluate'] } })
+      })
+      if (res.ok) await fetchEntry()
+      else console.error('Pipeline error:', res.status)
+    } catch (e) {
+      console.error('Pipeline failed:', e)
+    } finally {
+      setRunningAI(false)
+    }
+  }
+
+  
 
   return (
     <div className="min-h-screen p-6 max-w-6xl mx-auto">
@@ -209,7 +229,14 @@ export default function AttractionDetailPage() {
               &#8592; Back
             </button>
           )}
-          {currentStageIdx < STAGE_ORDER.length - 1 && (
+          <button
+              onClick={runAIPipeline}
+              disabled={runningAI}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-all"
+            >
+              {runningAI ? '⏳ Running…' : '▶ Run AI'}
+            </button>
+            {currentStageIdx < STAGE_ORDER.length - 1 && (
             <button onClick={advanceStage} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
               Advance to {STAGE_META[STAGE_ORDER[currentStageIdx + 1]].label} &#8594;
             </button>
