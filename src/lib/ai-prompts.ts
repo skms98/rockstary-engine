@@ -186,6 +186,7 @@ WHAT IS LOCKED (carry verbatim through every rewrite — zero deviation):
 - All prestige descriptors the organiser used for their artist or event — preserved verbatim or upgraded, never downgraded or softened
 - All attribution lines: "Presented by X", "Brought to you by X", organiser name, co-presenter credits — these are contractual
 - All legal disclaimers: reproduced word-for-word at the end of every rewrite — never paraphrased, shortened, or moved
+⚠ CRITICAL — NEVER INTRODUCE: Do NOT add attribution lines ("Presented by X", "Brought to you by X"), organiser credits, co-presenter notices, or legal disclaimers that are NOT already present verbatim in the original S1 description. These elements must only be preserved when they exist in the source — never fabricated or assumed.
 
 WHAT IS OURS TO REBUILD:
 The organiser's words are a verified source of facts — not a template to follow. Once you have read and understood the facts, write fresh.

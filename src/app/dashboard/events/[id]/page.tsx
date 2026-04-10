@@ -293,6 +293,7 @@ export default function EventDetailPage() {
         if (phase === 'initial') {
           setEntry(prev => prev ? { ...prev, categories_initial: data.result, status: 'in_progress' } : null)
           setCategoriesPhase('validate')
+          runCategoriesPhase('validate') // auto-trigger validator after initial
         } else {
           setEntry(prev => prev ? { ...prev, categories: data.result, status: 'in_progress' } : null)
           setCategoriesPhase(null)
