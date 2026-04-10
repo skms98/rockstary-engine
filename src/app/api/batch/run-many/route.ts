@@ -6,137 +6,84 @@ export const maxDuration = 300 // 5 min max on Vercel Pro
 
 export async function POST(request: NextRequest) {
   try {
-    const { jobId } = await request.json()
+    const body = await request.json()
+    const { jobId } = body
+    let directType = body.type
+    let directIds = body.item_ids
+    let directVars = body.variables
     const baseUrl = request.nextUrl.origin
 
-    // Load job from Supabase
-    const { data: job, error: loadErr } = await supabase
-      .from('batch_jobs')
-      .select('*')
-      .eq('id', jobId)
-      .single()
+    let type = directType
+    let item_ids = directIds
+    let variables = directVars
+    let progress: any = null
 
-    if (loadErr || !job) {
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    if (jobId) {
+      try {
+        const { data: job, error: loadErr } = await supabase
+          .from('batch_jobs').select('*').eq('id', jobId).single()
+        if (!loadErr && job) {
+          type = job.type; item_ids = job.item_ids; variables = job.variables
+          progress = JSON.parse(JSON.stringify(job.progress))
+        }
+      } catch {}
     }
 
-    // Mark as running
-    await supabase
-      .from('batch_jobs')
-      .update({ status: 'running', updated_at: new Date().toISOString() })
-      .eq('id', jobId)
+    if (!type || !item_ids || !item_ids.length) {
+      return NextResponse.json({ error: 'Missing type or item_ids' }, { status: 400 })
+    }
 
-    const { type, item_ids, variables } = job
-    const progress = JSON.parse(JSON.stringify(job.progress)) // deep clone
+    if (!progress) {
+      progress = { total: item_ids.length, completed: 0, failed: 0, items: item_ids.map((id: string) => ({ id, status: 'queued' })) }
+    }
 
-    // Helper: persist progress to Supabase
+    if (jobId) { try { await supabase.from('batch_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', jobId) } catch {} }
+
     const saveProgress = async () => {
-      await supabase
-        .from('batch_jobs')
-        .update({ progress, updated_at: new Date().toISOString() })
-        .eq('id', jobId)
+      if (!jobId) return
+      try { await supabase.from('batch_jobs').update({ progress, updated_at: new Date().toISOString() }).eq('id', jobId) } catch {}
     }
 
-    // -- EVENTS: calls /api/ai/run-all for each selected event
     const processEvent = async (itemId: string) => {
       const idx = progress.items.findIndex((i: any) => i.id === itemId)
       if (idx !== -1) progress.items[idx].status = 'running'
       await saveProgress()
-
       const resp = await fetch(`${baseUrl}/api/ai/run-all`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(variables.authToken ? { 'x-openai-key': variables.authToken } : {}),
-          ...(variables.mode ? { 'x-ai-mode': variables.mode } : {})
-        },
-        body: JSON.stringify({
-          entryId: itemId,
-          authToken: variables.authToken || '',
-          adminKey: variables.adminKey || ''
-        })
+        headers: { 'Content-Type': 'application/json', ...(variables.authToken ? { 'x-openai-key': variables.authToken } : {}), ...(variables.mode ? { 'x-ai-mode': variables.mode } : {}) },
+        body: JSON.stringify({ entryId: itemId, authToken: variables.authToken || '', adminKey: variables.adminKey || '' })
       })
       if (!resp.ok) throw new Error(`run-all failed (${resp.status}): ${resp.statusText}`)
       return resp.json()
     }
 
-    // -- ATTRACTIONS: calls generate-seo + classify for each selected attraction
     const processAttraction = async (itemId: string) => {
       const steps: string[] = variables.steps || ['seo', 'classify']
       const idx = progress.items.findIndex((i: any) => i.id === itemId)
       if (idx !== -1) progress.items[idx].status = 'running'
       await saveProgress()
-
-      if (steps.includes('seo')) {
-        const r = await fetch(`${baseUrl}/api/attractions/generate-seo`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attractionId: itemId })
-        })
-        if (!r.ok) throw new Error(`generate-seo failed: ${r.statusText}`)
-      }
-
-      if (steps.includes('classify')) {
-        const r = await fetch(`${baseUrl}/api/attractions/classify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attractionId: itemId })
-        })
-        if (!r.ok) throw new Error(`classify failed: ${r.statusText}`)
-      }
-
-      if (steps.includes('evaluate')) {
-        const r = await fetch(`${baseUrl}/api/attractions/evaluate-quality`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ attractionId: itemId })
-        })
-        if (!r.ok) throw new Error(`evaluate failed: ${r.statusText}`)
-      }
+      if (steps.includes('seo')) { const r = await fetch(`${baseUrl}/api/attractions/generate-seo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attractionId: itemId }) }); if (!r.ok) throw new Error(`seo failed: ${r.statusText}`) }
+      if (steps.includes('classify')) { const r = await fetch(`${baseUrl}/api/attractions/classify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attractionId: itemId }) }); if (!r.ok) throw new Error(`classify failed: ${r.statusText}`) }
+      if (steps.includes('evaluate')) { const r = await fetch(`${baseUrl}/api/attractions/evaluate-quality`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attractionId: itemId }) }); if (!r.ok) throw new Error(`evaluate failed: ${r.statusText}`) }
     }
 
-    // -- Run ALL selected items in PARALLEL (Promise.allSettled never throws)
-    await Promise.allSettled(
-      item_ids.map(async (itemId: string) => {
-        try {
-          if (type === 'events') {
-            await processEvent(itemId)
-          } else {
-            await processAttraction(itemId)
-          }
-          const idx = progress.items.findIndex((i: any) => i.id === itemId)
-          if (idx !== -1) progress.items[idx].status = 'completed'
-          progress.completed++
-        } catch (err) {
-          const idx = progress.items.findIndex((i: any) => i.id === itemId)
-          if (idx !== -1) {
-            progress.items[idx].status = 'failed'
-            progress.items[idx].error = String(err)
-          }
-          progress.failed++
-        } finally {
-          await saveProgress()
-        }
-      })
-    )
+    await Promise.allSettled(item_ids.map(async (itemId: string) => {
+      try {
+        if (type === 'events') { await processEvent(itemId) } else { await processAttraction(itemId) }
+        const idx = progress.items.findIndex((i: any) => i.id === itemId)
+        if (idx !== -1) progress.items[idx].status = 'completed'
+        progress.completed++
+      } catch (err) {
+        const idx = progress.items.findIndex((i: any) => i.id === itemId)
+        if (idx !== -1) { progress.items[idx].status = 'failed'; progress.items[idx].error = String(err) }
+        progress.failed++
+      } finally { await saveProgress() }
+    }))
 
-    // Final job status
-    const finalStatus =
-      progress.failed === 0 ? 'completed' :
-      progress.completed === 0 ? 'failed' : 'partial'
-
-    await supabase
-      .from('batch_jobs')
-      .update({
-        status: finalStatus,
-        progress,
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', jobId)
-
+    const finalStatus = progress.failed === 0 ? 'completed' : progress.completed === 0 ? 'failed' : 'partial'
+    if (jobId) { try { await supabase.from('batch_jobs').update({ status: finalStatus, progress, updated_at: new Date().toISOString(), completed_at: new Date().toISOString() }).eq('id', jobId) } catch {} }
     return NextResponse.json({ ok: true, status: finalStatus, progress })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-                             }
+}
