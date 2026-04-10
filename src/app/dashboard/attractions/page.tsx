@@ -102,6 +102,25 @@ export default function AttractionsFunnel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedBatch, setSelectedBatch] = useState<string | 'all'>('all')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [runningBatch, setRunningBatch] = useState(false)
+
+  const runAIOnSelected = async (ids: string[]) => {
+    if (ids.length === 0) return
+    setRunningBatch(true)
+    try {
+      await fetch('/api/batch/run-many', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_ids: ids, variables: { steps: ['seo', 'classify', 'evaluate'] } })
+      })
+      await fetchEntries()
+    } catch (e) {
+      console.error('Batch AI failed:', e)
+    } finally {
+      setRunningBatch(false)
+      setSelectedIds([])
+    }
+  }
 
   const fetchEntries = useCallback(async () => {
     setLoading(true)
@@ -178,7 +197,7 @@ export default function AttractionsFunnel() {
     <div className="min-h-screen p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Attractions Funnel</h1>
+          <h1 className="text-2xl font-bold text-white">Attractions</h1>
           <p className="text-gray-400 text-sm mt-1">{entries.length} attractions</p>
         </div>
         <div className="flex items-center gap-3">
@@ -186,6 +205,22 @@ export default function AttractionsFunnel() {
                         <button onClick={() => setView('list')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
               List
             </button>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={() => runAIOnSelected(selectedIds)}
+              disabled={runningBatch}
+              className="px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {runningBatch ? '⏳ Running…' : `▶ Run AI (${selectedIds.length})`}
+            </button>
+          )}
+          <button
+            onClick={() => runAIOnSelected(filtered.map(x => x.id))}
+            disabled={runningBatch}
+            className="px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-700/70 text-emerald-200 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            {runningBatch ? '⏳…' : '▶ Run All'}
+          </button>
           </div>
           <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
             ↓ Template
@@ -216,7 +251,7 @@ export default function AttractionsFunnel() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-700">
-                <th className="p-3 w-8"></th>
+                <th className="p-3 w-8"><input type="checkbox" className="rounded" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={e => setSelectedIds(e.target.checked ? filtered.map(x => x.id) : [])} /></th>
                 <th className="text-left p-3 text-gray-400 font-medium">Title</th>
                 <th className="text-left p-3 text-gray-400 font-medium">Stage</th>
                 <th className="text-left p-3 text-gray-400 font-medium">SEO</th>
