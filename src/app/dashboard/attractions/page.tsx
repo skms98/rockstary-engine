@@ -57,13 +57,13 @@ async function downloadTemplate() {
     ['Keywords', 'dubai aquarium, underwater zoo, dubai mall aquarium, things to do in dubai'],
     ['Description', 'Explore one of the largest suspended aquariums in the world, home to hundreds of species of aquatic animals including sharks and rays. Located inside The Dubai Mall.'],
     [],
-    ['âââ Instructions âââ', ''],
-    ['â¢ Each sheet = one attraction', ''],
-    ['â¢ Column A = field label, Column B = value', ''],
-    ['â¢ Title is required, other fields are optional', ''],
-    ['â¢ Keywords field is optional (used for SEO)', ''],
-    ['â¢ Duplicate the sheet for multiple attractions', ''],
-    ['â¢ Delete this instructions section before submitting', ''],
+    ['─── Instructions ───', ''],
+    ['• Each sheet = one attraction', ''],
+    ['• Column A = field label, Column B = value', ''],
+    ['• Title is required, other fields are optional', ''],
+    ['• Keywords field is optional (used for SEO)', ''],
+    ['• Duplicate the sheet for multiple attractions', ''],
+    ['• Delete this instructions section before submitting', ''],
   ]
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData)
@@ -191,7 +191,7 @@ export default function AttractionsFunnel() {
             </button>
           </div>
           <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
-            â Template
+            ↓ Template
           </button>
           <button onClick={() => setShowNewForm(true)} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
             + Add
@@ -285,7 +285,7 @@ export default function AttractionsFunnel() {
                     <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}><span>{stageConf.icon}</span> {stageConf.label}</span></td>
                     <td className="p-3"><SeoStatusBadge status={entry.seo_status} used={entry.keywords_used} total={entry.keywords_total} /></td>
                     <td className="p-3"><TaggingStatusBadge status={entry.tagging_status} gates={entry.validation_gates_passed} /></td>
-                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || 'â'}</td>
+                    <td className="p-3 text-gray-400 text-xs">{entry.batch_name || '—'}</td>
                     <td className="p-3 text-gray-500 text-xs">{new Date(entry.updated_at).toLocaleDateString()}</td>
                     <td className="p-3 text-right"><div className="flex items-center justify-end gap-2"><Link href={`/dashboard/attractions/${entry.id}`} className="text-blue-400 hover:text-blue-300 text-xs">Open</Link>{entry.stage !== 'exported' && <button onClick={() => advanceStage(entry.id, entry.stage)} className="text-emerald-400 hover:text-emerald-300 text-xs">Adv</button>}</div></td>
                   </tr>
