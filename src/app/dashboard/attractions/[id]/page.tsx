@@ -185,7 +185,7 @@ export default function AttractionDetailPage() {
       const res = await fetch('/api/batch/run-many', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [entry.id], variables: { steps: ['seo', 'classify', 'evaluate'] } })
+        body: JSON.stringify({ item_ids: [entry.id], variables: { steps: ['seo', 'classify', 'evaluate'] } })
       })
       if (res.ok) await fetchEntry()
       else console.error('Pipeline error:', res.status)
