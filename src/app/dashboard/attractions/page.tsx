@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { plSupabase } from '@/lib/pl-supabase'
 import Link from 'next/link'
 import { AttractionCard, SeoStatusBadge, TaggingStatusBadge } from './attraction-components'
@@ -103,6 +103,7 @@ export default function AttractionsFunnel() {
   const [selectedBatch, setSelectedBatch] = useState<string | 'all'>('all')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [runningBatch, setRunningBatch] = useState(false)
+  const entriesRef = useRef<any[]>([])
 
   const runAIOnSelected = async (ids: string[]) => {
     if (ids.length === 0) return
@@ -113,7 +114,16 @@ export default function AttractionsFunnel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_ids: ids, variables: { steps: ['seo', 'classify', 'evaluate'] } })
       })
-      await fetchEntries()
+      // Poll until all submitted items finish processing (max ~3 min)
+      for (let i = 0; i < 36; i++) {
+        await new Promise(r => setTimeout(r, 5000))
+        await fetchEntries()
+        const stillProcessing = ids.some(id => {
+          const e = entriesRef.current.find((x: any) => x.id === id)
+          return e && (e.seo_status === 'processing' || e.tagging_status === 'processing')
+        })
+        if (!stillProcessing) break
+      }
     } catch (e) {
       console.error('Batch AI failed:', e)
     } finally {
@@ -130,6 +140,7 @@ export default function AttractionsFunnel() {
   }, [])
 
   useEffect(() => { fetchEntries() }, [fetchEntries])
+  useEffect(() => { entriesRef.current = entries }, [entries])
 
   const advanceStage = async (id: string, currentStage: AttractionStage) => {
     const order: AttractionStage[] = ['intake', 'seo_optimization', 'tagging', 'review', 'exported']
