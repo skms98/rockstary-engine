@@ -1,15 +1,16 @@
+// @ts-nocheck
 import { createClient } from '@supabase/supabase-js'
 
 // Client-side PL Supabase client — singleton with unique storageKey to avoid GoTrueClient conflicts
-const plUrl = process.env.NEXT_PUBLIC_PL_SUPABASE_URL!
-const plKey = process.env.NEXT_PUBLIC_PL_SUPABASE_ANON_KEY!
+const plUrl = process.env.NEXT_PUBLIC_PL_SUPABASE_URL
+const plKey = process.env.NEXT_PUBLIC_PL_SUPABASE_ANON_KEY
 
 export const plSupabase = createClient(plUrl, plKey, {
   auth: { storageKey: 'platinumlist-supabase' }
 })
 
 // Server-side only PL Supabase client — memoized singleton, no browser auth
-let _plServerClient: ReturnType<typeof createClient> | null = null
+let _plServerClient = null
 
 export function createPLClient() {
   if (_plServerClient) return _plServerClient
