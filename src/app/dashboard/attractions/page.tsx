@@ -295,7 +295,7 @@ export default function AttractionsFunnel() {
                     <td className="p-3"><TaggingStatusBadge status={entry.tagging_status} gates={entry.validation_gates_passed} /></td>
                     <td className="p-3 text-gray-400 text-xs">{entry.batch_name || '—'}</td>
                     <td className="p-3 text-gray-500 text-xs">{new Date(entry.updated_at).toLocaleDateString()}</td>
-                    <td className="p-3 text-right"><div className="flex items-center justify-end gap-2"><Link href={`/dashboard/attractions/${entry.id}`} className="text-blue-400 hover:text-blue-300 text-xs">Open</Link>{entry.stage !== 'exported' && <button onClick={() => advanceStage(entry.id, entry.stage)} className="text-emerald-400 hover:text-emerald-300 text-xs">Adv</button>}</div></td>
+                    <td className="p-3 text-right"><div className="flex items-center justify-end gap-2"><Link href={`/dashboard/attractions/${entry.id}`} className="text-blue-400 hover:text-blue-300 text-xs">Open</Link>{entry.stage !== 'exported' && <button onClick={() => advanceStage(entry.id, entry.stage)} className="text-emerald-400 hover:text-emerald-300 text-xs">Adv</button>}<button onClick={() => { if (window.confirm(`Delete "${entry.title}"?`)) deleteEntry(entry.id) }} className="text-red-400 hover:text-red-300 text-xs ml-2">Del</button></div></td>
                   </tr>
                 )
               })}
