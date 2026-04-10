@@ -96,7 +96,7 @@ async function downloadTemplate() {
 export default function AttractionsFunnel() {
   const [entries, setEntries] = useState<AttractionEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'funnel' | 'list'>('funnel')
+  const [view, setView] = useState<'funnel' | 'list'>('list')
   const [showNewForm, setShowNewForm] = useState(false)
   const [filterStage, setFilterStage] = useState<AttractionStage | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -211,7 +211,7 @@ export default function AttractionsFunnel() {
       {loading && <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>}
 
       
-      {!loading && view === 'list' && (
+      {!loading && (
         <div className="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
