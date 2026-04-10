@@ -38,6 +38,8 @@ How to use this data:
 }
 
 export function buildValidatorPrompt(ctx: TaggingContext, initialResult: string): string {
+    const enrichmentSection = ctx.artistEnrichment    ? '\n\n=== EVENT ENRICHMENT (supplementary reference — use ONLY for genre tag validation) ===\n' + ctx.artistEnrichment + '\n'
+        : ''
   return `${ctx.validatorPrompt}
 
 === AUTHORIZED TAXONOMY ===
@@ -49,7 +51,7 @@ MARKETING TAGS:
 ${ctx.tags}
 
 === SOURCE CONTENT ===
-${ctx.sourceText}
+${ctx.sourceText}${enrichmentSection}
 
 === PROPOSED CLASSIFICATION (FROM INITIAL TAGGING) ===
 ${initialResult}`
