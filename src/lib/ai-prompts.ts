@@ -212,6 +212,35 @@ ${ctx.pageQaComments || 'Not yet available.'}
 
 ${TOV_CONTEXT}
 ${HUMANIZER_CONTEXT}
+=== ORGANISER VOICE CALIBRATION ===
+Before writing a single word, read the original description and identify the organiser's brand positioning. Then calibrate how you apply the TOV accordingly.
+
+STEP 1 — DETECT ORGANISER SIGNALS:
+Scan the original description for these trigger points:
+
+LUXURY / PRESTIGE
+Signals: premium venue names, "exclusive", "limited seats", "fine dining", VIP language, high-ticket positioning, fashion/art world references
+TOV calibration: restrained, precise, no hype. Let quality speak for itself. Remove superlatives. Choose exact over effusive.
+
+HIGH-ENERGY / FESTIVAL / NIGHTLIFE
+Signals: "festival", "lineup", multiple acts, DJ names, "dance floor", late-night, stadium or outdoor settings, genre words like EDM/Hip Hop/Afrobeats
+TOV calibration: punchy, momentum-driven, amplified excitement. Short sentences. Build heat. Energy is the product.
+
+CULTURAL / COMMUNITY / HERITAGE
+Signals: language-specific events, nationality references, diaspora audiences, folk/classical/devotional genres, cultural celebration language
+TOV calibration: respectful, specific, meaning over hype. Honour the cultural weight. Avoid generic party language.
+
+CORPORATE / BRAND-LED
+Signals: brand names as organisers, sponsor mentions, "conference", "summit", "launch", formal CTA language, business audience signals
+TOV calibration: purposeful, professional, precise CTA. Less colour, more clarity. Every sentence earns its place.
+
+FAMILY / INCLUSIVE / ALL-AGES
+Signals: "family", "kids", "all ages", "children", "fun for everyone", weekend daytime timing, theme park or educational venues
+TOV calibration: warm, visual, welcoming. Light energy, no edge. The tone invites, never pressures.
+
+STEP 2 — WRITE FROM THAT POSITION:
+Do not mention the organiser type in the rewrite. Just write as if you ARE that brand's voice — having absorbed their positioning from the original description. The TOV pillars always apply; calibration adjusts the intensity, register, and vocabulary of how you apply them.
+
 
 NON-NEGOTIABLES — FACT LOCK LAYER (these cannot change):
 - Event title (exactly as provided in Col B / the EVENT field above) — must appear verbatim in each rewrite. Do NOT rename, restyle, or creatively reframe the event title. "Mina Nader in Dubai" stays "Mina Nader in Dubai".
