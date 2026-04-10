@@ -38,11 +38,11 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: 'ð¥' },
-  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: 'âï¸' },
-  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: 'ð·ï¸' },
-  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: 'â' },
-  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: 'ð¤' },
+  { key: 'intake', label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', icon: '●' },
+  { key: 'seo_optimization', label: 'SEO Optimization', color: 'text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', icon: '◆' },
+  { key: 'tagging', label: 'Tagging', color: 'text-purple-400', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/30', icon: '▲' },
+  { key: 'review', label: 'Review', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/30', icon: '★' },
+  { key: 'exported', label: 'Exported', color: 'text-gray-400', bgColor: 'bg-gray-500/10', borderColor: 'border-gray-500/30', icon: '✓' },
 ]
 
 async function downloadTemplate() {
@@ -203,7 +203,7 @@ export default function AttractionsFunnel() {
         {stageCounts.map((s) => (
           <button key={s.key} onClick={() => setFilterStage(filterStage === s.key ? 'all' : s.key)} className={`p-3 rounded-xl border transition-all ${filterStage === s.key ? `${s.bgColor} ${s.borderColor}` : 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600'}`}>
             <div className="flex items-center justify-between">
-              <span className="text-lg" style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{s.icon}</span>
+              <span className="text-lg">{s.icon}</span>
               <span className={`text-2xl font-bold ${s.color}`}>{s.count}</span>
             </div>
             <p className={`text-xs font-medium mt-1 ${s.color}`}>{s.label}</p>
@@ -232,7 +232,7 @@ export default function AttractionsFunnel() {
               <div key={stage.key} className={`rounded-xl border ${stage.borderColor} ${stage.bgColor} p-3 min-h[300px]`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{stage.icon}</span>
+                    <span>{stage.icon}</span>
                     <h3 className={`text-sm font-semibold ${stage.color}`}>{stage.label}</h3>
                   </div>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stage.bgColor} ${stage.color}`}>{items.length}</span>
@@ -270,17 +270,19 @@ export default function AttractionsFunnel() {
                 return (
                   <tr key={entry.id} className="border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors">
                   <td className="p-3 w-8">
+                    <label className="flex items-center justify-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(entry.id)}
                       onChange={() => setSelectedIds(prev =>
                         prev.includes(entry.id) ? prev.filter(i => i !== entry.id) : [...prev, entry.id]
                       )}
-                      className="rounded border-gray-600 bg-white/5 text-orange-500 focus:ring-orange-500"
+                      className="rounded border-gray-600 bg-white/5 text-orange-500 focus:ring-orange-500 cursor-pointer"
                     />
+                    </label>
                   </td>
                     <td className="p-3"><Link href={`/dashboard/attractions/${entry.id}`} className="text-white hover:text-blue-400 font-medium">{entry.title}</Link>{entry.city && <span className="text-gray-500 text-xs ml-2">{entry.city}{entry.country ? `, ${entry.country}` : ''}</span>}</td>
-                    <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}><span style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{stageConf.icon}</span> {stageConf.label}</span></td>
+                    <td className="p-3"><span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${stageConf.bgColor} ${stageConf.color}`}><span>{stageConf.icon}</span> {stageConf.label}</span></td>
                     <td className="p-3"><SeoStatusBadge status={entry.seo_status} used={entry.keywords_used} total={entry.keywords_total} /></td>
                     <td className="p-3"><TaggingStatusBadge status={entry.tagging_status} gates={entry.validation_gates_passed} /></td>
                     <td className="p-3 text-gray-400 text-xs">{entry.batch_name || 'â'}</td>
