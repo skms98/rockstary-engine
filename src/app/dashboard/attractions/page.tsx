@@ -225,6 +225,9 @@ export default function AttractionsFunnel() {
               {runningBatch ? '⏳ Running…' : `▶ Run AI (${selectedIds.length})`}
             </button>
           )}
+          {selectedIds.length > 0 && (
+            <button onClick={() => { if (window.confirm(`Delete ${selectedIds.length} attraction(s)?`)) Promise.all(selectedIds.map(id => deleteEntry(id))).then(() => setSelectedIds([])) }} className="px-3 py-1.5 rounded-md text-sm font-medium bg-red-700 text-white hover:bg-red-600 disabled:opacity-50 transition-colors">🗑 Delete ({selectedIds.length})</button>
+          )}
           <button
             onClick={() => runAIOnSelected(filtered.map(x => x.id))}
             disabled={runningBatch}
