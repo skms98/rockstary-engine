@@ -196,6 +196,13 @@ export default function AttractionDetailPage() {
     }
   }
 
+  // Auto-run AI pipeline on load if not yet processed
+  useEffect(() => {
+    if (entry && entry.seo_status === 'pending' && !runningAI) {
+      runAIPipeline()
+    }
+  }, [entry?.id])
+
   
 
   return (
