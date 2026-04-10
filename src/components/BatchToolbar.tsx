@@ -113,9 +113,9 @@ export default function BatchToolbar({ selectedIds, type, onClear }: BatchToolba
               <span className="h-2 w-2 rounded-full bg-orange-400 animate-pulse" />
               <span className="text-sm text-white/70">
                 {selectedIds.length} {label}{selectedIds.length !== 1 ? 's' : ''} selected
-              </span>span>
+              </span>
           {error && (
-                  <span className="text-sm text-red-400">{error}</span>span>
+                  <span className="text-sm text-red-400">{error}</span>
               )}
               <button
                         onClick={handleRunBatch}
