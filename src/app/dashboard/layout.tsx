@@ -54,7 +54,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setAiMode(storedMode)
   }, [])
 
-  // Global fetch interceptor â injects x-ai-mode on every AI API call
+  // Global fetch interceptor — injects x-ai-mode on every AI API call
   // Also captures aiMode from responses to show which path actually ran
   useEffect(() => {
     const origFetch = window.fetch.bind(window)
@@ -381,7 +381,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
 
-        {/* AI Mode Quick Toggle â always visible for samir, no PIN needed */}
+        {/* AI Mode Quick Toggle — always visible for samir, no PIN needed */}
         {canAccessSettings && (
           <div className={`border-t border-pl-border ${sidebarOpen ? 'px-4 py-3' : 'px-2 py-3'}`}>
             {sidebarOpen ? (
@@ -401,21 +401,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       aiMode === 'pro' ? 'bg-purple-500 text-white' : 'text-pl-muted hover:text-pl-text'
                     }`}
                   >
-                    â¡ Pro
+                    ⚡ Pro
                   </button>
                 </div>
                 {lastAiMode && (
                   <p className={`text-[10px] text-center mt-1.5 ${
                     lastAiMode === 'pro' ? 'text-purple-400' : 'text-pl-muted'
                   }`}>
-                    last call: {lastAiMode === 'pro' ? 'â¡ pro key' : 'â¦ regular'}
+                    last call: {lastAiMode === 'pro' ? '⚡ pro key' : '✦ regular'}
                   </p>
                 )}
               </div>
             ) : (
               <div
                 onClick={() => handleSetMode(aiMode === 'pro' ? 'regular' : 'pro')}
-                title={`AI: ${aiMode} â click to toggle`}
+                title={`AI: ${aiMode} — click to toggle`}
                 className="cursor-pointer"
               >
                 <div className={`w-3 h-3 rounded-full mx-auto ${
@@ -455,7 +455,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </div>
             )}
-            {/* Settings gear with active-key dot â only for samir */}
+            {/* Settings gear with active-key dot — only for samir */}
             {canAccessSettings && (
               <button
                 onClick={handleOpenSettings}
@@ -477,7 +477,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {children}
       </main>
 
-      {/* Settings Modal â only for samir */}
+      {/* Settings Modal — only for samir */}
       {settingsOpen && canAccessSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-pl-navy border border-pl-border rounded-2xl w-full max-w-md mx-4 shadow-2xl">
