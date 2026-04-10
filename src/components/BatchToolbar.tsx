@@ -8,10 +8,9 @@ interface BatchToolbarProps {
     onClear: () => void
 }
 
-// All 14 AI pipeline steps for events, in dependency order
+// All 13 AI pipheline steps for events, in dependency order
 const EVENT_STEPS = [
     'page_qa_comments',
-    'categories',
     'recommended_versions',
     'fact_check_scores',
     'duplicate_analysis',
