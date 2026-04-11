@@ -103,11 +103,13 @@ export default function AttractionsFunnel() {
   const [selectedBatch, setSelectedBatch] = useState<string | 'all'>('all')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [runningBatch, setRunningBatch] = useState(false)
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
   const entriesRef = useRef<any[]>([])
 
   const runAIOnSelected = async (ids: string[]) => {
     if (ids.length === 0) return
     setRunningBatch(true)
+    setProcessingIds(new Set(ids))
     try {
       await fetch('/api/batch/run-many', {
         method: 'POST',
@@ -128,6 +130,7 @@ export default function AttractionsFunnel() {
       console.error('Batch AI failed:', e)
     } finally {
       setRunningBatch(false)
+      setProcessingIds(new Set())
       setSelectedIds([])
     }
   }
@@ -222,7 +225,7 @@ export default function AttractionsFunnel() {
               disabled={runningBatch}
               className="px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
-              {runningBatch ? '⏳ Running…' : `▶ Run AI (${selectedIds.length})`}
+              {runningBatch ? <span className="flex items-center gap-1.5"><svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Running…</span> : `▶ Run AI (${selectedIds.length})`}
             </button>
           )}
           {selectedIds.length > 0 && (
@@ -233,7 +236,7 @@ export default function AttractionsFunnel() {
             disabled={runningBatch}
             className="px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-700/70 text-emerald-200 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
-            {runningBatch ? '⏳…' : '▶ Run All'}
+            {runningBatch ? <span className="flex items-center gap-1.5"><svg className="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Running…</span> : '▶ Run All'}
           </button>
           </div>
           <button onClick={downloadTemplate} className="px-4 py-2 bg-gray-700 text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-600 transition-colors border border-gray-600">
@@ -279,7 +282,7 @@ export default function AttractionsFunnel() {
               {filtered.map((entry) => {
                 const stageConf = STAGES.find(s => s.key === entry.stage)!
                 return (
-                  <tr key={entry.id} className="border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors">
+                  <tr key={entry.id} className={`border-b border-gray-700/50 hover:bg-gray-700/20 transition-colors ${processingIds.has(entry.id) ? 'bg-emerald-900/10 ring-1 ring-inset ring-emerald-500/20' : ''}`}>
                   <td className="p-3 w-8">
                     <label className="flex items-center justify-center cursor-pointer">
                     <input
